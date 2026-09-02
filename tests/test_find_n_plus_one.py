@@ -179,6 +179,10 @@ def test_findings_of_equal_size_are_ordered_by_where_they_started(
 
     Without this the two below would be ordered by however the buckets happened
     to be built, and a report would reshuffle between two runs over one capture.
+
+    This is the ordinary case and it is kept for that, but it cannot tell the
+    tie-break from a coincidence -- see the test below, which is the one that
+    pins it.
     """
     with QueryCapture(using="default") as capture:
         for _ in range(2):
@@ -187,6 +191,33 @@ def test_findings_of_equal_size_are_ordered_by_where_they_started(
             list(Author.objects.filter(pk=1))
 
     assert [finding.first_index for finding in find_n_plus_one(capture)] == [0, 2]
+
+
+def test_the_order_does_not_depend_on_the_order_records_arrive(
+    authors: list[Author],
+) -> None:
+    """The tie-break has to be the tie-break, not a coincidence of bucket order.
+
+    The test above cannot tell the two apart, and for a while nothing could:
+    deleting the ``first_index`` tie-break left the whole of this module green.
+    Buckets are built in first-seen order and ``list.sort`` is stable, so with
+    records arriving in capture order a sort on the count alone already lands
+    equal-sized findings in ``first_index`` order -- and would keep doing so with
+    the tie-break gone.
+
+    ``find_n_plus_one`` accepts any iterable of records, so handing them over out
+    of capture order separates what the code promises from what the dict happened
+    to do. The same trap, and the same fix, as
+    ``test_group_by_call_site.py::test_the_order_does_not_depend_on_the_order_records_arrive``.
+    """
+    with QueryCapture(using="default") as capture:
+        for _ in range(2):
+            list(Book.objects.filter(pk=1))
+        for _ in range(2):
+            list(Author.objects.filter(pk=1))
+
+    shuffled = [*capture.records[2:], *capture.records[:2]]
+    assert [finding.first_index for finding in find_n_plus_one(shuffled)] == [0, 2]
 
 
 def test_a_recursive_walk_splits_by_depth(authors: list[Author]) -> None:
