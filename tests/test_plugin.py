@@ -74,6 +74,10 @@ def django_pytester(isolated_pytester: pytest.Pytester) -> pytest.Pytester:
     return isolated_pytester
 
 
+# A loop rather than two statements on two lines, and the difference is the
+# whole detector: two lines are two call paths and no N+1, while a loop is one
+# path executed twice and therefore a finding. The inner test knows none of
+# that -- it just expects one query and does two.
 _TWO_QUERIES_ONE_EXPECTED = """
     import pytest
     from django.db import connection
@@ -82,7 +86,18 @@ _TWO_QUERIES_ONE_EXPECTED = """
     def test_counts(django_assert_num_queries):
         with django_assert_num_queries(1):
             with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
+                for _ in range(2):
+                    cursor.execute("SELECT 1")
+"""
+
+_A_LOOP = """
+    import pytest
+    from django.db import connection
+
+    @pytest.mark.django_db
+    def test_loops():
+        with connection.cursor() as cursor:
+            for _ in range(3):
                 cursor.execute("SELECT 1")
 """
 
@@ -102,7 +117,9 @@ def test_a_failed_count_assertion_gains_a_diagnosis(django_pytester: pytest.Pyte
             "*Expected to perform 1 queries but 2 were done*",
             "*django-query-contract*",
             "*2 statements captured: 2 on 'default'.*",
-            "*2 x  #0, #1*",
+            "*N+1 -- one statement shape, executed more than once from one call path:*",
+            "*2 x  from *test_a_failed_count_assertion_gains_a_diagnosis.py:*",
+            "*queries #0, #1*",
         ]
     )
 
@@ -185,7 +202,9 @@ def test_the_stack_depth_ini_reaches_the_capture(django_pytester: pytest.Pyteste
     result = django_pytester.runpytest_subprocess()
 
     result.assert_outcomes(failed=1)
-    result.stdout.fnmatch_lines(["*from no frame outside Django (stack empty or truncated)*"])
+    result.stdout.fnmatch_lines(
+        ["*from no frame outside Django (the capture*s stack depth did not reach one)*"]
+    )
 
 
 def test_a_block_above_the_ceiling_warns_even_when_it_passes(
@@ -284,3 +303,52 @@ def test_a_suite_without_django_settings_is_left_alone(
     result = isolated_pytester.runpytest_subprocess()
 
     result.assert_outcomes(passed=1)
+
+
+def test_the_flag_lists_what_the_run_found(django_pytester: pytest.Pytester) -> None:
+    """The listing, and the fact that asking for it changes no outcome.
+
+    Opt-in for the reason four earlier detectors are dead: an N+1 printed under
+    every passing test is crying wolf, and a list somebody asked for cannot cry
+    anything. The test below passes, and passes with the flag too.
+    """
+    django_pytester.makepyfile(_A_LOOP)
+    result = django_pytester.runpytest_subprocess("--n-plus-one")
+
+    result.assert_outcomes(passed=1)
+    result.stdout.fnmatch_lines(
+        [
+            "*django-query-contract*",
+            "*1 N+1 finding(s), most repeated first:*",
+            "*3 x  from *test_the_flag_lists_what_the_run_found.py:*",
+            "*in test_the_flag_lists_what_the_run_found.py::test_loops*",
+        ]
+    )
+
+
+def test_the_flag_says_so_when_the_run_found_nothing(django_pytester: pytest.Pytester) -> None:
+    """No N+1 anywhere is the answer somebody ran this to get."""
+    django_pytester.makepyfile(
+        """
+        import pytest
+        from django.db import connection
+
+        @pytest.mark.django_db
+        def test_one_query():
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+        """
+    )
+    result = django_pytester.runpytest_subprocess("--n-plus-one")
+
+    result.assert_outcomes(passed=1)
+    result.stdout.fnmatch_lines(["*No N+1: no statement shape repeated from a single call path.*"])
+
+
+def test_without_the_flag_the_run_says_nothing(django_pytester: pytest.Pytester) -> None:
+    """A passing suite full of N+1s prints not one word about them unless asked."""
+    django_pytester.makepyfile(_A_LOOP)
+    result = django_pytester.runpytest_subprocess()
+
+    result.assert_outcomes(passed=1)
+    assert "N+1" not in result.stdout.str()

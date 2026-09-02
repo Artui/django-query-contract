@@ -86,6 +86,24 @@ def _make_report(item: pytest.Item, when: str, failing: bool) -> pytest.TestRepo
     return pytest.TestReport.from_item_and_call(item, call)
 
 
+def _reporter(pytester: pytest.Pytester, *configargs: str) -> Any:
+    """pytest's own terminal reporter, over a real ``Config``, writing to captured stdout.
+
+    Built from a second config for the same reason ``_item`` is: the summary
+    hook reads the config's stash and writes to the terminal, and doing either
+    to the live session would print into the run that is asserting on it.
+    Neither of the tests using this touches a database, so the blocker problem
+    ``_item`` describes cannot arise.
+
+    Taken off the plugin manager rather than constructed, because the class has
+    no public name at this package's declared pytest floor: the alias for it in
+    pytest's top-level namespace arrived long after 8.0, and a test that reaches
+    for it passes at the pinned resolution and fails in the floor job.
+    ``parseconfigure`` runs the configure hooks, which is what registers it.
+    """
+    return pytester.parseconfigure(*configargs).pluginmanager.getplugin("terminalreporter")
+
+
 def _run_makereport(item: pytest.Item, report: pytest.TestReport) -> pytest.TestReport:
     """Drive the report hookwrapper by hand and hand it the report to enrich."""
     generator = plugin.pytest_runtest_makereport(
@@ -236,3 +254,119 @@ def test_the_stack_depth_ini_has_a_default(pytester: pytest.Pytester) -> None:
 
     assert config.getini("query_contract") is True
     assert int(config.getini("query_contract_stack_depth")) == 25
+
+
+@pytest.mark.django_db
+def test_the_flag_collects_a_finding_for_the_summary(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The collection half of the listing: findings, not the capture they came from."""
+    item = _live_item(request)
+    monkeypatch.setattr(item.config.option, "n_plus_one", True)
+
+    def body() -> None:
+        with connection.cursor() as cursor:
+            for _ in range(2):
+                cursor.execute("SELECT 1")
+
+    try:
+        _run_call_hook(item, body)
+
+        collected = item.config.stash[plugin._FINDINGS_KEY]
+        assert list(collected) == [item.nodeid]
+        (finding,) = collected[item.nodeid]
+        assert finding.count == 2
+    finally:
+        # The stash belongs to the session that is running this test, so what
+        # the hook put there has to come back out or the real summary at the end
+        # of this run would report a finding nobody asked about.
+        del item.config.stash[plugin._FINDINGS_KEY]
+
+
+@pytest.mark.django_db
+def test_a_test_with_no_findings_still_records_that_it_was_asked(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Absent means "nobody asked"; empty means "asked, and there were none".
+
+    The listing says those two things differently, so the ask is registered
+    even by a test that found nothing.
+    """
+    item = _live_item(request)
+    monkeypatch.setattr(item.config.option, "n_plus_one", True)
+
+    try:
+        _run_call_hook(item)
+
+        assert item.config.stash[plugin._FINDINGS_KEY] == {}
+    finally:
+        del item.config.stash[plugin._FINDINGS_KEY]
+
+
+def test_the_summary_says_nothing_when_nobody_asked(
+    pytester: pytest.Pytester, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Not one line, rather than an empty section on every run of every suite."""
+    plugin.pytest_terminal_summary(_reporter(pytester))
+
+    assert capsys.readouterr().out == ""
+
+
+def test_the_summary_reports_an_empty_run_as_empty(
+    pytester: pytest.Pytester, capsys: pytest.CaptureFixture[str]
+) -> None:
+    reporter = _reporter(pytester, "--n-plus-one")
+    reporter.config.stash[plugin._FINDINGS_KEY] = {}
+
+    plugin.pytest_terminal_summary(reporter)
+
+    printed = capsys.readouterr().out
+    assert "django-query-contract" in printed
+    assert "No N+1: no statement shape repeated from a single call path." in printed
+
+
+@pytest.mark.django_db
+def test_the_capture_does_not_outlive_the_report_that_reads_it(
+    request: pytest.FixtureRequest,
+) -> None:
+    """The capture is taken out of the stash, not read from it.
+
+    pytest holds every collected item in ``session.items`` until the run ends, so
+    a capture left behind is retained for the whole session: every statement's
+    SQL and up to ``stack_depth`` frames per statement, for every test that ran.
+    Measured on a synthetic suite at twenty queries a test, that was about 50 KiB
+    per test -- 64 MiB across twelve hundred tests, growing linearly. A package
+    that asks to be left on session-wide cannot also accumulate.
+    """
+    item = _live_item(request)
+
+    def body() -> None:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+
+    _run_call_hook(item, body)
+    assert plugin._CAPTURE_KEY in item.stash
+
+    _run_makereport(item, _make_report(item, "call", failing=True))
+
+    assert plugin._CAPTURE_KEY not in item.stash
+
+
+@pytest.mark.django_db
+def test_a_passing_call_also_drops_its_capture(request: pytest.FixtureRequest) -> None:
+    """The passing case is the one that matters, because it is nearly all of them.
+
+    A suite where every test passes is the ordinary suite, and it is exactly the
+    one that would have retained every capture: the old hook returned early on a
+    passing report, before it reached the stash at all.
+    """
+    item = _live_item(request)
+
+    def body() -> None:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+
+    _run_call_hook(item, body)
+    _run_makereport(item, _make_report(item, "call", failing=False))
+
+    assert plugin._CAPTURE_KEY not in item.stash

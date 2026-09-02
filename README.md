@@ -44,11 +44,65 @@ When it fails, the failure now carries a diagnosis underneath it:
 ------------------------------ django-query-contract ------------------------------
 13 statements captured: 13 on 'default'.
 
-Repeated statement shapes:
-  11 x  #1, #2, #3, #4, #5, #6, #7, #8, ...
+N+1 -- one statement shape, executed more than once from one call path:
+  11 x  from shop/views.py:16 in render_author_list
        SELECT "shop_book"."id", "shop_book"."author_id", "shop_book"."title" FROM "shop_book" WHERE "shop_book"."author_id" = %s
-       from shop/views.py:16 in render_author_list
-  2 shape(s) ran once.
+       queries #1, #2, #3, #4, #5, #6, #7, #8, ...
+  2 statement(s) were not repeated from any one call path.
+```
+
+## N+1 by construction, with nothing to tune
+
+**More than one execution with the same normalised SQL and the same call stack
+is an N+1.** No threshold, no confidence score, no rule about lazy loads: the
+same line ran the same statement again with different data instead of asking
+once.
+
+Four Python N+1 detectors are dead on PyPI -- `nplusone` (2018, 1068 stars, and
+still what the blog posts recommend), `django-query-capture`, `django-nplusone`
+and `django-explain`. The probable reason is that they classified by rule, so
+they cried wolf and were removed. A detector nobody disables is a different
+package from a detector that finds more.
+
+The identity is the **whole call stack**, not the call site. Two callers of one
+`get_books(author)` helper are two defects with two fixes, and a report grouped
+by call site would name the one line that is fine. The identity does *not*
+include the connection, so a loop that queries two databases stays one finding.
+A statement with no call stack -- everything in a capture rebuilt from a
+`CaptureQueriesContext` -- is not grouped at all, because guessing there would
+manufacture a finding out of a gap in the input.
+
+Nothing fails on a finding. A batched `bulk_create` is one shape run a hundred
+times from one line, structurally identical to the defect, so it is reported
+like any other repetition and costs nobody a red build. That is what keeps this
+from crying wolf, rather than an exemption list -- which would be the first
+tunable.
+
+```bash
+pytest --n-plus-one
+```
+
+lists every finding in the run, worst first, and changes no outcome:
+
+```
+=============================== django-query-contract ===============================
+2 N+1 finding(s), most repeated first:
+  40 x  from shop/views.py:16 in render_author_list
+       in tests/test_views.py::test_author_listing
+       SELECT "shop_book"."id", "shop_book"."author_id" FROM "shop_book" WHERE ...
+       queries #3, #4, #5, #6, #7, #8, #9, #10, ...
+```
+
+Or read them yourself:
+
+```python
+from django_query_contract import QueryCapture, find_n_plus_one
+
+with QueryCapture(using="default") as capture:
+    view(request)
+
+for finding in find_n_plus_one(capture):
+    print(finding.count, finding.call_site, finding.fingerprint)
 ```
 
 ## The ceiling nobody mentions
@@ -83,8 +137,7 @@ with QueryCapture() as capture:
     render_author_list()
 
 for fingerprint, records in capture.by_fingerprint().items():
-    if len(records) > 1:
-        print(len(records), records[0].call_site, fingerprint)
+    print(len(records), fingerprint)
 ```
 
 A `QueryRecord` carries the statement, its fingerprint, the connection alias and
@@ -116,13 +169,15 @@ query_contract = false
 query_contract_stack_depth = 25
 ```
 
-or `--no-query-contract` for one run.
+or `--no-query-contract` for one run. `query_contract_stack_depth` is also what
+widens the window the N+1 identity is formed from -- see
+[N+1 detection](https://artui.github.io/django-query-contract/n-plus-one/).
 
 ## Status
 
-Early. The capture engine and the pytest diagnosis. N+1 by
-(call stack, fingerprint), the growth assertion, call-site attribution and plan
-capture come next.
+Early. The capture engine, the pytest diagnosis, and N+1 by
+(call stack, fingerprint). The growth assertion, call-site attribution as a
+public surface, and plan capture come next.
 
 Full documentation: <https://artui.github.io/django-query-contract/>
 
