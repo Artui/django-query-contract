@@ -35,6 +35,7 @@ from django_query_contract.format_n_plus_one_summary import format_n_plus_one_su
 from django_query_contract.n_plus_one import NPlusOne
 from django_query_contract.query_capture import QueryCapture
 from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarning
+from django_query_contract.utils import DEFAULT_STACK_DEPTH
 
 _CAPTURE_KEY = pytest.StashKey[QueryCapture]()
 
@@ -63,7 +64,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addini(
         "query_contract_stack_depth",
         "How many call-stack frames to keep per captured query.",
-        default="25",
+        # Stringified from the one constant rather than written out again: an
+        # ini default that drifted from the capture's own would make the plugin
+        # quietly measure something different from a hand-written
+        # ``QueryCapture``, which is the class of divergence this package exists
+        # to complain about.
+        default=str(DEFAULT_STACK_DEPTH),
     )
     group = parser.getgroup("django-query-contract")
     group.addoption(

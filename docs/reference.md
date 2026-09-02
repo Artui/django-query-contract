@@ -14,6 +14,14 @@
 
 ::: django_query_contract.NPlusOne
 
+## The growth curve
+
+::: django_query_contract.Growth
+
+::: django_query_contract.QueryGrowth
+
+::: django_query_contract.GrowthPoint
+
 ## The ceiling
 
 ::: django_query_contract.LogCeiling
@@ -33,3 +41,9 @@
 ::: django_query_contract.format_n_plus_one
 
 ::: django_query_contract.format_n_plus_one_summary
+
+::: django_query_contract.assert_query_growth
+
+::: django_query_contract.measure_query_growth
+
+::: django_query_contract.format_query_growth
