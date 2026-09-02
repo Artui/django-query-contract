@@ -105,6 +105,66 @@ for finding in find_n_plus_one(capture):
     print(finding.count, finding.call_site, finding.fingerprint)
 ```
 
+## The growth assertion
+
+A count asserted against three fixture rows is asserted against a defect that
+costs one query per row, because at three rows a prefetch and a loop cost almost
+the same. **Run the block at two sizes of world instead and ask whether the
+count moved.**
+
+```python
+from django_query_contract import assert_query_growth
+
+
+def test_the_author_listing_does_not_grow(world):
+    assert_query_growth(world, lambda: render_author_list())
+```
+
+A hundred rows, then a thousand, and the two counts have to be equal. Ruby has
+had this since `n_plus_one_control`; no Python package does it.
+
+`world` is anything callable as `world(factor)` returning a context manager -- a
+five-line `@contextmanager` in your own `conftest.py`, or
+[`django-data-shape`](https://pypi.org/project/django-data-shape/)'s
+`scale_fixture`. It is a shape rather than a dependency, because a growth
+assertion needs *scale* (a hundred rows against a thousand, any backend) and not
+*size*.
+
+**Never open a capture around the call that builds the world.** A world's own
+loader emits statements, and off PostgreSQL they are ordinary inserts, so the
+count grows with the factor: measured on a two-table world, 8 statements at
+factor 1 and 17 at factor 10 on SQLite. A harness reading that reports a
+confident `O(N)` for an `O(1)` block. This one opens the capture *inside* the
+world, and you never write `QueryCapture` at all -- there is nowhere to put it
+in the wrong place.
+
+```text
+The query count is not constant across the scale factors.
+
+  factor  1    4 rows    3 statements
+  factor 10   40 rows   21 statements
+
+A constant count runs the same statements whatever the data, so every factor
+has to produce the same number. Factor 1 ran 3 and factor 10 ran 21.
+
+At factor 10 the block ran:
+21 statements captured: 21 on 'default'.
+
+N+1 -- one statement shape, executed more than once from one call path:
+  20 x  from shop/views.py:16 in render_author_list
+       SELECT "shop_book"."id", "shop_book"."author_id" FROM "shop_book" WHERE ...
+       queries #1, #2, #3, #4, #5, #6, #7, #8, ...
+```
+
+`Growth.LINEAR` is how genuine bulk work says so, and it still refuses a nested
+loop. Both claims are exact integer comparisons rather than a fitted curve: a
+fit needs a tolerance, a fit floor and a rule for what counts as linear, and a
+growth assertion that is itself flaky gets deleted and takes the idea with it.
+
+Full detail, including the one remaining way to make it flaky and the `warm_up`
+that fixes it, is in
+[Growth assertions](https://artui.github.io/django-query-contract/growth/).
+
 ## The ceiling nobody mentions
 
 `assertNumQueries` and `django_assert_num_queries` both count through
@@ -175,9 +235,9 @@ widens the window the N+1 identity is formed from -- see
 
 ## Status
 
-Early. The capture engine, the pytest diagnosis, and N+1 by
-(call stack, fingerprint). The growth assertion, call-site attribution as a
-public surface, and plan capture come next.
+Early. The capture engine, the pytest diagnosis, N+1 by
+(call stack, fingerprint), and the growth assertion. Call-site attribution as a
+public surface and plan capture come next.
 
 Full documentation: <https://artui.github.io/django-query-contract/>
 

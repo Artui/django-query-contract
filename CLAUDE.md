@@ -64,10 +64,23 @@ make docs-build    # mkdocs build --strict
 ## Public API naming
 
 `QueryCapture`, `QueryRecord`, `StackFrame`, `NPlusOne`, `LogCeiling`,
-`QueryLogCeilingWarning`, `normalise_sql`, `capture_stack`, `find_n_plus_one`,
-`format_capture_report`, `format_n_plus_one`, `format_n_plus_one_summary`. Nouns
-for what is recorded, verbs for what is done to it. Nothing is named after
-pytest, because three of the four faces are not pytest.
+`QueryLogCeilingWarning`, `Growth`, `GrowthPoint`, `QueryGrowth`, `normalise_sql`,
+`capture_stack`, `find_n_plus_one`, `assert_query_growth`, `measure_query_growth`,
+`format_capture_report`, `format_n_plus_one`, `format_n_plus_one_summary`,
+`format_query_growth`. Nouns for what is recorded, verbs for what is done to it.
+Nothing is named after pytest, because three of the four faces are not pytest.
+
+`utils.py` holds what more than one of them must agree on: `DEFAULT_STACK_DEPTH`
+(read by both `QueryCapture` and the plugin's ini default, rather than the same
+literal in three places), `DEFAULT_FACTORS`, and the `ScaleWorld` alias.
+
+**The growth rules are exact integer comparisons, and that is the design.** A
+fitted curve would need three thresholds to become a verdict -- how near zero is
+flat, how linear is linear, how good a fit is believable -- and three knobs in a
+package whose thesis is "by construction, never by heuristic" is three ways to be
+wrong. `CONSTANT` is equality; `LINEAR` cross-multiplies so it never leaves the
+integers. Do not introduce a tolerance: a growth assertion that fails once a
+fortnight gets deleted and takes the idea with it.
 
 **`QueryRecord` is a public, documented artifact from the first release**, and
 the reason is that four faces read it and three of them are unwritten. A record

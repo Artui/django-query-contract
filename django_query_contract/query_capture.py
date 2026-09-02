@@ -12,15 +12,7 @@ from django_query_contract.capture_stack import capture_stack
 from django_query_contract.log_ceiling import LogCeiling
 from django_query_contract.normalise_sql import normalise_sql
 from django_query_contract.query_record import QueryRecord
-
-# Measured rather than guessed: six frames separate ``cursor.execute`` from the
-# line that iterated a queryset, so twenty-five leaves nineteen for whatever
-# application code sits above it -- a view, a service, a serializer -- and still
-# reaches the call site. The frames beyond that, under pytest, are the runner's
-# own and identical for every query in the suite. Depth is the one part of
-# capture whose cost scales, at roughly half a microsecond per frame, so the
-# default is the smallest number that keeps what a reader can act on.
-_DEFAULT_STACK_DEPTH = 25
+from django_query_contract.utils import DEFAULT_STACK_DEPTH
 
 
 class QueryCapture:
@@ -50,7 +42,7 @@ class QueryCapture:
         self,
         *,
         using: str | Iterable[str] | None = None,
-        stack_depth: int = _DEFAULT_STACK_DEPTH,
+        stack_depth: int = DEFAULT_STACK_DEPTH,
     ) -> None:
         """
         Args:
