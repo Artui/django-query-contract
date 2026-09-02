@@ -29,6 +29,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that were rejected and why, the case for reporting legitimate batched writes
   like any other repetition, and the one place the identity's window stops.
 
+### Fixed
+- The per-test capture is dropped from the item's stash once the report that
+  reads it is built, instead of being left there. pytest holds every collected
+  item in `session.items` until the run ends, so a capture left behind was
+  retained for the whole session -- every statement's SQL and up to
+  `query_contract_stack_depth` frames per statement, for every test that ran.
+  Measured on a synthetic suite at twenty queries a test: **64 MiB retained
+  across twelve hundred tests, falling to 14 MiB**, and growing linearly before
+  the fix at roughly 50 KiB a test. The passing case was the one that leaked,
+  because the hook returned early on a passing report before it reached the
+  stash at all -- and a suite where every test passes is the ordinary suite.
+  Shipped in 0.1.0 and unmeasured until now.
+
 ### Changed
 - The report section under a failing `django_assert_num_queries` now names an
   N+1 with its call site on the first line, instead of listing repeated

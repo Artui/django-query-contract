@@ -145,10 +145,25 @@ def pytest_runtest_makereport(
     """
     outcome = yield
     report = outcome.get_result()
-    if report.when != "call" or not report.failed:
+    if report.when != "call":
         return
+    # Taken out of the stash, not read from it. pytest holds every collected
+    # item in ``session.items`` until the run ends, so a capture left here is
+    # retained for the whole session -- every statement's SQL and up to
+    # ``stack_depth`` frames per statement, for every test that ran. Measured on
+    # a synthetic suite at twenty queries a test: about 50 KiB per test, so 64
+    # MiB across twelve hundred tests and growing linearly. This package asks to
+    # be left on session-wide, which it can only honestly do if it does not
+    # accumulate.
+    #
+    # Dropping it here rather than in teardown because this is the only reader:
+    # the report section below is the last thing that wants it, and the
+    # ``--n-plus-one`` listing already extracted its findings during the call
+    # phase, keeping the small part worth keeping.
     capture = item.stash.get(_CAPTURE_KEY, None)
-    if capture is None:
+    if capture is not None:
+        del item.stash[_CAPTURE_KEY]
+    if capture is None or not report.failed:
         return
     text = format_capture_report(capture)
     if text:

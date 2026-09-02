@@ -323,3 +323,50 @@ def test_the_summary_reports_an_empty_run_as_empty(
     printed = capsys.readouterr().out
     assert "django-query-contract" in printed
     assert "No N+1: no statement shape repeated from a single call path." in printed
+
+
+@pytest.mark.django_db
+def test_the_capture_does_not_outlive_the_report_that_reads_it(
+    request: pytest.FixtureRequest,
+) -> None:
+    """The capture is taken out of the stash, not read from it.
+
+    pytest holds every collected item in ``session.items`` until the run ends, so
+    a capture left behind is retained for the whole session: every statement's
+    SQL and up to ``stack_depth`` frames per statement, for every test that ran.
+    Measured on a synthetic suite at twenty queries a test, that was about 50 KiB
+    per test -- 64 MiB across twelve hundred tests, growing linearly. A package
+    that asks to be left on session-wide cannot also accumulate.
+    """
+    item = _live_item(request)
+
+    def body() -> None:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+
+    _run_call_hook(item, body)
+    assert plugin._CAPTURE_KEY in item.stash
+
+    _run_makereport(item, _make_report(item, "call", failing=True))
+
+    assert plugin._CAPTURE_KEY not in item.stash
+
+
+@pytest.mark.django_db
+def test_a_passing_call_also_drops_its_capture(request: pytest.FixtureRequest) -> None:
+    """The passing case is the one that matters, because it is nearly all of them.
+
+    A suite where every test passes is the ordinary suite, and it is exactly the
+    one that would have retained every capture: the old hook returned early on a
+    passing report, before it reached the stash at all.
+    """
+    item = _live_item(request)
+
+    def body() -> None:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+
+    _run_call_hook(item, body)
+    _run_makereport(item, _make_report(item, "call", failing=False))
+
+    assert plugin._CAPTURE_KEY not in item.stash
