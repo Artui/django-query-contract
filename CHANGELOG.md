@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-02
+
 ### Added
 - The growth assertion. `assert_query_growth` runs one block against worlds of
   several sizes and asserts the query count kept its shape -- `O(1)` by
@@ -144,6 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Artui/django-query-contract/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Artui/django-query-contract/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Artui/django-query-contract/compare/v0.0.0...v0.1.0
