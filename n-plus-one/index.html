@@ -525,6 +525,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../attribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Call-site attribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/" class="md-nav__link">
         
   
@@ -847,11 +874,20 @@ of each finding, because it is the only part anybody acts on:</p>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  11 x  from shop/views.py:16 in render_author_list
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>       SELECT "shop_book"."id", "shop_book"."author_id" FROM "shop_book" WHERE ...
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>       queries #1, #2, #3, #4, #5, #6, #7, #8, ...
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  2 statement(s) were not repeated from any one call path.
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  2 statement(s) were not repeated from any one call path. They came from:
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>  1 x  from shop/views.py:15 in render_author_list
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>       SELECT "shop_author"."id", "shop_author"."name" FROM "shop_author"
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>  1 x  from shop/middleware.py:12 in __call__
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>       SELECT "django_session"."session_key" FROM "django_session" WHERE ...
 </span></code></pre></div>
 <p>The counts add up to the number of statements captured, on purpose. A report
 that lists the interesting queries and stays quiet about the rest invites a
 reader to assume the rest were fine.</p>
+<p>The statements no finding accounts for are attributed to the lines that ran
+them, so every statement in the section has an address whether it repeated or
+not. That grouping merges call paths a finding keeps apart, deliberately and
+only because it claims nothing about defects -- see
+<a href="../attribution/#attribution-is-not-identity">call-site attribution</a>.</p>
 <p>When nothing repeated, it says so -- which under a failed count assertion is
 worth knowing, because it means the fix is not a prefetch.</p>
 <h3 id="the-whole-run-on-request">The whole run, on request<a class="headerlink" href="#the-whole-run-on-request" title="Permanent link">&para;</a></h3>
