@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Notes
+- **The `ty` floor was raised to `0.0.32`, because the declared one was false.**
+  `ty==0.0.1a10` cannot parse the `[tool.ty.environment]` table this repository
+  has shipped since its first commit -- it fails with a TOML parse error. The
+  `lowest declared versions` job passed only because the resolver it runs under
+  rounds the pre-release up. A floor nothing can resolve to is not a floor.
+
 - **Index advice was the milestone and it is declined, in writing.** The plan
   this package came from said the output people actually want is "these twelve
   queries sequentially scanned a two-million-row table, here are the
