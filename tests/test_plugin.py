@@ -8,6 +8,8 @@ one's would be measuring a process that had already been set up.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 _SETTINGS = """
@@ -22,14 +24,44 @@ USE_TZ = True
 def isolated_pytester(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
 ) -> pytest.Pytester:
-    """A pytester whose subprocess does not inherit this suite's Django settings.
+    """A pytester whose subprocess inherits neither the settings nor the coverage of this run.
 
-    pytest-django exports ``DJANGO_SETTINGS_MODULE`` into the environment, and a
-    subprocess inherits it -- so without this every inner run would quietly be
-    configured by the outer one, and the test for a project with no Django
-    settings at all would be measuring the opposite of what it claims.
+    **Django settings.** pytest-django exports ``DJANGO_SETTINGS_MODULE`` into
+    the environment, and a subprocess inherits it -- so without this every inner
+    run would quietly be configured by the outer one, and the test for a project
+    with no Django settings at all would be measuring the opposite of what it
+    claims.
+
+    **Coverage.** pytest-cov instruments subprocesses through a ``.pth`` hook
+    that reads a ``COV_CORE_*`` environment, and the data those inner runs write
+    is unusable here for a reason that is structural rather than incidental:
+    ``branch`` is propagated only from the ``--cov-branch`` command-line flag
+    (``pytest_cov/engine.py``, ``if self.cov_branch``), and this project
+    declares ``branch = true`` in ``pyproject.toml`` instead. The subprocess is
+    also pointed at no config file -- ``COV_CORE_CONFIG`` is set to a separator
+    when ``.coveragerc`` does not exist -- so it rediscovers configuration from
+    its own working directory, which is the pytester temp directory and holds no
+    ``pyproject.toml``. Each inner run therefore writes **statement** data into
+    the parent's **branch** data file, and the combine at the end of the session
+    fails with ``Can't combine statement coverage data with branch data``.
+
+    Clearing the environment is the fix rather than a workaround, and the reason
+    is what these runs are for. They exist to prove *behaviour* that only exists
+    in a real run -- a report section, a captured warning, a flag that silences
+    both. Every branch of every hook is covered in-process by
+    ``test_plugin_hooks.py`` with real ``Config``, ``Item``, ``TestReport`` and
+    ``pluggy.Result`` objects. Letting a subprocess contribute coverage would
+    mean a hook branch could be covered by a run this process cannot introspect,
+    so ``test_plugin_hooks.py`` could rot while the number stayed at 100%. The
+    gate is stricter without it.
     """
     monkeypatch.delenv("DJANGO_SETTINGS_MODULE", raising=False)
+    # By prefix rather than by name: the set of these has changed across
+    # pytest-cov releases, and a fix for a floor job must not itself be pinned
+    # to a version. COVERAGE_PROCESS_START is coverage's own equivalent hook.
+    for name in [key for key in os.environ if key.startswith("COV_CORE_")]:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.delenv("COVERAGE_PROCESS_START", raising=False)
     return pytester
 
 
@@ -209,6 +241,34 @@ def test_a_block_above_the_ceiling_warns_even_when_it_passes(
     result.stdout.fnmatch_lines(
         ["*QueryLogCeilingWarning: *5 statements ran on connection 'default'*reports 0 *"]
     )
+
+
+def test_the_inner_runs_collect_no_coverage(django_pytester: pytest.Pytester) -> None:
+    """The fix above, asserted rather than assumed.
+
+    pytest-cov instruments a subprocess through a ``.pth`` hook keyed on this
+    environment, and the data it would write here is statement-only where the
+    parent's is branch data -- an unusable combination that surfaced only at the
+    declared dependency floor, in a job that runs once per pull request and long
+    after the edit that caused it. Checking the environment from inside an inner
+    run turns that into a failure in the file that owns the decision.
+
+    By prefix, not by name, for the same reason the fixture clears it that way:
+    the set of these variables has changed across pytest-cov releases.
+    """
+    django_pytester.makepyfile(
+        """
+        import os
+
+        def test_the_environment_is_clear():
+            leaked = sorted(key for key in os.environ if key.startswith("COV_CORE_"))
+            assert leaked == [], leaked
+            assert "COVERAGE_PROCESS_START" not in os.environ
+        """
+    )
+    result = django_pytester.runpytest_subprocess()
+
+    result.assert_outcomes(passed=1)
 
 
 def test_a_suite_without_django_settings_is_left_alone(

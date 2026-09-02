@@ -33,13 +33,36 @@ def test_nothing():
 def _item(pytester: pytest.Pytester, *configargs: str) -> pytest.Item:
     """A real collected test item, whose config carries the given command line.
 
-    Building a second pytest ``Config`` re-installs pytest-django's database
-    blocker over the one the ``django_db`` mark had already lifted, so the tests
-    below that touch a connection re-open it with ``django_db_blocker.unblock``.
+    For tests that vary the command line and touch no database. Building a
+    second pytest ``Config`` constructs a **new** pytest-django database
+    blocker -- they live on ``Config.stash``, one per config -- which installs
+    its blocking wrapper over the global
+    ``BaseDatabaseWrapper.ensure_connection``. The outer blocker cannot hand
+    that back: ``unblock`` and ``restore`` pop a different instance's history,
+    so the connection stays closed for the rest of the test *and its teardown*.
+    On Django 4.2 that surfaces as an error in ``check_constraints`` after the
+    test itself has already passed; on 6.1 the teardown happens not to need a
+    cursor and the same bug is invisible.
+
+    A test that touches a database uses :func:`_live_item` instead.
     """
     module = pytester.getmodulecol(_A_TEST, configargs=list(configargs))
     (item,) = module.collect()
     return item
+
+
+def _live_item(request: pytest.FixtureRequest) -> pytest.Item:
+    """The item pytest is running right now.
+
+    Realer than a collected one, and free of the blocker problem above: it is a
+    genuine ``Function`` carrying the session's own ``Config``, so driving the
+    hooks with it needs no second config to exist at all. Every test that has to
+    vary the command line is one that touches no database, so the two helpers
+    divide cleanly.
+    """
+    node = request.node
+    assert isinstance(node, pytest.Item)
+    return node
 
 
 def _run_call_hook(item: pytest.Item, body: Any = None) -> None:
@@ -76,17 +99,16 @@ def _run_makereport(item: pytest.Item, report: pytest.TestReport) -> pytest.Test
 
 @pytest.mark.django_db
 def test_the_call_hook_captures_and_leaves_the_capture_behind(
-    pytester: pytest.Pytester, django_db_blocker
+    request: pytest.FixtureRequest,
 ) -> None:
     """The stash is the join between the two hooks: one fills it, the other reads it."""
-    item = _item(pytester)
+    item = _live_item(request)
 
     def body() -> None:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
 
-    with django_db_blocker.unblock():
-        _run_call_hook(item, body)
+    _run_call_hook(item, body)
 
     capture = item.stash[plugin._CAPTURE_KEY]
     assert len(capture) == 1
@@ -120,10 +142,10 @@ def test_a_project_without_django_settings_is_left_alone(
 
 @pytest.mark.django_db
 def test_a_block_over_the_ceiling_warns(
-    pytester: pytest.Pytester, tiny_query_log: int, django_db_blocker
+    request: pytest.FixtureRequest, tiny_query_log: int
 ) -> None:
     """The warning fires on the way out of the call phase, whatever the outcome was."""
-    item = _item(pytester)
+    item = _live_item(request)
     connection.queries_log.extend(
         {"sql": "SELECT 1", "time": "0.000"} for _ in range(tiny_query_log)
     )
@@ -133,7 +155,7 @@ def test_a_block_over_the_ceiling_warns(
             for _ in range(3):
                 cursor.execute("SELECT 1")
 
-    with django_db_blocker.unblock(), warnings.catch_warnings(record=True) as caught:
+    with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         _run_call_hook(item, body)
 
@@ -142,16 +164,15 @@ def test_a_block_over_the_ceiling_warns(
 
 
 @pytest.mark.django_db
-def test_a_failed_call_gains_the_section(pytester: pytest.Pytester, django_db_blocker) -> None:
-    item = _item(pytester)
+def test_a_failed_call_gains_the_section(request: pytest.FixtureRequest) -> None:
+    item = _live_item(request)
 
     def body() -> None:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.execute("SELECT 1")
 
-    with django_db_blocker.unblock():
-        _run_call_hook(item, body)
+    _run_call_hook(item, body)
     report = _run_makereport(item, _make_report(item, "call", failing=True))
 
     (section,) = report.sections
@@ -160,31 +181,29 @@ def test_a_failed_call_gains_the_section(pytester: pytest.Pytester, django_db_bl
 
 
 @pytest.mark.django_db
-def test_a_passing_call_gains_nothing(pytester: pytest.Pytester, django_db_blocker) -> None:
-    item = _item(pytester)
+def test_a_passing_call_gains_nothing(request: pytest.FixtureRequest) -> None:
+    item = _live_item(request)
 
     def body() -> None:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
 
-    with django_db_blocker.unblock():
-        _run_call_hook(item, body)
+    _run_call_hook(item, body)
     report = _run_makereport(item, _make_report(item, "call", failing=False))
 
     assert report.sections == []
 
 
 @pytest.mark.django_db
-def test_a_failure_in_setup_gains_nothing(pytester: pytest.Pytester, django_db_blocker) -> None:
+def test_a_failure_in_setup_gains_nothing(request: pytest.FixtureRequest) -> None:
     """Only the call phase is diagnosed; the capture describes the call phase."""
-    item = _item(pytester)
+    item = _live_item(request)
 
     def body() -> None:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
 
-    with django_db_blocker.unblock():
-        _run_call_hook(item, body)
+    _run_call_hook(item, body)
     report = _run_makereport(item, _make_report(item, "setup", failing=True))
 
     assert report.sections == []
@@ -201,9 +220,9 @@ def test_a_failure_with_capture_disabled_gains_nothing(pytester: pytest.Pytester
 
 
 @pytest.mark.django_db
-def test_a_failure_with_an_empty_capture_gains_nothing(pytester: pytest.Pytester) -> None:
+def test_a_failure_with_an_empty_capture_gains_nothing(request: pytest.FixtureRequest) -> None:
     """A failure unrelated to the database does not acquire a paragraph about it."""
-    item = _item(pytester)
+    item = _live_item(request)
 
     _run_call_hook(item)
     report = _run_makereport(item, _make_report(item, "call", failing=True))

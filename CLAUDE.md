@@ -118,6 +118,23 @@ own module, a re-export in `__init__.py`, and a docs entry.
   `test_plugin_hooks.py`, which drives each hook directly with real `Config`,
   `Item`, `TestReport` and `pluggy.Result` objects. Removing the flag does not
   make the suite dogfood the plugin; it makes the gate stop measuring the package.
+- **Three consequences of that flag, all of which have bitten once.**
+  `tests/conftest.py` registers the plugin's *options* without its hooks, or a
+  hook driven against the live item raises `no option named '--no-query-lens'`.
+  An inner `runpytest_subprocess` run must inherit no `COV_CORE_*` environment,
+  or it writes statement data into the parent's branch data and the combine
+  fails -- only at the dependency floor, because `branch` reaches a subprocess
+  from the `--cov-branch` flag and this project declares it in `pyproject.toml`.
+  And a hook test that touches the database must use the live item, never a
+  second `Config`: each config builds its own pytest-django database blocker, so
+  the outer one cannot give back what the inner one took, and the connection
+  stays shut through teardown.
+- **Run the suite against the floor before pushing anything that touches
+  `tests/`.** `uv lock --resolution lowest-direct --refresh` then
+  `uv sync --frozen --all-groups`; restore `uv.lock` from git afterwards,
+  because uv records the resolution mode inside it and a lock left that way
+  re-resolves every later sync. Both bugs above were invisible at the pinned
+  resolution and reproduced immediately at the floor.
 - **A test that asserts a query count must assert the count, never a duration.**
 - The ceiling is falsified at the real limit once, in
   `test_query_capture.py::test_the_ceiling_is_real`, and at a shrunken limit
