@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-02
+
 ### Added
 - N+1 detection by fingerprint. `NPlusOne` is a finding and `find_n_plus_one`
   produces them: more than one execution with the same normalised SQL *and* the
@@ -86,5 +88,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Artui/django-query-contract/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Artui/django-query-contract/compare/v0.0.0...v0.1.0
