@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-09-02
+
 ### Added
 - The capture engine. `QueryCapture` records every statement a Django connection
   executes through `connection.execute_wrapper()`, which is independent of
@@ -40,4 +42,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.0.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Artui/django-query-contract/compare/v0.0.0...v0.1.0
