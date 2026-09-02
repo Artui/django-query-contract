@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-09-02
+
 ### Notes
 - **The `ty` floor was raised to `0.0.32`, because the declared one was false.**
   `ty==0.0.1a10` cannot parse the `[tool.ty.environment]` table this repository
@@ -374,7 +376,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Artui/django-query-contract/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Artui/django-query-contract/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Artui/django-query-contract/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Artui/django-query-contract/compare/v0.2.0...v0.3.0
