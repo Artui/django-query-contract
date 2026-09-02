@@ -76,6 +76,72 @@ def test_a_failure_with_no_n_plus_one_says_that_too(authors: list[Author]) -> No
     assert "2 statement(s) were not repeated from any one call path." in report
 
 
+def test_statements_that_are_not_an_n_plus_one_still_name_their_lines(
+    authors: list[Author],
+) -> None:
+    """The hole this section had until call-site attribution existed.
+
+    A finding needs a repetition, so a capture named a call site only where one
+    rendered. That left the case this section exists for -- a count assertion
+    that failed with no N+1 in the capture at all -- printing a number of
+    unexplained statements and not one line of code to go and look at.
+    """
+    with QueryCapture(using="default") as capture:
+        list(Author.objects.all())
+        list(Book.objects.all())
+
+    report = format_capture_report(capture)
+    assert "2 statement(s) were not repeated from any one call path. They came from:" in report
+    assert report.count("1 x  from ") == 2
+    assert "test_format_capture_report.py:" in report
+
+
+def test_the_statements_a_finding_explains_are_not_attributed_twice(
+    authors: list[Author],
+) -> None:
+    """The finding named their call site three lines higher up.
+
+    Repeating them under the attribution would double the count a reader adds
+    up, and the counts adding up is the property this whole section is built
+    around.
+    """
+    with QueryCapture(using="default") as capture:
+        for author in Author.objects.all():
+            list(author.books.all())
+
+    report = format_capture_report(capture)
+    assert "3 x  from " in report
+    assert "1 statement(s) were not repeated from any one call path. They came from:" in report
+    assert report.count("x  from ") == 2
+
+
+def test_only_the_busiest_lines_are_attributed(authors: list[Author]) -> None:
+    with QueryCapture(using="default") as capture:
+        list(Author.objects.filter(pk=1))
+        list(Author.objects.filter(pk=2))
+        list(Author.objects.filter(pk=3))
+
+    report = format_capture_report(capture, max_call_sites=1)
+    assert report.count("x  from ") == 1
+    assert "and 2 more call site(s)." in report
+
+
+def test_a_statement_whose_window_never_left_django_is_attributed_to_nothing(
+    authors: list[Author],
+) -> None:
+    """Counted and addressed as unaddressable, rather than quietly dropped.
+
+    Depth one keeps the innermost frame, which is Django's own. The statement
+    still happened and still has to appear in a total this reader is adding up.
+    """
+    with QueryCapture(using="default", stack_depth=1) as capture:
+        list(Author.objects.filter(pk=1))
+
+    report = format_capture_report(capture)
+    assert "1 statement(s) were not repeated from any one call path. They came from:" in report
+    assert "  1 x  from no frame outside Django (an empty stack, or a window" in report
+
+
 def test_the_same_statement_from_two_lines_is_two_findings(authors: list[Author]) -> None:
     """The section reports each call path separately, because each is a fix."""
     with QueryCapture(using="default") as capture:

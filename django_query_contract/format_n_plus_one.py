@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import os
-
 from django_query_contract.n_plus_one import NPlusOne
+from django_query_contract.utils import relative_to_cwd, shorten
 
 # How many query indices to name before eliding. Eight is enough to see that the
 # executions are consecutive, which is what a reader checks; a hundred of them
@@ -36,7 +35,7 @@ def format_n_plus_one(finding: NPlusOne, *, max_sql: int = 160, label: str = "")
     """
     site = finding.call_site
     where = (
-        _relative(str(site))
+        relative_to_cwd(str(site))
         if site is not None
         # Everything kept was Django's own. Reported, with the reason, rather
         # than filled in with the innermost frame available: "it came from
@@ -54,7 +53,7 @@ def format_n_plus_one(finding: NPlusOne, *, max_sql: int = 160, label: str = "")
     lines = [f"  {finding.count} x  from {where}"]
     if label:
         lines.append(f"       in {label}")
-    lines.append(f"       {_shorten(finding.fingerprint, max_sql)}")
+    lines.append(f"       {shorten(finding.fingerprint, max_sql)}")
     lines.append(f"       queries {_indices(finding)}")
     if len(finding.aliases) > 1:
         # The identity is (fingerprint, stack) and deliberately says nothing
@@ -71,23 +70,3 @@ def _indices(finding: NPlusOne) -> str:
     if finding.count > _MAX_INDICES:
         named += ", ..."
     return named
-
-
-def _shorten(text: str, limit: int) -> str:
-    """Cut a statement to ``limit`` characters, saying that it was cut."""
-    if len(text) <= limit:
-        return text
-    return text[:limit] + " ... (truncated)"
-
-
-def _relative(site: str) -> str:
-    """Shorten a call site to a path relative to the working directory when it is under it.
-
-    Only when it is under it: ``os.path.relpath`` will happily walk out of the
-    tree with a row of ``..`` segments, which is longer than the absolute path
-    and harder to read.
-    """
-    root = os.getcwd() + os.sep
-    if site.startswith(root):
-        return site[len(root) :]
-    return site

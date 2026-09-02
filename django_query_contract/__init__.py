@@ -1,12 +1,15 @@
 """A query-capture engine for Django, and a pytest plugin over it."""
 
 from django_query_contract.assert_query_growth import assert_query_growth
+from django_query_contract.attribution import Attribution
 from django_query_contract.capture_stack import capture_stack
 from django_query_contract.find_n_plus_one import find_n_plus_one
+from django_query_contract.format_attributions import format_attributions
 from django_query_contract.format_capture_report import format_capture_report
 from django_query_contract.format_n_plus_one import format_n_plus_one
 from django_query_contract.format_n_plus_one_summary import format_n_plus_one_summary
 from django_query_contract.format_query_growth import format_query_growth
+from django_query_contract.group_by_call_site import group_by_call_site
 from django_query_contract.growth import Growth
 from django_query_contract.growth_point import GrowthPoint
 from django_query_contract.log_ceiling import LogCeiling
@@ -21,6 +24,7 @@ from django_query_contract.stack_frame import StackFrame
 from django_query_contract.version import __version__
 
 __all__ = [
+    "Attribution",
     "Growth",
     "GrowthPoint",
     "LogCeiling",
@@ -34,10 +38,12 @@ __all__ = [
     "assert_query_growth",
     "capture_stack",
     "find_n_plus_one",
+    "format_attributions",
     "format_capture_report",
     "format_n_plus_one",
     "format_n_plus_one_summary",
     "format_query_growth",
+    "group_by_call_site",
     "measure_query_growth",
     "normalise_sql",
 ]

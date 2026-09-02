@@ -10,6 +10,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] — 2026-09-02
 
 ### Added
+- Call-site attribution as a public surface. `group_by_call_site` reads a
+  capture back as the lines its statements came from -- "these forty statements
+  came from these three lines" -- and `Attribution` is one such line with every
+  statement that entered the database from it: its `count`, the distinct
+  statement shapes it emitted, and the connections it ran on. The per-statement
+  half of the same question, `QueryRecord.call_site`, has been there since the
+  first release; what was missing was the ability to ask it of a whole capture.
+- **A finding needs a repetition, so until now a capture named a call site only
+  where an N+1 rendered one.** The section under a failed query-count assertion
+  now attributes the statements no finding accounted for, which is exactly the
+  case that section exists for: a count assertion that failed with no N+1 in the
+  capture at all used to print a number of unexplained statements and not one
+  line of code to go and look at. A growth failure renders the same section
+  under its curve, so it gained the same lines.
+- **Grouping by call site merges call paths that `find_n_plus_one` deliberately
+  keeps apart, and that is the one thing here worth being careful about.** Two
+  callers of one `get_books()` helper are two findings, because the identity of
+  a defect is the whole call stack and the helper's own line is the one line
+  that is fine. They are one attribution, because that line is genuinely where
+  the statements were emitted. Both are true, and the merge is allowed only
+  because an attribution claims nothing about defects: a group of forty is not a
+  finding of forty, it is forty statements and an address. So the frame rule
+  stays on the display side and out of every identity -- a rule about which
+  frames matter is a knob, and a knob in a detector's identity is how the four
+  dead ones came to cry wolf. One test runs a single capture through both
+  readings and pins that they disagree.
+- Every record lands in exactly one group, including the ones with no call site.
+  A capture with no stacks, or a window too small to reach out of the ORM, gets
+  the group whose `call_site` is `None` rather than being dropped, so the
+  statements in a capture and the statements in its attribution always add up. A
+  grouping that quietly lost what it could not place would be the silently
+  incomplete measurement this package exists to complain about, and it would be
+  silent about the statements a reader has no other way to see.
+- `format_attributions`, which renders the blocks and no heading, because the
+  caller is what knows why it is printing them; and `max_call_sites` on
+  `format_capture_report`.
+- `docs/attribution.md`, carrying the positioning against `django-sqlcommenter`
+  -- the same question answered from the other end, by annotating the SQL so a
+  `callsite=` tag reaches `pg_stat_activity` and the slow-query log. That is a
+  production reader: at test time there is no database log to read, the answer
+  has to arrive as a Python object, and a comment travels with one statement, so
+  "these forty came from these three lines" is not a question that shape can be
+  asked. The two do not overlap.
 - The growth assertion. `assert_query_growth` runs one block against worlds of
   several sizes and asserts the query count kept its shape -- `O(1)` by
   default, and `Growth.LINEAR` for genuine bulk work. It is the claim a fixed
@@ -56,6 +99,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/growth.md`.
 
 ### Changed
+- `relative_to_cwd` and `shorten` moved into `utils.py` from
+  `format_n_plus_one`, so the two renderings of a call site cannot spell one
+  path, or one `max_sql`, two different ways. Both are internal.
+- There is deliberately **no run-wide listing of call sites** to match
+  `--n-plus-one`, and the reason is memory. A call site's group *is* its
+  records, so gathering them across a session would re-create the retention bug
+  0.2.0 fixed: 64 MiB across twelve hundred tests. A run-wide profile of query
+  counts per line belongs to the reporting face, which can aggregate to counts
+  and drop the records.
 - Fewer than two scale factors, a repeated factor and a descending list are all
   refused with a stated reason. One factor is refused because it would make this
   a count assertion, and `django_assert_num_queries` is the count assertion --

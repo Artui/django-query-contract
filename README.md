@@ -48,7 +48,11 @@ N+1 -- one statement shape, executed more than once from one call path:
   11 x  from shop/views.py:16 in render_author_list
        SELECT "shop_book"."id", "shop_book"."author_id", "shop_book"."title" FROM "shop_book" WHERE "shop_book"."author_id" = %s
        queries #1, #2, #3, #4, #5, #6, #7, #8, ...
-  2 statement(s) were not repeated from any one call path.
+  2 statement(s) were not repeated from any one call path. They came from:
+  1 x  from shop/views.py:15 in render_author_list
+       SELECT "shop_author"."id", "shop_author"."name" FROM "shop_author"
+  1 x  from shop/middleware.py:12 in __call__
+       SELECT "django_session"."session_key" FROM "django_session" WHERE ...
 ```
 
 ## N+1 by construction, with nothing to tune
@@ -165,6 +169,54 @@ Full detail, including the one remaining way to make it flaky and the `warm_up`
 that fixes it, is in
 [Growth assertions](https://artui.github.io/django-query-contract/growth/).
 
+## Where every query came from
+
+A finding needs a repetition, so before this a capture named a call site only
+where an N+1 rendered one. **Every statement has an answer**, repeated or not:
+
+```python
+from django_query_contract import QueryCapture, group_by_call_site
+
+with QueryCapture() as capture:
+    render_author_list()
+
+for attribution in group_by_call_site(capture):
+    print(attribution.count, attribution.call_site)
+```
+
+```text
+40 shop/views.py:31 in author_list
+ 3 shop/serializers.py:88 in to_representation
+ 1 shop/middleware.py:12 in __call__
+```
+
+The call site is the innermost frame outside Django, and that is the whole rule.
+It needs no project root and no depth setting, and when the stack reaches no
+such frame the answer is `None` rather than a guess -- "it came from
+`django/db/models/query.py`" is true of every query ever executed.
+
+**Grouping by call site merges what a finding keeps apart, on purpose.** Two
+callers of one `get_books()` helper are two findings, because the identity of a
+defect is the whole call stack and the helper's line is the one line that is
+fine. They are one *attribution*, because that line is genuinely where the
+statements were emitted. Both are true, and attribution is allowed the merge
+only because it claims nothing about defects: a group of forty is not a finding
+of forty, it is forty statements and an address.
+
+That is also why the frame rule stays on the display side and out of every
+identity -- a rule about which frames matter is a knob, and a knob in a
+detector's identity is how the four dead ones came to cry wolf.
+
+[`django-sqlcommenter`](https://pypi.org/project/django-sqlcommenter/) answers
+the same question from the other end, by annotating the SQL so a `callsite=` tag
+reaches `pg_stat_activity` and the slow-query log. That is a production reader
+and a different delivery: at test time there is no database log to read, the
+answer has to arrive as a Python object, and the statement should not have to
+change to carry it. Running both is reasonable.
+
+Full detail, including why there is no run-wide listing, is in
+[Call-site attribution](https://artui.github.io/django-query-contract/attribution/).
+
 ## The ceiling nobody mentions
 
 `assertNumQueries` and `django_assert_num_queries` both count through
@@ -236,8 +288,8 @@ widens the window the N+1 identity is formed from -- see
 ## Status
 
 Early. The capture engine, the pytest diagnosis, N+1 by
-(call stack, fingerprint), and the growth assertion. Call-site attribution as a
-public surface and plan capture come next.
+(call stack, fingerprint), the growth assertion, and call-site attribution. Plan
+capture and index advice come next.
 
 Full documentation: <https://artui.github.io/django-query-contract/>
 

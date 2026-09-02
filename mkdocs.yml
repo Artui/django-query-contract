@@ -72,4 +72,5 @@ nav:
   - Home: index.md
   - N+1 detection: n-plus-one.md
   - Growth assertions: growth.md
+  - Call-site attribution: attribution.md
   - API reference: reference.md

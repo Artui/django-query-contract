@@ -15,8 +15,10 @@ class QueryRecord:
     This is the artifact the whole package is built around, and it is public and
     documented from the first release on purpose: four separate faces read it --
     the pytest plugin, a CI report, call-site attribution and a runtime budget
-    middleware -- and three of them are not written yet. A record kept private
+    middleware -- and two of them are still unwritten. A record kept private
     until they are would grow a private accessor per face instead of a shape.
+    Attribution is the evidence that the bet paid: it reads this record and
+    needed no field added to it.
 
     The contract in ``0.x`` is additive: fields may be added, never removed and
     never given a new meaning. It is frozen at ``1.0``.

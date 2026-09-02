@@ -148,12 +148,22 @@ N+1 -- one statement shape, executed more than once from one call path:
   11 x  from shop/views.py:16 in render_author_list
        SELECT "shop_book"."id", "shop_book"."author_id" FROM "shop_book" WHERE ...
        queries #1, #2, #3, #4, #5, #6, #7, #8, ...
-  2 statement(s) were not repeated from any one call path.
+  2 statement(s) were not repeated from any one call path. They came from:
+  1 x  from shop/views.py:15 in render_author_list
+       SELECT "shop_author"."id", "shop_author"."name" FROM "shop_author"
+  1 x  from shop/middleware.py:12 in __call__
+       SELECT "django_session"."session_key" FROM "django_session" WHERE ...
 ```
 
 The counts add up to the number of statements captured, on purpose. A report
 that lists the interesting queries and stays quiet about the rest invites a
 reader to assume the rest were fine.
+
+The statements no finding accounts for are attributed to the lines that ran
+them, so every statement in the section has an address whether it repeated or
+not. That grouping merges call paths a finding keeps apart, deliberately and
+only because it claims nothing about defects -- see
+[call-site attribution](attribution.md#attribution-is-not-identity).
 
 When nothing repeated, it says so -- which under a failed count assertion is
 worth knowing, because it means the fix is not a prefetch.
