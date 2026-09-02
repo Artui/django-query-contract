@@ -56,6 +56,19 @@ _STATISTICS = (
     "WHERE relname = ANY(%s) AND last_analyze IS NULL AND last_autoanalyze IS NULL"
 )
 
+# The indexes each relation already has, as the statements PostgreSQL would
+# write to create them. ``pg_get_indexdef`` rather than a join onto the columns
+# because the server renders an expression index, a partial index and a
+# non-default operator class correctly and this package would have to learn all
+# three -- and because the only CREATE INDEX statements it is willing to print
+# are the ones that already exist, so they may as well be in the server's own
+# words. See ``format_relation_access``.
+_INDEXES = (
+    "SELECT c.relname, pg_get_indexdef(x.indexrelid) "
+    "FROM pg_index x JOIN pg_class c ON c.oid = x.indrelid "
+    "WHERE c.relname = ANY(%s) ORDER BY 1, 2"
+)
+
 
 class PlanCapture(QueryCapture):
     """A :class:`~django_query_contract.QueryCapture` that also asks for the plan.
@@ -129,6 +142,7 @@ class PlanCapture(QueryCapture):
         self._analyze = analyze
         self._relations: dict[str, tuple[Any, set[str]]] = {}
         self._unanalyzed: tuple[str, ...] = ()
+        self._indexes: dict[str, tuple[str, ...]] = {}
 
     @property
     def analyze(self) -> bool:
@@ -156,6 +170,7 @@ class PlanCapture(QueryCapture):
             raise PlansUnsupported(refusal)
         self._relations = {}
         self._unanalyzed = ()
+        self._indexes = {}
         super().__enter__()
         return self
 
@@ -163,6 +178,7 @@ class PlanCapture(QueryCapture):
         """Stop capturing, then ask the catalogue whether these plans meant anything."""
         super().__exit__(exc_type, exc, traceback)
         self._unanalyzed = self._read_statistics()
+        self._indexes = self._read_indexes()
 
     @property
     def unanalyzed_relations(self) -> tuple[str, ...]:
@@ -186,6 +202,33 @@ class PlanCapture(QueryCapture):
         no plans.
         """
         return self._unanalyzed
+
+    @property
+    def relation_indexes(self) -> dict[str, tuple[str, ...]]:
+        """The indexes each relation in these plans already has, in PostgreSQL's own words.
+
+        Keyed by relation name, holding the ``CREATE INDEX`` statements the
+        server would write to build them -- ``pg_get_indexdef``, unedited, so an
+        expression index, a partial index and a non-default operator class all
+        come out right without this package learning any of the three.
+
+        **The one place index advice touched something real, and it is the half
+        that is a fact.** The milestone this was written for wanted to emit the
+        ``CREATE INDEX`` statements a capture implies; that turned out to need a
+        threshold and a SQL parser, and was declined -- see
+        :class:`~django_query_contract.RelationAccess`. What survives is
+        printing the statements that already exist beside the filters that were
+        applied, so a reader can see which predicate nothing covers and decide
+        for themselves.
+
+        A relation is absent rather than empty when the catalogue said nothing
+        about it, because an empty tuple would claim a table has no indexes and
+        that is false for anything with a primary key.
+
+        Empty before the block has finished, and empty on any capture that took
+        no plans.
+        """
+        return dict(self._indexes)
 
     def _plan_for(self, connection: Any, sql: str, params: Any, many: bool) -> QueryPlan:
         """The hook :class:`~django_query_contract.QueryCapture` calls per statement."""
@@ -249,14 +292,33 @@ class PlanCapture(QueryCapture):
         return QueryPlan.from_explain(payload, analyzed=self._analyze)
 
     def _read_statistics(self) -> tuple[str, ...]:
-        """Ask each connection which of the relations it planned over it has never analyzed.
+        """Ask each connection which of the relations it planned over it has never analyzed."""
+        return tuple(sorted({row[0] for row in self._ask_catalogue(_STATISTICS)}))
 
-        One statement per connection that produced a plan, at the end of the
-        block rather than per statement, and on the driver cursor for the reason
-        the ``EXPLAIN`` is: a diagnostic that inflated ``queries_log`` would
-        change the count the assertion it is diagnosing reads.
+    def _read_indexes(self) -> dict[str, tuple[str, ...]]:
+        """Ask each connection what already indexes the relations it planned over.
+
+        Grouped in the order the statement returned, which it sorts, so two runs
+        over one capture print a relation's indexes in the same order.
         """
-        unanalyzed: set[str] = set()
+        found: dict[str, list[str]] = {}
+        for relation, definition in self._ask_catalogue(_INDEXES):
+            found.setdefault(relation, []).append(definition)
+        return {relation: tuple(definitions) for relation, definitions in found.items()}
+
+    def _ask_catalogue(self, statement: str) -> Iterator[tuple[Any, ...]]:
+        """Put one catalogue question to every connection that produced a plan.
+
+        One statement per connection, at the end of the block rather than per
+        statement, and on the driver cursor for the reason the ``EXPLAIN`` is: a
+        diagnostic that inflated ``queries_log`` would change the count the
+        assertion it is diagnosing reads.
+
+        Shared by both questions rather than written twice. They differ only in
+        the SQL, and a second copy of the loop is where the two would come to
+        disagree about which connections get asked -- silently, because both
+        would still return something.
+        """
         for connection, relations in self._relations.values():
             driver = connection.connection
             if driver is None:
@@ -266,11 +328,10 @@ class PlanCapture(QueryCapture):
                 continue
             cursor = driver.cursor()
             try:
-                cursor.execute(_STATISTICS, [sorted(relations)])
-                unanalyzed.update(row[0] for row in cursor.fetchall())
+                cursor.execute(statement, [sorted(relations)])
+                yield from cursor.fetchall()
             finally:
                 cursor.close()
-        return tuple(sorted(unanalyzed))
 
 
 def _vendor_refusal(vendors: Iterator[tuple[str, str]]) -> str | None:

@@ -11,7 +11,9 @@ from django_query_contract.format_n_plus_one import format_n_plus_one
 from django_query_contract.format_n_plus_one_summary import format_n_plus_one_summary
 from django_query_contract.format_query_growth import format_query_growth
 from django_query_contract.format_query_plans import format_query_plans
+from django_query_contract.format_relation_access import format_relation_access
 from django_query_contract.group_by_call_site import group_by_call_site
+from django_query_contract.group_by_relation import group_by_relation
 from django_query_contract.growth import Growth
 from django_query_contract.growth_point import GrowthPoint
 from django_query_contract.log_ceiling import LogCeiling
@@ -28,6 +30,7 @@ from django_query_contract.query_growth import QueryGrowth
 from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarning
 from django_query_contract.query_plan import QueryPlan
 from django_query_contract.query_record import QueryRecord
+from django_query_contract.relation_access import RelationAccess
 from django_query_contract.stack_frame import StackFrame
 from django_query_contract.version import __version__
 
@@ -47,6 +50,7 @@ __all__ = [
     "QueryLogCeilingWarning",
     "QueryPlan",
     "QueryRecord",
+    "RelationAccess",
     "StackFrame",
     "__version__",
     "assert_query_growth",
@@ -59,7 +63,9 @@ __all__ = [
     "format_n_plus_one_summary",
     "format_query_growth",
     "format_query_plans",
+    "format_relation_access",
     "group_by_call_site",
+    "group_by_relation",
     "measure_query_growth",
     "normalise_sql",
 ]

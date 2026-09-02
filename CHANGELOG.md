@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Index advice was the milestone and it is declined, in writing.** The plan
+  this package came from said the output people actually want is "these twelve
+  queries sequentially scanned a two-million-row table, here are the
+  `CREATE INDEX` statements", and that it falls straight out of having plans plus
+  call sites. It does not. Three routes to an assertable version were tried
+  against a real server and all three ended in a threshold, which is the knob
+  this package refuses everywhere else.
+- **The near miss is worth recording, because it reads threshold-free and is
+  not.** "A sequential scan on a relation that another captured statement
+  reaches by index" looks like a comparison between two measurements rather than
+  a cut-off. Two statements filtering *different columns* of one table are not
+  measuring the same thing: measured against a server, one statement reached
+  `testapp_order` through the foreign key index while another read it end to end
+  for a predicate that kept all 100,000 of its rows -- the correct plan, and the
+  one no index improves. Both halves of the rule hold and the index it names
+  could not have helped. `Rows Removed by Filter` failed for the plainer reason:
+  the server supplies the number and nobody supplies the verdict, so a five-row
+  table discards four rows in the same shape a hundred-thousand-row table
+  discards 99,999. Both refutations are tests, run rather than argued.
+- **What ships instead is the evidence, with the judgement left to the reader.**
+  `RelationAccess`, `group_by_relation` and `format_relation_access` read a
+  capture back as the tables it touched: how PostgreSQL reached each one, the
+  predicate it applied, how many rows it said it threw away, the lines that
+  asked, and the indexes that already exist. It is a **grouping** and not a
+  detector, in the sense call-site attribution is one -- which is exactly what
+  makes it safe to put a sequential read of a table beside an indexed read of the
+  same table, where a finding would not be. The block is printed under
+  `format_query_plans`, so a failing test that used the `query_plans` fixture
+  gains it.
+- **The relations are ordered by how many times they were read and deliberately
+  not by rows discarded.** That second order is the one a reader would find most
+  useful, and is exactly why it is refused: ranking tables by how badly they want
+  an index is the declined judgement, and a sort key is a quiet way of making it
+  anyway. The test that pins this pulls the two orders apart, because a fixture
+  where they agree passes either way -- and the first one written did.
+- **Fixed: a plan node retained the value bound to the statement.** `EXPLAIN`
+  renders a predicate with the parameter substituted, so a real server writes
+  `Filter: ((reference)::text = '601980.6826913885'::text)` for a query bound
+  with `%s`, and `PlanNode.condition` kept that string verbatim. This package
+  retains no parameters anywhere else, and the sentence it prints when it
+  declines to quote a driver error says so to the reader. `condition` is now put
+  through the same `normalise_sql` rules the statement fingerprint is made with:
+  the column, the operator and the casts survive and the value becomes `%s`.
+  **This changes what the field holds**, one release after it shipped, and it is
+  the right way round -- the field's documented purpose never included the
+  values. The redaction is also what makes the predicate groupable: with the
+  value in it, one statement shape run with twelve parameters is twelve
+  conditions and no report could say the twelve executions did the same thing.
+- **`PlanNode.indexes_used` walks, because PostgreSQL splits a bitmap read
+  across nodes.** The `Bitmap Heap Scan` names the table and carries no index at
+  all, while the `Bitmap Index Scan` beneath it names the index and no table; put
+  a `BitmapAnd` between them and the index is two levels down. Reading the node
+  alone would report a table PostgreSQL reached through two indexes as one it
+  read end to end, which is the single worst thing this report could say. The
+  walk stops at the next node naming a relation, because that is a different read
+  of a different table. Both shapes are pinned by a real server's payload.
+- **`PlanCapture.relation_indexes` asks the catalogue what already indexes the
+  tables a capture planned over**, on the driver cursor beside the statistics
+  question that was already there, so a diagnostic still cannot inflate the count
+  `django_assert_num_queries` reads. The definitions come from
+  `pg_get_indexdef` unedited, so an expression index, a partial index and a
+  non-default operator class all come out right without this package learning any
+  of the three -- and they are the only `CREATE INDEX` statements it prints: the
+  ones that exist, beside the filter nothing covers.
+
 ## [0.5.0] — 2026-09-02
 
 - Plan capture, and it is the milestone the dependency on
