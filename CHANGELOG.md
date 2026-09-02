@@ -7,9 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.0] — 2026-09-02
-
-### Added
 - Call-site attribution as a public surface. `group_by_call_site` reads a
   capture back as the lines its statements came from -- "these forty statements
   came from these three lines" -- and `Attribution` is one such line with every
@@ -53,6 +50,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   has to arrive as a Python object, and a comment travels with one statement, so
   "these forty came from these three lines" is not a question that shape can be
   asked. The two do not overlap.
+- `relative_to_cwd` and `shorten` moved into `utils.py` from
+  `format_n_plus_one`, so the two renderings of a call site cannot spell one
+  path, or one `max_sql`, two different ways. Both are internal.
+- There is deliberately **no run-wide listing of call sites** to match
+  `--n-plus-one`, and the reason is memory. A call site's group *is* its
+  records, so gathering them across a session would re-create the retention bug
+  0.2.0 fixed: 64 MiB across twelve hundred tests. A run-wide profile of query
+  counts per line belongs to the reporting face, which can aggregate to counts
+  and drop the records.
+
+## [0.3.0] — 2026-09-02
+
+### Added
 - The growth assertion. `assert_query_growth` runs one block against worlds of
   several sizes and asserts the query count kept its shape -- `O(1)` by
   default, and `Growth.LINEAR` for genuine bulk work. It is the claim a fixed
@@ -99,15 +109,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/growth.md`.
 
 ### Changed
-- `relative_to_cwd` and `shorten` moved into `utils.py` from
-  `format_n_plus_one`, so the two renderings of a call site cannot spell one
-  path, or one `max_sql`, two different ways. Both are internal.
-- There is deliberately **no run-wide listing of call sites** to match
-  `--n-plus-one`, and the reason is memory. A call site's group *is* its
-  records, so gathering them across a session would re-create the retention bug
-  0.2.0 fixed: 64 MiB across twelve hundred tests. A run-wide profile of query
-  counts per line belongs to the reporting face, which can aggregate to counts
-  and drop the records.
 - Fewer than two scale factors, a repeated factor and a descending list are all
   refused with a stated reason. One factor is refused because it would make this
   a count assertion, and `django_assert_num_queries` is the count assertion --
