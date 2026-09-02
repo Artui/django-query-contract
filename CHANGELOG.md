@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-02
+
 - Call-site attribution as a public surface. `group_by_call_site` reads a
   capture back as the lines its statements came from -- "these forty statements
   came from these three lines" -- and `Attribution` is one such line with every
@@ -199,7 +201,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Artui/django-query-contract/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Artui/django-query-contract/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Artui/django-query-contract/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Artui/django-query-contract/compare/v0.0.0...v0.1.0
