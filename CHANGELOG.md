@@ -7,6 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Plan capture, and it is the milestone the dependency on
+  [django-data-shape](https://github.com/Artui/django-data-shape) existed for.
+  `PlanCapture` runs `EXPLAIN (ANALYZE, BUFFERS, TIMING OFF, FORMAT JSON)` on
+  every captured statement that begins with `SELECT` and hangs the result off
+  `QueryRecord.plan`, so a plan travels with the statement it belongs to and with
+  the call stack that emitted it. `QueryPlan`, `PlanNode`, `PlanDefect`,
+  `PlanFinding`, `find_plan_defects`, `format_query_plans` and `PlansUnsupported`
+  are the rest of the surface, and the `query_plans` fixture is the pytest face.
+- **The plan is taken at execution time because it has to be.** This package
+  retains no parameters, so a plan cannot be taken after the fact from a record
+  -- which was written into `QueryRecord` in the first release, before the plan
+  face existed. `QueryRecord.plan` is the first field added under the additive
+  `0.x` contract, and adding it changes nothing for a reader that does not want
+  it.
+- **Two findings ship, and there are two because only two can be stated without
+  a threshold.** `PLANNER_BLIND` is two or more executions of one statement shape
+  whose plans agree exactly on the row count and whose measured rows do not --
+  `==` and `!=`, with no magnitude anywhere in it. Measured against a Zipf
+  fan-out of 400,000 rows over 20,000 parents: joined through the parent rather
+  than through the foreign key column, a whale and a tail row are both estimated
+  at **20** rows against actuals of **20,323** and **6**, because across a join
+  PostgreSQL has only `n_distinct` for the edge and an average is the one number
+  that is wrong at both ends of a skew. `SPILLED_TO_DISK` is PostgreSQL saying
+  `work_mem` was not enough -- a sort's `Sort Space Type: Disk`, more than one
+  hash batch, a hash aggregate's disk usage -- so its threshold belongs to the
+  database under test rather than to this package.
+- **The estimate-versus-actual ratio is reported on every node and classified
+  nowhere**, and that is the design rather than an omission. "The planner
+  expected 20 rows and 20,323 arrived" is a fact about a plan; "more than fifty
+  times out is a defect" is a policy about size, and a policy about size is the
+  knob this package refuses everywhere else. The report orders nodes by it and
+  prints the caveat beside them, because the commonest large ratio has no defect
+  under it at all -- a node under a `LIMIT` stops early by design. The two
+  candidate findings that needed a number, a sequential scan over a row threshold
+  and a nested loop with a large inner, are declined in writing.
+- **One measurement cannot make a blindness claim**, which is the same rule the
+  growth assertion keeps from the other side: a claim about a shape needs two
+  points. A growth claim needs two worlds; a blindness claim needs two
+  executions. Its identity is also the statement shape and deliberately **not**
+  the call stack, the opposite of the N+1 identity -- because a finding is keyed
+  on what the accused can see, and the planner is handed SQL and never hears
+  about the stack.
+- **It refuses rather than degrading, on a backend with no planner.**
+  `PlanCapture` raises `PlansUnsupported` on entry, before a statement has run,
+  and the `query_plans` fixture turns that into a skip carrying the same
+  sentence. Every other degradation here reports and carries on, because those
+  are still measurements; an empty plan capture is indistinguishable from a
+  healthy one, so an assertion over it would pass because the backend could not
+  check it. The decision is made from the connection's `vendor` string, which is
+  what keeps this repository's coverage gate on the SQLite matrix.
+- **A plan over ten rows is a lie, and a vendor check cannot see that half.** A
+  capture asks the catalogue once, at the end of the block, which of the
+  relations it planned over PostgreSQL has never gathered statistics for, and
+  `format_query_plans` says so above everything else because it invalidates
+  everything else. It deliberately says nothing about whether the tables are big
+  *enough*: "ten rows is too few" is a number.
+- **`TIMING OFF` is this package's thesis said to PostgreSQL**, not a cost
+  optimisation that happens to agree with it. A per-node duration would be a
+  field inviting an assertion about milliseconds, and the argument here is that
+  such an assertion is a flaky test with extra steps. What it costs is measured
+  rather than estimated: against PostgreSQL 16 on a shaped 400,000-row world, a
+  two-statement block took 8.9 ms alone and 14.8 ms with plan capture, about
+  1.7x, which is what running each statement twice buys. `analyze=False` was
+  1.02x and can produce no finding at all, so `ANALYZE` is the default and the
+  report says when it was not used.
+- **Only a statement beginning with `SELECT` is explained, because
+  `EXPLAIN ANALYZE` executes what it is given.** The rule is "begins with
+  SELECT" rather than "does not begin with INSERT" because a data-modifying CTE
+  is written `WITH ... INSERT` and does not announce itself in its first word.
+  Everything skipped carries a `QueryPlan` whose `refusal` says why, so "nobody
+  asked for plans" and "we declined to explain this one" stay distinguishable,
+  and the report counts them.
+- **Two things plan capture must not do to a test, both tested against a real
+  server.** The `EXPLAIN` goes out on the driver connection *underneath* Django's
+  cursor rather than through it, so neither it nor the savepoints around it reach
+  `connection.queries_log` -- which is what `django_assert_num_queries` counts
+  through, and the obvious implementation would have inflated every count in a
+  suite that turned this on. And it runs under a savepoint, so a statement
+  PostgreSQL declines to explain costs a plan rather than the transaction; there
+  is a test for the savepoint holding and a test for removing it poisoning the
+  transaction.
+- A `postgres` CI job, because everything above is covered on SQLite by passing a
+  vendor string or a real server's checked-in payload, and both of those agree
+  with whatever this repository believes PostgreSQL does. The job runs the same
+  entry points against a real one over a database shaped by `django-data-shape`,
+  asserts that every key the parser reads is a key the server still writes, and
+  fails if the plan tests skipped rather than ran. It carries no coverage gate;
+  one gate, on the SQLite matrix, is still the design.
+- `query_plan_connections`, a fixture to override where a project's second
+  database is not PostgreSQL. `PlanCapture()` requires *every* configured
+  connection to be one, because a capture that quietly skipped the connection it
+  could not explain would be the silent gap it exists to refuse -- and without a
+  way to name the one you meant, that rule would skip every plan test in a
+  project with a SQLite cache.
+- `docs/plans.md`, and the index advice this milestone deliberately does not
+  build: each node keeps its relation, its filter and the rows that filter threw
+  away, beside the call stack that emitted the statement, which is what an advisor
+  needs.
+
 ## [0.4.0] — 2026-09-02
 
 - Call-site attribution as a public surface. `group_by_call_site` reads a

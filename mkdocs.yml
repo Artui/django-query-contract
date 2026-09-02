@@ -73,4 +73,5 @@ nav:
   - N+1 detection: n-plus-one.md
   - Growth assertions: growth.md
   - Call-site attribution: attribution.md
+  - Plan capture: plans.md
   - API reference: reference.md

@@ -179,11 +179,10 @@ jobs:
         run: uv pip install --reinstall-package django "django~=${{ matrix.django-version }}.0"
       # The coverage gate rides on the default addopts and therefore on every
       # cell. There is no service container and no split matrix here on purpose:
-      # everything this package ships is backend-neutral, so SQLite reaches
-      # every line. When plan assertions arrive they will need PostgreSQL, and
-      # the rule that keeps the gate here rather than moving it is to branch
-      # their refusals on the connection's vendor -- a refusal coverable only on
-      # the backend it refuses is one the gating job cannot see.
+      # almost everything this package ships is backend-neutral, so SQLite
+      # reaches every line, and plan capture stays reachable because every
+      # refusal branches on the connection's vendor and every plan is parsed
+      # from a payload. The `postgres` job below is where those meet a server.
       - name: pytest
         run: uv run --no-sync pytest --cov-report=xml:coverage.xml --cov-report=html:htmlcov
       - name: Upload coverage artifact
@@ -195,6 +194,64 @@ jobs:
             coverage.xml
             htmlcov/
           if-no-files-found: ignore
+
+  postgres:
+    # The one thing the matrix above cannot prove. Everything about plan capture
+    # is covered there by passing a vendor string or a payload, which is what
+    # keeps the coverage gate on SQLite -- but a refusal decided from a string
+    # and a parser fed a checked-in payload both agree with whatever this
+    # repository believes PostgreSQL does. This job is where that belief meets a
+    # server: it runs the same entry points against a real one, over a database
+    # shaped by django-data-shape, and fails if a key the parser reads is not a
+    # key the server writes.
+    #
+    # Deliberately no coverage gate. One gate, on the matrix above, is the
+    # design; a second here would make a line's coverage depend on which job
+    # reached it.
+    name: postgres
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: django_query_contract
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      QUERY_CONTRACT_TEST_DATABASE: postgres
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: django_query_contract
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --all-groups
+      - name: pytest against PostgreSQL
+        run: uv run --no-sync pytest --cov-fail-under=0
+      # A skip here would be the failure this job exists to prevent: the plan
+      # module skips itself off PostgreSQL, so a misconfigured service container
+      # would turn the whole job green while testing nothing.
+      - name: Assert the plan tests actually ran
+        run: |
+          set -euo pipefail
+          uv run --no-sync pytest tests/test_plan_capture_postgres.py \
+            --cov-fail-under=0 -q --no-header | tee result.txt
+          if grep -q "skipped" result.txt; then
+            echo "The plan tests skipped, so this job proved nothing about PostgreSQL."
+            exit 1
+          fi
 
   coverage-badge:
     # Publishes a shields.io-compatible coverage.json to gh-pages so the README
@@ -343,7 +400,7 @@ jobs:
   tests-passed:
     name: tests
     if: always()
-    needs: [lint, docs, floor, test]
+    needs: [lint, docs, floor, test, postgres]
     runs-on: ubuntu-latest
     steps:
       - name: Verify required jobs succeeded

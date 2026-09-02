@@ -11,6 +11,7 @@ from django.db import connections
 from django_query_contract.capture_stack import capture_stack
 from django_query_contract.log_ceiling import LogCeiling
 from django_query_contract.normalise_sql import normalise_sql
+from django_query_contract.query_plan import QueryPlan
 from django_query_contract.query_record import QueryRecord
 from django_query_contract.utils import DEFAULT_STACK_DEPTH
 
@@ -73,7 +74,7 @@ class QueryCapture:
         # class of quiet wrongness this package exists to expose.
         self._records = []
         self._ceilings = ()
-        aliases = self._using if self._using is not None else tuple(connections)
+        aliases = self._aliases()
         entered: list[tuple[str, int, int | None]] = []
         self._wrappers = ExitStack()
         for alias in aliases:
@@ -94,6 +95,36 @@ class QueryCapture:
             )
             for alias, log_length, limit in self._entered
         )
+
+    def _aliases(self) -> tuple[str, ...]:
+        """The connections this capture covers: the ones named, or every configured one.
+
+        Here rather than inline in ``__enter__`` because
+        :class:`~django_query_contract.PlanCapture` has to answer "which
+        connections would you capture" *before* entering, to decide whether it
+        can capture at all. Two copies of that resolution would be two chances
+        for a refusal to be checked against a different set of connections from
+        the one that then gets wrapped.
+        """
+        return self._using if self._using is not None else tuple(connections)
+
+    def _plan_for(self, connection: Any, sql: str, params: Any, many: bool) -> QueryPlan | None:
+        """The plan for a statement about to run, or ``None`` when nobody asked for one.
+
+        The seam the plan face hangs on, and it is here rather than in a wrapper
+        of its own because there is exactly one moment when a statement and its
+        parameters are both in hand, and this is it. This package retains no
+        parameters, so a plan cannot be taken later from a record -- which was
+        written into :class:`~django_query_contract.QueryRecord` before the plan
+        face existed.
+
+        Returns ``None`` here, on every ordinary capture. Overridden by
+        :class:`~django_query_contract.PlanCapture`, which is the only
+        implementation and is expected to stay so: a hook with two subclasses
+        would be an extension point, and this is a seam between two of this
+        package's own faces.
+        """
+        return None
 
     def _record(self, execute: Any, sql: Any, params: Any, many: bool, context: Any) -> Any:
         """The ``execute_wrapper`` callable itself.
@@ -123,6 +154,7 @@ class QueryCapture:
                 param_count=param_count,
                 stack=stack,
                 stack_truncated=truncated,
+                plan=self._plan_for(connection, sql, params, many),
             )
         )
         return execute(sql, params, many, context)

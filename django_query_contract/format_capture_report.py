@@ -5,7 +5,9 @@ from __future__ import annotations
 from django_query_contract.find_n_plus_one import find_n_plus_one
 from django_query_contract.format_attributions import format_attributions
 from django_query_contract.format_n_plus_one import format_n_plus_one
+from django_query_contract.format_query_plans import format_query_plans
 from django_query_contract.group_by_call_site import group_by_call_site
+from django_query_contract.plan_capture import PlanCapture
 from django_query_contract.query_capture import QueryCapture
 
 
@@ -30,9 +32,15 @@ def format_capture_report(
     because nothing here fails a test on one. See
     :class:`~django_query_contract.NPlusOne`.
 
+    A :class:`~django_query_contract.PlanCapture` gains a fourth block underneath
+    all of it, describing what the planner did with the statements it explained.
+    An ordinary capture has no plans and prints none, so one function still
+    answers "what did this block do" whichever capture a caller is holding.
+
     Args:
         capture: A closed capture.
         max_findings: How many findings to list before summarising the rest.
+            Applied to N+1 findings and, separately, to plan findings.
         max_call_sites: How many lines to name when attributing the statements
             no finding accounted for.
         max_sql: Where to cut a long statement. The record keeps the whole thing.
@@ -55,7 +63,25 @@ def format_capture_report(
                 max_sql=max_sql,
             )
         )
+    lines.extend(_plan_lines(capture, max_findings=max_findings, max_sql=max_sql))
     return "\n".join(lines)
+
+
+def _plan_lines(capture: QueryCapture, *, max_findings: int, max_sql: int) -> list[str]:
+    """What the planner did, when the caller asked for plans at all.
+
+    An ``isinstance`` rather than a field on every capture, because taking plans
+    is a different bargain and not a mode: it is PostgreSQL-only, it refuses
+    rather than degrades, and it runs each read statement twice. A flag on
+    ``QueryCapture`` would put all of that behind a keyword argument on the
+    ordinary path, where the plugin sets one up around every test in the suite.
+    """
+    if not isinstance(capture, PlanCapture):
+        return []
+    plans = format_query_plans(capture, max_findings=max_findings, max_sql=max_sql)
+    if not plans:
+        return []
+    return ["", plans]
 
 
 def _ceiling_lines(capture: QueryCapture) -> list[str]:

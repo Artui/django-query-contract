@@ -240,6 +240,64 @@ Capture here rides on `execute_wrapper`, which has no bound, so this package
 raises a `QueryLogCeilingWarning` naming the test, the real count and the number
 the assertion was handed.
 
+## Plans, where a plan can mean something
+
+PostgreSQL only, and it **skips rather than passing** anywhere else.
+
+```python
+def test_the_dashboard(db, orders, query_plans):
+    dashboard()
+
+    assert not query_plans.unanalyzed_relations
+```
+
+`EXPLAIN (ANALYZE, BUFFERS, TIMING OFF, FORMAT JSON)` on every statement that
+begins with `SELECT`, taken at execution time because that is the one moment the
+statement and its parameters are both in hand. Two findings, and there are two
+because only two can be stated without a threshold:
+
+```text
+Plan findings -- what PostgreSQL's own output states:
+  planner blind  2 executions, one estimate of 20 rows, actuals 20,323, 6
+       SELECT "testapp_order"."id" FROM "testapp_order" INNER JOIN ...
+       from tests/test_dashboard.py:31 in whales, tests/test_dashboard.py:32 in tail
+       queries #0, #1
+  spilled to disk  Sort, external merge, 14,208 kB
+       SELECT "testapp_order"."id" FROM "testapp_order" ORDER BY ...
+       from tests/test_dashboard.py:44 in test_ordering
+       queries #4
+
+Where the planner was furthest out (reported, not judged -- a node under a
+LIMIT is meant to fall short):
+  1,016.1x  #0  Nested Loop: expected 20 rows, 20,323 arrived
+```
+
+**Planner blindness** is two executions of one statement shape whose plans agree
+exactly on the row count and whose measured rows do not: `==` and `!=`, and no
+magnitude anywhere. Measured on a Zipf fan-out of 400,000 rows over 20,000
+parents -- across a join PostgreSQL has only `n_distinct` for the edge, so a
+whale and a tail row both come out at 20 estimated rows against 20,323 and 6
+actual. **A spill** is PostgreSQL saying `work_mem` was not enough, so the
+threshold is the database's own.
+
+The estimate-versus-actual ratio is reported on every node and **classified
+nowhere**. "Expected 20 rows, 20,323 arrived" is a fact; "more than fifty times
+out is a defect" is a policy about size, and this package does not write those.
+The two candidate findings that needed one -- a sequential scan over a row
+threshold, a nested loop with a large inner -- were declined.
+
+A plan over ten rows is a lie, so a capture also asks the catalogue whether the
+tables it planned over have ever been analyzed, and says so before anything
+else. [django-data-shape](https://github.com/Artui/django-data-shape) is what
+builds a database worth taking a plan over.
+
+It costs about 1.7x the block's own time, because `EXPLAIN ANALYZE` runs the
+statement a second time. It does not change what `django_assert_num_queries`
+counts -- the `EXPLAIN` goes out under Django's cursor, not through it -- and a
+failing `EXPLAIN` costs a plan rather than your transaction, because it runs
+under a savepoint. See
+[plan capture](https://artui.github.io/django-query-contract/plans/).
+
 ## Reading the capture directly
 
 ```python
@@ -253,7 +311,8 @@ for fingerprint, records in capture.by_fingerprint().items():
 ```
 
 A `QueryRecord` carries the statement, its fingerprint, the connection alias and
-vendor, the parameter count and the call stack. It carries **no parameters** --
+vendor, the parameter count, the call stack, and -- where one was taken -- the
+plan. It carries **no parameters** --
 a `bulk_create` is one execution and ten thousand values, and a runtime reader
 of this capture has no business holding them -- and **no duration**, because a
 performance assertion that mentions milliseconds is a flaky test with extra
@@ -288,8 +347,8 @@ widens the window the N+1 identity is formed from -- see
 ## Status
 
 Early. The capture engine, the pytest diagnosis, N+1 by
-(call stack, fingerprint), the growth assertion, and call-site attribution. Plan
-capture and index advice come next.
+(call stack, fingerprint), the growth assertion, call-site attribution, and plan
+capture. Index advice comes next.
 
 Full documentation: <https://artui.github.io/django-query-contract/>
 
