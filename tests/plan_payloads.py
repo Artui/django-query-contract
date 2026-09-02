@@ -374,3 +374,200 @@ def tail_join() -> list[dict[str, Any]]:
     payload[0]["Plan"]["Plans"][1]["Actual Rows"] = 6
     payload[0]["Plan"]["Plans"][1]["Plans"][0]["Actual Rows"] = 6
     return payload
+
+
+UNINDEXED_SCAN: list[dict[str, Any]] = [
+    {
+        "Plan": {
+            "Node Type": "Seq Scan",
+            "Parallel Aware": False,
+            "Async Capable": False,
+            "Relation Name": "testapp_order",
+            "Alias": "testapp_order",
+            "Startup Cost": 0.0,
+            "Total Cost": 2090.0,
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Actual Rows": 1,
+            "Actual Loops": 1,
+            "Filter": "((reference)::text = '601980.6826913885'::text)",
+            "Rows Removed by Filter": 99999,
+            "Shared Hit Blocks": 840,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+        },
+        "Planning": {
+            "Shared Hit Blocks": 3,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+        },
+        "Planning Time": 0.015,
+        "Triggers": [],
+        "Execution Time": 5.37,
+    }
+]
+"""A table read end to end because nothing indexes the column being filtered.
+
+``SELECT id FROM testapp_order WHERE reference = <a reference>`` -- one row kept,
+99,999 discarded, and PostgreSQL is the one that counted them.
+
+Kept here because it is the payload the index-advice question was decided on,
+and the decision was to decline. The server supplies the number of rows it threw
+away; it does not supply the verdict that throwing them away was wrong. The
+identically shaped plan over a five-row table discards four, and only a magnitude
+separates the two. See :class:`~django_query_contract.RelationAccess`.
+
+Note also what the ``Filter`` carries: the bound value, spelled out. That is why
+:attr:`~django_query_contract.PlanNode.condition` normalises it away.
+"""
+
+BITMAP_AND: list[dict[str, Any]] = [
+    {
+        "Plan": {
+            "Node Type": "Bitmap Heap Scan",
+            "Parallel Aware": False,
+            "Async Capable": False,
+            "Relation Name": "testapp_order",
+            "Alias": "testapp_order",
+            "Startup Cost": 24.24,
+            "Total Cost": 64.68,
+            "Plan Rows": 11,
+            "Plan Width": 8,
+            "Actual Rows": 10,
+            "Actual Loops": 1,
+            "Recheck Cond": "((mod(id, '100'::bigint) = 5) AND (mod(id, '97'::bigint) = 3))",
+            "Rows Removed by Index Recheck": 0,
+            "Exact Heap Blocks": 10,
+            "Lossy Heap Blocks": 0,
+            "Shared Hit Blocks": 13,
+            "Shared Read Blocks": 6,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+                {
+                    "Node Type": "BitmapAnd",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": False,
+                    "Async Capable": False,
+                    "Startup Cost": 24.24,
+                    "Total Cost": 24.24,
+                    "Plan Rows": 11,
+                    "Plan Width": 0,
+                    "Actual Rows": 0,
+                    "Actual Loops": 1,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 6,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                        {
+                            "Node Type": "Bitmap Index Scan",
+                            "Parent Relationship": "Member",
+                            "Parallel Aware": False,
+                            "Async Capable": False,
+                            "Index Name": "dump_mod_100",
+                            "Startup Cost": 0.0,
+                            "Total Cost": 11.52,
+                            "Plan Rows": 963,
+                            "Plan Width": 0,
+                            "Actual Rows": 1000,
+                            "Actual Loops": 1,
+                            "Index Cond": "(mod(id, '100'::bigint) = 5)",
+                            "Shared Hit Blocks": 3,
+                            "Shared Read Blocks": 3,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Local Hit Blocks": 0,
+                            "Local Read Blocks": 0,
+                            "Local Dirtied Blocks": 0,
+                            "Local Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                        },
+                        {
+                            "Node Type": "Bitmap Index Scan",
+                            "Parent Relationship": "Member",
+                            "Parallel Aware": False,
+                            "Async Capable": False,
+                            "Index Name": "dump_mod_97",
+                            "Startup Cost": 0.0,
+                            "Total Cost": 12.47,
+                            "Plan Rows": 1090,
+                            "Plan Width": 0,
+                            "Actual Rows": 1031,
+                            "Actual Loops": 1,
+                            "Index Cond": "(mod(id, '97'::bigint) = 3)",
+                            "Shared Hit Blocks": 0,
+                            "Shared Read Blocks": 3,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Local Hit Blocks": 0,
+                            "Local Read Blocks": 0,
+                            "Local Dirtied Blocks": 0,
+                            "Local Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                        },
+                    ],
+                }
+            ],
+        },
+        "Planning": {
+            "Shared Hit Blocks": 18,
+            "Shared Read Blocks": 2,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+        },
+        "Planning Time": 0.077,
+        "Triggers": [],
+        "Execution Time": 0.188,
+    }
+]
+"""Two indexes combined, so the index that read the table is two levels down.
+
+``SELECT id FROM testapp_order WHERE mod(id, 100) = 5 AND mod(id, 97) = 3``,
+after ``CREATE INDEX ... ON testapp_order (mod(id, 100))`` and the same on
+``mod(id, 97)``, under ``SET LOCAL enable_indexscan = off``,
+``enable_indexonlyscan = off`` and ``enable_seqscan = off`` -- the settings that
+make the planner prefer a combination it would otherwise cost out.
+
+**The shape that makes
+:attr:`~django_query_contract.PlanNode.indexes_used` walk rather than look.**
+The node naming the relation is the ``Bitmap Heap Scan`` and it carries no
+``Index Name`` at all; the two indexes are under a ``BitmapAnd`` beneath it. A
+reading that looked only at the node itself, or only at its direct children,
+would report this table as read without an index -- which is the one thing the
+report must never say about a read PostgreSQL performed through two.
+"""

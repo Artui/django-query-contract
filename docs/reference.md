@@ -18,6 +18,8 @@
 
 ::: django_query_contract.Attribution
 
+::: django_query_contract.RelationAccess
+
 ## The growth curve
 
 ::: django_query_contract.Growth
@@ -54,6 +56,8 @@
 
 ::: django_query_contract.group_by_call_site
 
+::: django_query_contract.group_by_relation
+
 ::: django_query_contract.capture_stack
 
 ::: django_query_contract.format_capture_report
@@ -73,3 +77,5 @@
 ::: django_query_contract.find_plan_defects
 
 ::: django_query_contract.format_query_plans
+
+::: django_query_contract.format_relation_access

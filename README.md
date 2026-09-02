@@ -298,6 +298,45 @@ failing `EXPLAIN` costs a plan rather than your transaction, because it runs
 under a savepoint. See
 [plan capture](https://artui.github.io/django-query-contract/plans/).
 
+## Index advice: the evidence, and no recommendation
+
+"These twelve statements sequentially scanned a two-million-row table, here are
+the `CREATE INDEX` statements" is the output people want, and **it is not here,
+on purpose**. Three routes to it were tried against a real server and all three
+ended in a threshold -- including the one that looks threshold-free, comparing a
+table read sequentially by one statement against the same table reached by index
+by another. Two statements filtering *different columns* of one table are not two
+measurements of one thing, and the sequential read that keeps every row it looks
+at is the plan PostgreSQL should have chosen.
+
+So the facts are printed and the judgement is left to you:
+
+```text
+Relations these plans read, and how PostgreSQL reached them:
+  No index is recommended below, and that is a decision rather than an omission.
+  Whether one is worth adding is a judgement about size -- how many rows is too
+  many to read -- and this package states what the server measured instead.
+  testapp_order  2 reads, 1 without an index
+       filtering ((reference)::text = %s::text)
+       most one read discarded: 99,999 rows, keeping 1
+       read through testapp_order_customer_id_85c0ed1a
+       from tests/test_orders.py:13 in test_dashboard
+       PostgreSQL has 2 indexes on testapp_order:
+         CREATE INDEX testapp_order_customer_id_85c0ed1a ON public.testapp_order USING btree (customer_id)
+         CREATE UNIQUE INDEX testapp_order_pkey ON public.testapp_order USING btree (id)
+```
+
+The only `CREATE INDEX` statements this package prints are the ones that already
+exist, in PostgreSQL's own words. Put them beside the filter above and the gap is
+visible.
+
+The predicate is printed as a shape, and that is not cosmetic: `EXPLAIN` renders
+it with the bound value spelled out -- `((reference)::text =
+'601980.6826913885'::text)` -- so the value is taken back out by the same
+`normalise_sql` rules the fingerprint is made with. This package retains no
+parameters, and a plan node was the one place that promise could have quietly
+stopped being true.
+
 ## Reading the capture directly
 
 ```python
@@ -347,8 +386,8 @@ widens the window the N+1 identity is formed from -- see
 ## Status
 
 Early. The capture engine, the pytest diagnosis, N+1 by
-(call stack, fingerprint), the growth assertion, call-site attribution, and plan
-capture. Index advice comes next.
+(call stack, fingerprint), the growth assertion, call-site attribution, plan
+capture, and the relation report that index advice reduced to.
 
 Full documentation: <https://artui.github.io/django-query-contract/>
 

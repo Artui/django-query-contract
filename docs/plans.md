@@ -177,6 +177,9 @@ detectors are dead on PyPI, and the most probable reason is that they classified
 by rule, cried wolf, and were uninstalled. A detector nobody disables is a
 different package from a detector that finds more.
 
+Index advice was declined for the same reason and is a longer story, told
+[below](#index-advice-and-why-there-is-none).
+
 ## Nothing fails on a finding
 
 The same rule as everywhere else here. A finding is a diagnosis printed under a
@@ -245,10 +248,112 @@ The refusal names the exception class and never its message, because a driver
 error can quote a bound value and this package
 [retains no parameters](reference.md).
 
-## What is not here yet
+## Index advice, and why there is none
 
-Index advice -- "these twelve statements sequentially scanned a two-million-row
-table, here are the `CREATE INDEX` statements" -- is the output people actually
-want, and it falls out of having plans plus call sites. The record already
-carries what it needs: each node keeps its relation, its filter and the rows that
-filter threw away, beside the call stack that emitted the statement.
+"These twelve statements sequentially scanned a two-million-row table, here are
+the `CREATE INDEX` statements" is the output people actually want, and this was
+the milestone that was going to produce it. It does not, and the reason is the
+rule that decides every other question here: **a finding is a fact the server
+states, or an equality over measurements, never a number somebody picked.**
+
+Three routes to an assertable version were tried against a real server. All
+three ended in a threshold.
+
+**A sequential scan on a table another captured statement reaches by index.**
+This one is the near miss, because it reads like a comparison between two
+measurements rather than a cut-off. It is not: two statements filtering
+*different columns* of one table are not measuring the same thing. Measured --
+one statement reached `testapp_order` through the foreign key index while
+another read it end to end for a predicate that kept **every** row, which is the
+plan PostgreSQL should have chosen and the one no index improves. Both halves of
+the rule hold and the conclusion is still wrong, because the index it would
+point at is on the other statement's column. There is a test that runs exactly
+that pair against a server.
+
+**A filter whose discarded rows PostgreSQL counted itself.** `Rows Removed by
+Filter` is the server's number, not ours, which is what made it a candidate. The
+verdict is still nobody's: a five-row table discards four rows in the same shape
+a hundred-thousand-row table discards 99,999 -- same node type, same key, same
+everything a rule could read -- and only a magnitude separates them. The count
+does not even rank the candidates, because the read that discarded *nothing* is
+the whole-table read that was right to be a scan. There is a test that puts both
+tables in one capture.
+
+**Emitting the `CREATE INDEX` itself.** That needs a column, and the only place
+a column can be got is PostgreSQL's rendered predicate -- an expression that
+would have to be parsed, in a package that
+[declines a SQL parser](reference.md#django_query_contract.normalise_sql) on
+evidence, and whose text carries the bound value this package retains nowhere.
+
+### What is here instead
+
+Every fact the decision needs, and no decision. `group_by_relation` reads a
+capture back as the tables it touched, and `format_relation_access` prints them:
+
+```text
+Relations these plans read, and how PostgreSQL reached them:
+  No index is recommended below, and that is a decision rather than an omission.
+  Whether one is worth adding is a judgement about size -- how many rows is too
+  many to read -- and this package states what the server measured instead.
+  testapp_order  2 reads, 1 without an index
+       filtering ((reference)::text = %s::text)
+       most one read discarded: 99,999 rows, keeping 1
+       read through testapp_order_customer_id_85c0ed1a
+       from tests/test_orders.py:13 in test_dashboard
+       PostgreSQL has 2 indexes on testapp_order:
+         CREATE INDEX testapp_order_customer_id_85c0ed1a ON public.testapp_order USING btree (customer_id)
+         CREATE UNIQUE INDEX testapp_order_pkey ON public.testapp_order USING btree (id)
+```
+
+The table, how PostgreSQL reached it, the predicate it applied, how many rows it
+said it threw away, the line that asked, and the indexes that already exist --
+in the server's own words, from `pg_get_indexdef`, so an expression index, a
+partial index and a non-default operator class all come out right without this
+package learning any of the three. Put the filter next to the index list and the
+gap is visible. The judgement is yours.
+
+It is a **grouping**, in the sense
+[call-site attribution](attribution.md) is one, and not a detector. Nothing here
+is a finding, nothing fails on it, and there is no rule anywhere in it about
+which read is the interesting one -- which is exactly what makes it safe to put
+a sequential read of a table beside an indexed read of the same table, where a
+finding would not be.
+
+The relations are ordered by how many times they were read, and **deliberately
+not by rows discarded** -- which is the order a reader would find most useful,
+and is exactly why it is refused. Ranking tables by how badly they want an index
+is the judgement being declined, and a sort key is a quiet way of making it
+anyway.
+
+### A filter carries a value, and this package retains none
+
+`EXPLAIN` renders a predicate with the parameter substituted. A real server
+writes this for a query bound with `%s`:
+
+```text
+Filter: ((reference)::text = '601980.6826913885'::text)
+```
+
+That is a customer's data, on a record this package would otherwise hold for the
+length of a capture and print into CI output. So `PlanNode.condition` is put
+through the same [`normalise_sql`](reference.md#django_query_contract.normalise_sql)
+rules the statement fingerprint is made with: the column, the operator and the
+casts survive, and the value becomes `%s`.
+
+That redaction is also what makes the predicate groupable. With the value in it,
+one statement shape run with twelve parameters is twelve conditions and no
+report could say the twelve executions did the same thing. Without it, they are
+one.
+
+### An index two levels down is still an index
+
+PostgreSQL splits a bitmap read across nodes: the `Bitmap Heap Scan` names the
+table and carries no index at all, while the `Bitmap Index Scan` beneath it
+names the index and no table. Put a `BitmapAnd` between them -- two indexes
+combined -- and the index is two levels down.
+
+`PlanNode.indexes_used` walks down to find them, stopping at the next node that
+names a relation, because that node is a different read of a different table.
+Reading the node alone would report a table PostgreSQL reached through two
+indexes as one it read end to end, which is the single worst thing this report
+could say. Both shapes are pinned by a real server's payload.

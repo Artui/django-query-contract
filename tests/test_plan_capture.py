@@ -324,3 +324,39 @@ def test_a_refused_statement_names_no_relations() -> None:
     capture._plan_for(connection, "INSERT INTO testapp_book DEFAULT VALUES", None, False)
 
     assert capture._read_statistics() == ()
+
+
+def test_the_indexes_of_every_relation_a_plan_touched_are_asked_for_once() -> None:
+    """The catalogue half of the index report, and the only CREATE INDEX it prints."""
+    capture = PlanCapture()
+    cursor = _Cursor(
+        rows=[
+            [(WHALE_JOIN,)],
+            [
+                ("testapp_book", "CREATE INDEX book_author ON testapp_book (author_id)"),
+                ("testapp_book", "CREATE UNIQUE INDEX book_pkey ON testapp_book (id)"),
+                ("testapp_author", "CREATE UNIQUE INDEX author_pkey ON testapp_author (id)"),
+            ],
+        ]
+    )
+    connection = _Connection(cursor)
+    capture._plan_for(connection, _SELECT, (1,), False)
+
+    indexes = capture._read_indexes()
+
+    assert indexes == {
+        "testapp_book": (
+            "CREATE INDEX book_author ON testapp_book (author_id)",
+            "CREATE UNIQUE INDEX book_pkey ON testapp_book (id)",
+        ),
+        "testapp_author": ("CREATE UNIQUE INDEX author_pkey ON testapp_author (id)",),
+    }
+    asked = [sql for sql, _ in cursor.statements if "pg_get_indexdef" in sql]
+    assert len(asked) == 1
+    assert cursor.statements[-1][1] == [["testapp_author", "testapp_book"]]
+
+
+def test_a_capture_that_planned_over_nothing_knows_of_no_indexes() -> None:
+    """Absent rather than empty: an empty tuple would claim a table has none."""
+    assert PlanCapture()._read_indexes() == {}
+    assert PlanCapture().relation_indexes == {}

@@ -34,6 +34,8 @@ if connection.vendor == "postgresql":
         PlanDefect,
         find_plan_defects,
         format_query_plans,
+        format_relation_access,
+        group_by_relation,
     )
 
     # Small enough for a CI job and skewed enough for the planner to be wrong:
@@ -254,3 +256,136 @@ def test_a_capture_over_a_connection_that_is_not_postgres_is_refused(db) -> None
     assert refusal is not None
     assert "'other'" in refusal
     assert connections["other"].vendor == "sqlite"
+
+
+def test_a_captured_filter_never_carries_the_value_that_was_bound(world, db) -> None:
+    """The rule this package states about itself, checked where it would break.
+
+    ``EXPLAIN`` renders a predicate with the parameter substituted -- a real
+    server writes ``Filter: ((reference)::text = '601980.6826913885'::text)``
+    for a query bound with ``%s``. Every other part of this package retains no
+    parameter, and the refusal sentence it prints when it declines to quote a
+    driver error tells the reader as much. A plan node is the one place that
+    promise could quietly stop being true, so it is checked against a server
+    rather than against a payload somebody wrote down.
+    """
+    reference = Order.objects.values_list("reference", flat=True).first()
+    assert reference
+
+    with PlanCapture(using="default") as capture:
+        list(Order.objects.filter(reference=reference).values_list("id", flat=True))
+
+    conditions = [
+        node.condition
+        for record in capture.records
+        if record.plan is not None
+        for node in record.plan.nodes
+        if node.condition is not None
+    ]
+    assert conditions, "the query did not produce a filter to check"
+    assert any("reference" in condition for condition in conditions)
+    assert all(reference not in condition for condition in conditions)
+    # And the same has to hold of every rendering, not only of the record.
+    assert reference not in format_query_plans(capture)
+    assert reference not in format_relation_access(capture)
+
+
+def test_the_indexes_a_relation_already_has_are_read_from_the_catalogue(world, db) -> None:
+    """The only ``CREATE INDEX`` statements this package prints: the ones that exist."""
+    with PlanCapture(using="default") as capture:
+        list(Order.objects.filter(customer_id=1).values_list("id", flat=True))
+
+    definitions = capture.relation_indexes["testapp_order"]
+
+    assert any("testapp_order_pkey" in definition for definition in definitions)
+    assert any("customer_id" in definition for definition in definitions)
+    # PostgreSQL's own rendering, unedited, so an expression or partial index
+    # needs nothing learned here.
+    assert all(definition.startswith("CREATE ") for definition in definitions)
+    assert "PostgreSQL has" in format_relation_access(capture)
+
+
+def test_a_table_read_without_an_index_is_named_with_the_line_that_read_it(world, db) -> None:
+    """Plans plus call sites, which is what the milestone asked for."""
+    reference = Order.objects.values_list("reference", flat=True).first()
+
+    with PlanCapture(using="default") as capture:
+        list(Order.objects.filter(reference=reference).values_list("id", flat=True))
+
+    (access,) = [found for found in group_by_relation(capture) if found.relation == "testapp_order"]
+    worst = access.most_rows_discarded
+
+    assert access.unindexed_reads
+    assert worst is not None
+    # 100,000 rows in the world, one of them matching: the server counted the rest.
+    assert worst[0] > 99_000
+    report = format_relation_access(capture)
+    assert "testapp_order" in report
+    assert "test_plan_capture_postgres.py" in report
+    assert "No index is recommended" in report
+
+
+def test_the_seq_scan_beside_an_index_scan_rule_would_have_named_a_useless_index(world, db) -> None:
+    """Why one candidate for an index finding was declined, run rather than argued.
+
+    The rule considered: a relation read sequentially by one statement while
+    another statement in the same capture reaches it by index. That reads like a
+    comparison between two measurements rather than a threshold, and it is not
+    -- two statements filtering **different columns** of one table are not
+    measuring one thing.
+
+    Below, both halves of the rule hold on ``testapp_order`` and the conclusion
+    is still wrong: the sequential read keeps every row it looks at, so it is
+    the plan PostgreSQL should have chosen and there is no index that improves
+    it. The index the rule would have pointed at is on the other statement's
+    column.
+    """
+    with PlanCapture(using="default") as capture:
+        list(Order.objects.filter(customer_id=1).values_list("id", flat=True))
+        list(Order.objects.filter(reference__isnull=False).values_list("id", flat=True))
+
+    (access,) = [found for found in group_by_relation(capture) if found.relation == "testapp_order"]
+
+    # Both halves of the declined rule are true here.
+    assert access.indexes_used
+    assert access.unindexed_reads
+    # And the read it accuses threw away nothing at all: it wanted the whole
+    # table, and got it in one pass.
+    assert all(node.rows_removed_by_filter in (None, 0.0) for node in access.unindexed_reads)
+    assert any(node.actual_rows == 100_000 for node in access.unindexed_reads)
+
+
+def test_the_rows_removed_rule_fires_the_same_way_on_five_rows_as_on_a_hundred_thousand(
+    world, db
+) -> None:
+    """Why the other candidate was declined, on two tables three orders apart.
+
+    ``Rows Removed by Filter`` is PostgreSQL's own count, which is what made it
+    a candidate: the number is not one this package picked. The *verdict* is
+    still one nobody supplied. A five-row table discards four rows in exactly
+    the shape a hundred-thousand-row table discards 99,999 -- same node type,
+    same key present, same everything a rule could read -- and only a magnitude
+    separates them. A magnitude is the knob this package refuses.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute("CREATE TEMPORARY TABLE five_rows (id integer)")
+        cursor.execute("INSERT INTO five_rows SELECT generate_series(1, 5)")
+        cursor.execute("ANALYZE five_rows")
+    reference = Order.objects.values_list("reference", flat=True).first()
+
+    with PlanCapture(using="default") as capture, connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM five_rows WHERE id > 4")
+        cursor.fetchall()
+        list(Order.objects.filter(reference=reference).values_list("id", flat=True))
+
+    by_relation = {found.relation: found for found in group_by_relation(capture)}
+    tiny = by_relation["five_rows"].most_rows_discarded
+    large = by_relation["testapp_order"].most_rows_discarded
+
+    assert tiny is not None and large is not None
+    assert tiny[1].node_type == large[1].node_type == "Seq Scan"
+    assert not by_relation["five_rows"].unindexed_reads[0].indexes_used
+    assert not by_relation["testapp_order"].unindexed_reads[0].indexes_used
+    # Indistinguishable but for the size, which is the whole finding.
+    assert tiny[0] == 4.0
+    assert large[0] > 99_000

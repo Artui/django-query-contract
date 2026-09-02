@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from django_query_contract.find_plan_defects import find_plan_defects
+from django_query_contract.format_relation_access import format_relation_access
 from django_query_contract.plan_capture import PlanCapture
 from django_query_contract.plan_defect import PlanDefect
 from django_query_contract.plan_finding import PlanFinding
@@ -17,17 +18,24 @@ def format_query_plans(
     *,
     max_findings: int = 5,
     max_estimates: int = 5,
+    max_relations: int = 5,
     max_sql: int = 160,
 ) -> str:
     """Describe what the planner did, what it got wrong, and what was not asked.
 
-    Four blocks, and the order is the argument. The findings come first because
+    Five blocks, and the order is the argument. The findings come first because
     they are the only claims here that hold by construction. The estimate errors
     come after them and are explicitly *not* claims: they are two numbers
     PostgreSQL printed and the factor between them, ordered so the largest is
     visible, with no rule anywhere deciding which of them is a defect. The
     statements that carried no plan are counted last, so a reader can see that
     the numbers above do not cover everything.
+
+    The relations block sits between them and the count of what carried no plan,
+    and it is a third register again: neither a claim nor a number to be read,
+    but the material an index decision is made of, with the decision itself
+    declined in the text. See
+    :class:`~django_query_contract.RelationAccess` for why it is declined.
 
     The block about relations with no statistics comes before all of it, because
     it can invalidate all of it: a plan over a table PostgreSQL has never
@@ -37,6 +45,7 @@ def format_query_plans(
         capture: A closed :class:`~django_query_contract.PlanCapture`.
         max_findings: How many findings to list before summarising the rest.
         max_estimates: How many statements to name in the estimate-error block.
+        max_relations: How many tables to describe before counting the rest.
         max_sql: Where to cut a long statement. The record keeps the whole thing.
 
     Returns:
@@ -58,6 +67,7 @@ def format_query_plans(
     lines.extend(_statistics_lines(capture))
     lines.extend(_finding_lines(capture, max_findings=max_findings, max_sql=max_sql))
     lines.extend(_estimate_lines(explained, max_estimates=max_estimates, max_sql=max_sql))
+    lines.extend(_relation_lines(capture, max_relations=max_relations, max_sql=max_sql))
     lines.extend(_refusal_lines(refusals))
     return "\n".join(lines)
 
@@ -165,6 +175,19 @@ def _estimate_lines(
     if len(scored) > max_estimates:
         lines.append(f"  and {len(scored) - max_estimates} more statements.")
     return lines
+
+
+def _relation_lines(capture: PlanCapture, *, max_relations: int, max_sql: int) -> list[str]:
+    """The tables these plans touched, and what already indexes them.
+
+    Delegated whole rather than inlined, because a caller holding a capture may
+    want this paragraph on its own -- it is the one block here that is useful
+    when nothing failed.
+    """
+    relations = format_relation_access(capture, max_relations=max_relations, max_sql=max_sql)
+    if not relations:
+        return []
+    return ["", relations]
 
 
 def _refusal_lines(refusals: list[str]) -> list[str]:

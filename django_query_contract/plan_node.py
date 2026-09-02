@@ -6,6 +6,8 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from django_query_contract.normalise_sql import normalise_sql
+
 
 @dataclass(frozen=True, slots=True)
 class PlanNode:
@@ -48,12 +50,28 @@ class PlanNode:
     """The index this node reads, when it uses one. ``None`` for a sequential scan."""
 
     condition: str | None
-    """The ``Filter`` this node applied, as PostgreSQL rendered it.
+    """The ``Filter`` this node applied, as a shape: the predicate without its values.
 
-    Kept because it is half of what index advice is made of: a filter over a
-    relation, with the rows it threw away, is the statement a ``CREATE INDEX``
-    would answer. The advice itself is a later milestone; the record carrying
-    what it needs is this one.
+    Half of what index advice is made of -- a filter over a relation, with the
+    rows it threw away, is the statement a ``CREATE INDEX`` would answer -- and
+    the reason the advice itself is declined is set out at
+    :class:`~django_query_contract.RelationAccess`.
+
+    **PostgreSQL renders this predicate with the bound value spelled out, and
+    that value is taken back out here.** A parameterised query against a real
+    server produces ``Filter: ((reference)::text = '601980.6826913885'::text)``,
+    so keeping the string verbatim would put a customer's data on a public
+    record for the length of a capture -- in a package that retains no
+    parameters anywhere else, and whose own refusal sentence tells the reader so
+    when it declines to quote a driver error. The rendering is put through
+    :func:`~django_query_contract.normalise_sql`, which is the same small list
+    of named rules the statement fingerprint is made with, so a value becomes
+    ``%s`` and the column, the operator and the casts survive.
+
+    That redaction is also what makes the predicate a *group*. With the value in
+    it, one statement shape run with twelve parameters is twelve different
+    conditions and no report could say the twelve executions did the same thing;
+    without it, they are one.
     """
 
     estimated_rows: float
@@ -111,7 +129,7 @@ class PlanNode:
             node_type=str(node.get("Node Type", "")),
             relation=_text(node.get("Relation Name")),
             index=_text(node.get("Index Name")),
-            condition=_text(node.get("Filter")),
+            condition=_condition(node.get("Filter")),
             # The one key with no default worth defending: a plan node always
             # carries an estimate, because an estimate is what a plan is. A zero
             # here would be a parser bug wearing a plausible number.
@@ -134,6 +152,37 @@ class PlanNode:
         yield self
         for child in self.children:
             yield from child.walk()
+
+    @property
+    def indexes_used(self) -> tuple[str, ...]:
+        """The indexes PostgreSQL read this node's relation through. Empty means none.
+
+        **Not the same question as :attr:`index`, and the difference is what
+        keeps a report from crying wolf.** PostgreSQL splits a bitmap read
+        across two nodes: the ``Bitmap Heap Scan`` names the table and carries no
+        ``Index Name`` at all, while the ``Bitmap Index Scan`` beneath it names
+        the index and no table. Put a ``BitmapAnd`` between them -- two indexes
+        combined -- and the index is two levels down. A reading that looked only
+        at the node itself would report a table PostgreSQL reached through two
+        indexes as one it read end to end, which is the single worst thing this
+        report could say.
+
+        So it walks down, and stops at the next node that names a relation:
+        that node is a different read of a different table, and its index
+        belongs to it. Both payloads that pin this are a real server's output.
+
+        Order is the order PostgreSQL listed the nodes in, and duplicates are
+        possible in principle -- the same index reached twice under one
+        ``BitmapOr`` -- so a caller wanting a set should say so.
+        """
+        if self.index is not None:
+            return (self.index,)
+        return tuple(
+            index
+            for child in self.children
+            if child.relation is None
+            for index in child.indexes_used
+        )
 
     @property
     def spilled_to_disk(self) -> bool:
@@ -192,6 +241,15 @@ class PlanNode:
 def _text(value: Any) -> str | None:
     """A string key, or ``None`` when ``EXPLAIN`` did not emit it."""
     return None if value is None else str(value)
+
+
+def _condition(value: Any) -> str | None:
+    """A rendered predicate reduced to its shape, or ``None`` when there was none.
+
+    The one place a bound value could enter this package's records. See
+    :attr:`PlanNode.condition` for why it does not.
+    """
+    return None if value is None else normalise_sql(str(value))
 
 
 def _number(value: Any) -> float | None:

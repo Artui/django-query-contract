@@ -223,3 +223,33 @@ def test_a_report_over_plans_with_no_measurements_has_no_estimate_block() -> Non
 
     assert "Where the planner was furthest out" not in report
     assert "nothing here was measured" in report
+
+
+def test_the_relations_block_names_the_tables_and_declines_the_advice() -> None:
+    """The fifth block, and the one that is neither a claim nor a bare number."""
+    report = format_query_plans(_capture([_record(0, _measured(WHALE_JOIN))]))
+
+    assert "Relations these plans read" in report
+    assert "No index is recommended" in report
+    assert "testapp_author" in report
+
+
+def test_the_relations_block_is_capped_like_the_others() -> None:
+    report = format_query_plans(_capture([_record(0, _measured(WHALE_JOIN))]), max_relations=1)
+
+    assert "and 1 more relations." in report
+
+
+def test_a_block_of_nothing_but_writes_has_plans_to_count_and_no_relations_to_name() -> None:
+    """Every statement refused: there is a report, and the relations block is not in it.
+
+    A refusal carries no plan tree, so nothing in it names a table. Printing an
+    empty relations heading here would say "these plans read no relations",
+    which is true of the plans and false of the block.
+    """
+    report = format_query_plans(
+        _capture([_record(0, QueryPlan.refused("a write was not explained."))])
+    )
+
+    assert "1 statements captured, 0 of them explained." in report
+    assert "Relations these plans read" not in report
