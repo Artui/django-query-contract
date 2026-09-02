@@ -98,3 +98,32 @@ def innermost_frame_outside_django(stack: tuple[StackFrame, ...]) -> StackFrame 
         if not frame.filename.startswith(_DJANGO_ROOT):
             return frame
     return None
+
+
+def relative_to_cwd(text: str) -> str:
+    """Shorten a rendered call site to a path relative to the working directory.
+
+    Only when it is under it: ``os.path.relpath`` will happily walk out of the
+    tree with a row of ``..`` segments, which is longer than the absolute path
+    and harder to read.
+
+    Here for the same reason as the frame choice above. Two renderings name a
+    call site now -- a finding's block and an attribution's -- and a reader
+    shown one path abbreviated and the other absolute would reasonably wonder
+    whether they were the same file.
+    """
+    root = os.getcwd() + os.sep
+    if text.startswith(root):
+        return text[len(root) :]
+    return text
+
+
+def shorten(text: str, limit: int) -> str:
+    """Cut a statement to ``limit`` characters, saying that it was cut.
+
+    Shared by both renderings of a statement, so ``max_sql`` means one thing
+    across a report rather than one thing per block in it.
+    """
+    if len(text) <= limit:
+        return text
+    return text[:limit] + " ... (truncated)"

@@ -7,8 +7,8 @@ workspace roadmap, not here; this file is about how the code is written.
 
 `django-query-contract` captures every statement a Django connection executes, with a
 normalised SQL fingerprint and the call stack that emitted it, and reads that
-capture back as a diagnosis. The pytest plugin is one face of it. A CI report,
-call-site attribution and a runtime budget middleware are the other three, and
+capture back as a diagnosis. The pytest plugin and call-site attribution are two
+faces of it. A CI report and a runtime budget middleware are the other two, and
 they are not written yet.
 
 Two claims decide every design question here.
@@ -63,16 +63,28 @@ make docs-build    # mkdocs build --strict
 
 ## Public API naming
 
-`QueryCapture`, `QueryRecord`, `StackFrame`, `NPlusOne`, `LogCeiling`,
-`QueryLogCeilingWarning`, `Growth`, `GrowthPoint`, `QueryGrowth`, `normalise_sql`,
-`capture_stack`, `find_n_plus_one`, `assert_query_growth`, `measure_query_growth`,
-`format_capture_report`, `format_n_plus_one`, `format_n_plus_one_summary`,
+`QueryCapture`, `QueryRecord`, `StackFrame`, `NPlusOne`, `Attribution`,
+`LogCeiling`, `QueryLogCeilingWarning`, `Growth`, `GrowthPoint`, `QueryGrowth`,
+`normalise_sql`, `capture_stack`, `find_n_plus_one`, `group_by_call_site`,
+`assert_query_growth`, `measure_query_growth`, `format_capture_report`,
+`format_n_plus_one`, `format_n_plus_one_summary`, `format_attributions`,
 `format_query_growth`. Nouns for what is recorded, verbs for what is done to it.
 Nothing is named after pytest, because three of the four faces are not pytest.
 
+**`group_by_call_site` is a grouping and `find_n_plus_one` is a detector**, and
+the verbs say so. Anything named `find_` produces findings and keys on the whole
+call stack; `group_by_` re-files the same records under a display rule and claims
+nothing. Do not rename either into the other's register.
+
 `utils.py` holds what more than one of them must agree on: `DEFAULT_STACK_DEPTH`
 (read by both `QueryCapture` and the plugin's ini default, rather than the same
-literal in three places), `DEFAULT_FACTORS`, and the `ScaleWorld` alias.
+literal in three places), `DEFAULT_FACTORS`, the `ScaleWorld` alias, and the
+three call-site helpers -- `innermost_frame_outside_django`, which is the one
+place the package decides which frame is the interesting one, plus
+`relative_to_cwd` and `shorten`, so two renderings of a call site cannot spell
+one path or one `max_sql` two ways. Extend it rather than forking a second
+copy: a record, a finding and an attribution disagreeing about where a statement
+came from is worse than any of them having no answer.
 
 **The growth rules are exact integer comparisons, and that is the design.** A
 fitted curve would need three thresholds to become a verdict -- how near zero is
@@ -83,10 +95,12 @@ integers. Do not introduce a tolerance: a growth assertion that fails once a
 fortnight gets deleted and takes the idea with it.
 
 **`QueryRecord` is a public, documented artifact from the first release**, and
-the reason is that four faces read it and three of them are unwritten. A record
-kept private until they existed would grow a private accessor per face instead of
-a shape. The contract in `0.x` is **additive**: fields may be added, never removed
-and never given a new meaning. It is frozen at `1.0`.
+the reason is that four faces read it and two of them are still unwritten. A
+record kept private until they existed would grow a private accessor per face
+instead of a shape -- and attribution, the second face to arrive, read the
+record without needing a field added to it. The contract in `0.x` is
+**additive**: fields may be added, never removed and never given a new meaning.
+It is frozen at `1.0`.
 
 ## The rules the design rests on
 
@@ -107,6 +121,16 @@ and never given a new meaning. It is frozen at `1.0`.
   does not mention one and splitting on it would break one loop into two
   findings. A record with **no** stack is not grouped at all -- guessing there
   manufactures a finding out of a gap in the input.
+  **The call site is a display rule and must stay one.** `Attribution` groups by
+  the innermost frame outside Django, which merges the two callers of one helper
+  that the identity above deliberately splits. That is safe *only* because a
+  group claims nothing about defects -- it is statements and an address, nothing
+  fails on it, and no rule about which repetition counts is anywhere near it. The
+  moment a frame rule reaches an identity it is a knob, and a knob in an
+  identity is how the four dead detectors came to cry wolf. The distinction is
+  stated in `Attribution`, in `group_by_call_site`, and in
+  `docs/attribution.md`; a test in `test_group_by_call_site.py` runs one capture
+  through both readings and pins that they disagree.
   **The identity is really the innermost `stack_depth` frames**, which is the one
   place it can be wrong. Under pytest a query from a test function is 38 frames
   deep and 30 of them are the runner's own, so `stack_truncated` is set on every

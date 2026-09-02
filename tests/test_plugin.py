@@ -90,6 +90,21 @@ _TWO_QUERIES_ONE_EXPECTED = """
                     cursor.execute("SELECT 1")
 """
 
+# Two statements on two lines, which is the other half of the pair above: two
+# call paths, so no repetition, so no finding -- and the section still has to
+# name where the extra statement came from.
+_TWO_LINES_ONE_EXPECTED = """
+    import pytest
+    from django.db import connection
+
+    @pytest.mark.django_db
+    def test_counts(django_assert_num_queries):
+        with django_assert_num_queries(1):
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.execute("SELECT 2")
+"""
+
 _A_LOOP = """
     import pytest
     from django.db import connection
@@ -120,6 +135,32 @@ def test_a_failed_count_assertion_gains_a_diagnosis(django_pytester: pytest.Pyte
             "*N+1 -- one statement shape, executed more than once from one call path:*",
             "*2 x  from *test_a_failed_count_assertion_gains_a_diagnosis.py:*",
             "*queries #0, #1*",
+        ]
+    )
+
+
+def test_a_failure_with_no_n_plus_one_still_names_the_lines(
+    django_pytester: pytest.Pytester,
+) -> None:
+    """Two statements from two lines: no call path repeated, so no finding at all.
+
+    This is the case the section exists for and the one it had nothing to say
+    about until call-site attribution existed -- a count assertion that failed
+    with no loop behind it printed a number of unexplained statements and not
+    one line of code. Driven through the real plugin rather than the formatter,
+    because what is being claimed is that the lines reach a reader.
+    """
+    django_pytester.makepyfile(_TWO_LINES_ONE_EXPECTED)
+    result = django_pytester.runpytest_subprocess()
+
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines(
+        [
+            "*django-query-contract*",
+            "*2 statements captured: 2 on 'default'.*",
+            "*No N+1: no statement shape repeated from a single call path.*",
+            "*2 statement(s) were not repeated from any one call path. They came from:*",
+            "*1 x  from *test_a_failure_with_no_n_plus_one_still_names_the_lines.py:*",
         ]
     )
 
