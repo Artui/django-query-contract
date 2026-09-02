@@ -5,7 +5,7 @@ workspace roadmap, not here; this file is about how the code is written.
 
 ## What this package is
 
-`django-query-lens` captures every statement a Django connection executes, with a
+`django-query-contract` captures every statement a Django connection executes, with a
 normalised SQL fingerprint and the call stack that emitted it, and reads that
 capture back as a diagnosis. The pytest plugin is one face of it. A CI report,
 call-site attribution and a runtime budget middleware are the other three, and
@@ -110,7 +110,7 @@ own module, a re-export in `__init__.py`, and a docs entry.
 - **100% line and branch coverage.** Never `# pragma: no cover` -- restructure
   the code instead.
 - **The suite runs with this package's own plugin disabled**, through
-  `-p no:django_query_lens` in `addopts`. pytest imports entry-point plugins
+  `-p no:django_query_contract` in `addopts`. pytest imports entry-point plugins
   before pytest-cov starts measuring, so with the plugin on, every module it
   pulls in at import time is already loaded when coverage begins and is reported
   at 0% for lines that in fact ran. The hooks are covered by `test_plugin.py`,
@@ -120,7 +120,7 @@ own module, a re-export in `__init__.py`, and a docs entry.
   make the suite dogfood the plugin; it makes the gate stop measuring the package.
 - **Three consequences of that flag, all of which have bitten once.**
   `tests/conftest.py` registers the plugin's *options* without its hooks, or a
-  hook driven against the live item raises `no option named '--no-query-lens'`.
+  hook driven against the live item raises `no option named '--no-query-contract'`.
   An inner `runpytest_subprocess` run must inherit no `COV_CORE_*` environment,
   or it writes statement data into the parent's branch data and the combine
   fails -- only at the dependency floor, because `branch` reaches a subprocess
@@ -154,7 +154,7 @@ Ruff is the source of truth for both. Use `...` over `pass` for empty bodies.
 
 ## Imports inside the package
 
-Absolute only. `from django_query_lens.x import y`, never `from .x import y` --
+Absolute only. `from django_query_contract.x import y`, never `from .x import y` --
 `ban-relative-imports = "all"` rejects every relative form including single-dot.
 
 ## Compatibility floor

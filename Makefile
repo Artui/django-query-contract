@@ -26,7 +26,7 @@ test:
 
 lint:
 	uv run ruff check .
-	uv run ty check django_query_lens
+	uv run ty check django_query_contract
 
 lint-fix:
 	uv run ruff check --fix .
@@ -38,7 +38,7 @@ format-check:
 	uv run ruff format --check --diff .
 
 type-check:
-	uv run ty check django_query_lens
+	uv run ty check django_query_contract
 
 deps-bump:
 	uvx uv-upx upgrade run --profile with_pinned
@@ -58,7 +58,7 @@ release-bump:
 	@echo "Bumped to $(VERSION). Edit CHANGELOG.md to fill the new section,"
 	@echo "review with 'git diff', then run 'make release-publish'."
 
-# Release pipeline. The version lives in django_query_lens/version.py (pyproject
+# Release pipeline. The version lives in django_query_contract/version.py (pyproject
 # pulls it in via [tool.hatch.version] dynamic). The three targets below wrap
 # scripts/release-publish.sh, which is the single source of truth for the flow
 # and stays byte-identical across the sibling repos.
@@ -71,8 +71,8 @@ release-bump:
 #                               Called after PyPI publish succeeds in CI.
 #   release-publish           — prepare → uv publish → finalize. For end-to-end
 #                               workstation releases. Set DRY_RUN=1 to rehearse.
-RELEASE_PACKAGE_NAME := django-query-lens
-RELEASE_VERSION_FILES := django_query_lens/version.py|^__version__[^=]*= *
+RELEASE_PACKAGE_NAME := django-query-contract
+RELEASE_VERSION_FILES := django_query_contract/version.py|^__version__[^=]*= *
 
 release-publish:
 	@PACKAGE_NAME='$(RELEASE_PACKAGE_NAME)' \

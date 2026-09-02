@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import django_query_lens
+import django_query_contract
 
 
 def test_version_is_exported() -> None:
-    assert isinstance(django_query_lens.__version__, str)
-    assert django_query_lens.__version__.count(".") == 2
+    assert isinstance(django_query_contract.__version__, str)
+    assert django_query_contract.__version__.count(".") == 2

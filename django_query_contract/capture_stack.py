@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 import os
 
-from django_query_lens.stack_frame import StackFrame
+from django_query_contract.stack_frame import StackFrame
 
 # The directory this package occupies. Frames inside it are dropped, so a caller
 # never sees the capture machinery between itself and the query -- including the

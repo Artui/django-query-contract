@@ -1,8 +1,8 @@
-site_name: django-query-lens
+site_name: django-query-contract
 site_description: "A query-capture engine and pytest plugin for finding performance defects in Django at test time: normalised SQL fingerprints, call sites, and honest reporting above Django query-log ceiling."
-site_url: https://artui.github.io/django-query-lens/
-repo_url: https://github.com/Artui/django-query-lens
-repo_name: Artui/django-query-lens
+site_url: https://artui.github.io/django-query-contract/
+repo_url: https://github.com/Artui/django-query-contract
+repo_name: Artui/django-query-contract
 edit_uri: edit/main/docs/
 
 theme:

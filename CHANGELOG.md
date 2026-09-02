@@ -31,8 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The pytest plugin, loaded through a `pytest11` entry point. It ships no count
   assertion. A failing `django_assert_num_queries` gains a report section naming
   the repeated shapes and their call sites; a block over the ceiling raises a
-  warning whatever its outcome. `query_lens`, `query_lens_stack_depth` and
-  `--no-query-lens` control it.
+  warning whatever its outcome. `query_contract`, `query_contract_stack_depth` and
+  `--no-query-contract` control it.
 - `format_capture_report`, the report as a function, so the CI-report face can
   use it without a test runner.
 - `QueryCapture.from_capture_context`, which serves a caller who already holds
@@ -40,4 +40,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-lens/compare/v0.0.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.0.0...HEAD

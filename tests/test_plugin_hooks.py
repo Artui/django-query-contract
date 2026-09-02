@@ -22,7 +22,7 @@ from django.conf import empty, settings
 from django.db import connection
 from pluggy import Result
 
-from django_query_lens import QueryLogCeilingWarning, plugin
+from django_query_contract import QueryLogCeilingWarning, plugin
 
 _A_TEST = """
 def test_nothing():
@@ -116,7 +116,7 @@ def test_the_call_hook_captures_and_leaves_the_capture_behind(
 
 def test_the_flag_stands_the_hook_down(pytester: pytest.Pytester) -> None:
     """Nothing is captured and nothing is stashed, so the report hook has nothing to say."""
-    item = _item(pytester, "--no-query-lens")
+    item = _item(pytester, "--no-query-contract")
 
     _run_call_hook(item)
 
@@ -176,7 +176,7 @@ def test_a_failed_call_gains_the_section(request: pytest.FixtureRequest) -> None
     report = _run_makereport(item, _make_report(item, "call", failing=True))
 
     (section,) = report.sections
-    assert section[0] == "django-query-lens"
+    assert section[0] == "django-query-contract"
     assert "2 statements captured" in section[1]
 
 
@@ -211,7 +211,7 @@ def test_a_failure_in_setup_gains_nothing(request: pytest.FixtureRequest) -> Non
 
 def test_a_failure_with_capture_disabled_gains_nothing(pytester: pytest.Pytester) -> None:
     """Nothing in the stash, so the report hook returns before it formats anything."""
-    item = _item(pytester, "--no-query-lens")
+    item = _item(pytester, "--no-query-contract")
 
     _run_call_hook(item)
     report = _run_makereport(item, _make_report(item, "call", failing=True))
@@ -234,5 +234,5 @@ def test_the_stack_depth_ini_has_a_default(pytester: pytest.Pytester) -> None:
     """A project that configures nothing still gets a working depth."""
     config = pytester.parseconfig()
 
-    assert config.getini("query_lens") is True
-    assert int(config.getini("query_lens_stack_depth")) == 25
+    assert config.getini("query_contract") is True
+    assert int(config.getini("query_contract_stack_depth")) == 25

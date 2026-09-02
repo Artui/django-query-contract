@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from django_query_lens import normalise_sql
+from django_query_contract import normalise_sql
 
 
 @pytest.mark.parametrize(

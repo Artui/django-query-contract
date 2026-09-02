@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from django_query_lens import LogCeiling
+from django_query_contract import LogCeiling
 
 
 @pytest.mark.parametrize(

@@ -24,20 +24,20 @@ import pytest
 from django.conf import settings
 from pluggy import Result
 
-from django_query_lens.format_capture_report import format_capture_report
-from django_query_lens.query_capture import QueryCapture
-from django_query_lens.query_log_ceiling_warning import QueryLogCeilingWarning
+from django_query_contract.format_capture_report import format_capture_report
+from django_query_contract.query_capture import QueryCapture
+from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarning
 
 _CAPTURE_KEY = pytest.StashKey[QueryCapture]()
 
-# What pytest prints above the block, as ``---- django-query-lens ----``.
-_SECTION_NAME = "django-query-lens"
+# What pytest prints above the block, as ``---- django-query-contract ----``.
+_SECTION_NAME = "django-query-contract"
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Register the on/off switch and the stack-depth knob."""
     parser.addini(
-        "query_lens",
+        "query_contract",
         "Capture queries around every test, so a failed query-count assertion "
         "can be diagnosed and a block above Django's query-log ceiling can be reported.",
         type="bool",
@@ -45,12 +45,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     # A string rather than pytest's ``int`` type, which only exists from 8.4.
     parser.addini(
-        "query_lens_stack_depth",
+        "query_contract_stack_depth",
         "How many call-stack frames to keep per captured query.",
         default="25",
     )
-    parser.getgroup("django-query-lens").addoption(
-        "--no-query-lens",
+    parser.getgroup("django-query-contract").addoption(
+        "--no-query-contract",
         action="store_true",
         default=False,
         help="Turn capture off for this run without editing the ini file.",
@@ -119,11 +119,11 @@ def pytest_runtest_makereport(
 
 def _enabled(config: pytest.Config) -> bool:
     """Whether to capture at all: the ini says normally, the flag says today."""
-    if config.getoption("--no-query-lens"):
+    if config.getoption("--no-query-contract"):
         return False
-    return bool(config.getini("query_lens"))
+    return bool(config.getini("query_contract"))
 
 
 def _stack_depth(config: pytest.Config) -> int:
     """The configured frame budget per query."""
-    return int(config.getini("query_lens_stack_depth"))
+    return int(config.getini("query_contract_stack_depth"))

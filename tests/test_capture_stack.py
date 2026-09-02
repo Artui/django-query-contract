@@ -5,10 +5,10 @@ from __future__ import annotations
 import inspect
 import os
 
-import django_query_lens
-from django_query_lens import StackFrame, capture_stack
+import django_query_contract
+from django_query_contract import StackFrame, capture_stack
 
-_PACKAGE_ROOT = os.path.dirname(os.path.abspath(django_query_lens.__file__)) + os.sep
+_PACKAGE_ROOT = os.path.dirname(os.path.abspath(django_query_contract.__file__)) + os.sep
 
 
 def test_the_innermost_frame_is_the_caller() -> None:

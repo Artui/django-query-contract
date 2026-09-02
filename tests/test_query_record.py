@@ -6,7 +6,7 @@ import os
 
 import django
 
-from django_query_lens import QueryRecord, StackFrame
+from django_query_contract import QueryRecord, StackFrame
 
 _DJANGO_ROOT = os.path.dirname(os.path.abspath(django.__file__))
 

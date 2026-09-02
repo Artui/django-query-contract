@@ -9,13 +9,13 @@ import pytest
 from django.db import connection, connections
 from django.test.utils import CaptureQueriesContext
 
-import django_query_lens
-from django_query_lens import QueryCapture
+import django_query_contract
+from django_query_contract import QueryCapture
 from tests.testapp.models import Author, Book
 
 pytestmark = pytest.mark.django_db
 
-_PACKAGE_ROOT = os.path.dirname(os.path.abspath(django_query_lens.__file__)) + os.sep
+_PACKAGE_ROOT = os.path.dirname(os.path.abspath(django_query_contract.__file__)) + os.sep
 
 
 @pytest.fixture

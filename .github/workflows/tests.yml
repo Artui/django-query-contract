@@ -30,7 +30,7 @@ jobs:
       - name: ruff format check
         run: uv run ruff format --check --diff .
       - name: ty
-        run: uv run ty check django_query_lens
+        run: uv run ty check django_query_contract
 
   docs:
     name: docs build
@@ -123,14 +123,14 @@ jobs:
 
           import sys
 
-          import django_query_lens
+          import django_query_contract
 
           # The plugin module is the one that imports pytest, and it is only
           # ever loaded through the entry point. Importing the package must not
           # drag a test runner in with it.
           assert "pytest" not in sys.modules, "importing the package pulled in pytest"
 
-          print("BASE IMPORT OK", django_query_lens.__version__, django.get_version())
+          print("BASE IMPORT OK", django_query_contract.__version__, django.get_version())
           PY
 
   test:
@@ -240,12 +240,12 @@ jobs:
               git fetch --depth=1 origin "$before" 2>/dev/null || true
           fi
           old=""
-          if git cat-file -e "$before:django_query_lens/version.py" 2>/dev/null; then
-              old="$(git show "$before:django_query_lens/version.py" \
+          if git cat-file -e "$before:django_query_contract/version.py" 2>/dev/null; then
+              old="$(git show "$before:django_query_contract/version.py" \
                      | awk -F'"' '/^__version__/ { print $2; exit }')"
           fi
           new="$(awk -F'"' '/^__version__/ { print $2; exit }' \
-                 django_query_lens/version.py)"
+                 django_query_contract/version.py)"
           if [[ -n "$old" && "$old" != "$new" ]]; then
               echo "Version bumped $old → $new; release.yml will deploy gh-pages."
               echo "skip=true" >> "$GITHUB_OUTPUT"

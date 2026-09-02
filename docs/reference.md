@@ -2,24 +2,24 @@
 
 ## The capture
 
-::: django_query_lens.QueryCapture
+::: django_query_contract.QueryCapture
 
 ## The record
 
-::: django_query_lens.QueryRecord
+::: django_query_contract.QueryRecord
 
-::: django_query_lens.StackFrame
+::: django_query_contract.StackFrame
 
 ## The ceiling
 
-::: django_query_lens.LogCeiling
+::: django_query_contract.LogCeiling
 
-::: django_query_lens.QueryLogCeilingWarning
+::: django_query_contract.QueryLogCeilingWarning
 
 ## Functions
 
-::: django_query_lens.normalise_sql
+::: django_query_contract.normalise_sql
 
-::: django_query_lens.capture_stack
+::: django_query_contract.capture_stack
 
-::: django_query_lens.format_capture_report
+::: django_query_contract.format_capture_report

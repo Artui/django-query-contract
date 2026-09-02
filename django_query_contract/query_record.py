@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 import django
 
-from django_query_lens.stack_frame import StackFrame
+from django_query_contract.stack_frame import StackFrame
 
 # Where Django itself lives. ``call_site`` walks outwards until it leaves this
 # directory, which is what turns twenty frames of queryset machinery into the

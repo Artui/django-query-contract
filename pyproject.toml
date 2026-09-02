@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "django-query-lens"
+name = "django-query-contract"
 dynamic = ["version"]
 description = "A query-capture engine for Django, and a pytest plugin over it: normalised SQL fingerprints, call sites, and an honest report above Django's query-log ceiling."
 readme = "README.md"
@@ -55,12 +55,12 @@ dependencies = [
 # into the process of every consumer running the middleware face in production,
 # to buy an import that is already guaranteed present wherever it matters.
 [project.entry-points.pytest11]
-django_query_lens = "django_query_lens.plugin"
+django_query_contract = "django_query_contract.plugin"
 
 [project.urls]
-Homepage = "https://github.com/Artui/django-query-lens"
-Repository = "https://github.com/Artui/django-query-lens"
-Issues = "https://github.com/Artui/django-query-lens/issues"
+Homepage = "https://github.com/Artui/django-query-contract"
+Repository = "https://github.com/Artui/django-query-contract"
+Issues = "https://github.com/Artui/django-query-contract/issues"
 
 [dependency-groups]
 dev = [
@@ -86,10 +86,10 @@ docs = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["django_query_lens"]
+packages = ["django_query_contract"]
 
 [tool.hatch.version]
-path = "django_query_lens/version.py"
+path = "django_query_contract/version.py"
 # Hatchling's default regex expects a bare ``__version__ = "..."``. This file
 # annotates the assignment, so the pattern has to allow the annotation or the
 # build cannot find the version at all -- and the failure is total: every uv
@@ -108,7 +108,7 @@ testpaths = ["tests"]
 # their refusals on the connection's *vendor* -- a refusal reachable only on the
 # backend it refuses is a refusal the gating job cannot see.
 #
-# ``-p no:django_query_lens`` disables this package's own pytest plugin for its
+# ``-p no:django_query_contract`` disables this package's own pytest plugin for its
 # own suite, and it is load-bearing rather than shy. pytest imports entry-point
 # plugins before pytest-cov starts measuring, so with the plugin enabled every
 # module it pulls in at import time -- which is all of them -- is already loaded
@@ -118,10 +118,10 @@ testpaths = ["tests"]
 # ``tests/test_plugin_hooks.py``, which drives each hook directly with real
 # pytest objects. Removing this flag does not make the suite dogfood the plugin;
 # it makes the coverage gate stop measuring the package.
-addopts = "-p no:django_query_lens --cov=django_query_lens --cov-report=term-missing --cov-fail-under=100"
+addopts = "-p no:django_query_contract --cov=django_query_contract --cov-report=term-missing --cov-fail-under=100"
 
 [tool.coverage.run]
-source = ["django_query_lens"]
+source = ["django_query_contract"]
 branch = true
 
 [tool.coverage.report]
@@ -145,7 +145,7 @@ ignore = ["E203", "E501", "E231", "F811", "E722", "E741", "UP040", "UP046", "UP0
 "**/migrations/*.py" = ["I002"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["django_query_lens"]
+known-first-party = ["django_query_contract"]
 # CLAUDE.md requires this at the top of every annotated file; required-imports
 # is what enforces it rather than leaving it to memory.
 required-imports = ["from __future__ import annotations"]
@@ -161,7 +161,7 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 
 [tool.ty.environment]
-root = ["./django_query_lens"]
+root = ["./django_query_contract"]
 
 [tool.bumpversion]
 current_version = "0.0.0"
@@ -170,7 +170,7 @@ commit = false
 tag = false
 
 [[tool.bumpversion.files]]
-filename = "django_query_lens/version.py"
+filename = "django_query_contract/version.py"
 search = '__version__: str = "{current_version}"'
 replace = '__version__: str = "{new_version}"'
 
@@ -183,6 +183,6 @@ replace = """## [Unreleased]
 
 [[tool.bumpversion.files]]
 filename = "CHANGELOG.md"
-search = "[Unreleased]: https://github.com/Artui/django-query-lens/compare/v{current_version}...HEAD"
-replace = """[Unreleased]: https://github.com/Artui/django-query-lens/compare/v{new_version}...HEAD
-[{new_version}]: https://github.com/Artui/django-query-lens/compare/v{current_version}...v{new_version}"""
+search = "[Unreleased]: https://github.com/Artui/django-query-contract/compare/v{current_version}...HEAD"
+replace = """[Unreleased]: https://github.com/Artui/django-query-contract/compare/v{new_version}...HEAD
+[{new_version}]: https://github.com/Artui/django-query-contract/compare/v{current_version}...v{new_version}"""

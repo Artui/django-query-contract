@@ -100,7 +100,7 @@ def test_a_failed_count_assertion_gains_a_diagnosis(django_pytester: pytest.Pyte
     result.stdout.fnmatch_lines(
         [
             "*Expected to perform 1 queries but 2 were done*",
-            "*django-query-lens*",
+            "*django-query-contract*",
             "*2 statements captured: 2 on 'default'.*",
             "*2 x  #0, #1*",
         ]
@@ -143,7 +143,7 @@ def test_a_failure_with_no_queries_gains_nothing(django_pytester: pytest.Pyteste
 
 def test_the_flag_turns_capture_off_for_one_run(django_pytester: pytest.Pytester) -> None:
     django_pytester.makepyfile(_TWO_QUERIES_ONE_EXPECTED)
-    result = django_pytester.runpytest_subprocess("--no-query-lens")
+    result = django_pytester.runpytest_subprocess("--no-query-contract")
 
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*Expected to perform 1 queries but 2 were done*"])
@@ -152,7 +152,7 @@ def test_the_flag_turns_capture_off_for_one_run(django_pytester: pytest.Pytester
 
 def test_the_ini_turns_capture_off_for_a_project(django_pytester: pytest.Pytester) -> None:
     django_pytester.makeini(
-        "[pytest]\nDJANGO_SETTINGS_MODULE = inner_settings\nquery_lens = false\n"
+        "[pytest]\nDJANGO_SETTINGS_MODULE = inner_settings\nquery_contract = false\n"
     )
     django_pytester.makepyfile(_TWO_QUERIES_ONE_EXPECTED)
     result = django_pytester.runpytest_subprocess()
@@ -168,7 +168,7 @@ def test_the_stack_depth_ini_reaches_the_capture(django_pytester: pytest.Pyteste
     observable purely through what the call site becomes.
     """
     django_pytester.makeini(
-        "[pytest]\nDJANGO_SETTINGS_MODULE = inner_settings\nquery_lens_stack_depth = 1\n"
+        "[pytest]\nDJANGO_SETTINGS_MODULE = inner_settings\nquery_contract_stack_depth = 1\n"
     )
     django_pytester.makepyfile(
         """

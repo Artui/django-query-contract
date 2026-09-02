@@ -8,10 +8,10 @@ from typing import Any
 
 from django.db import connections
 
-from django_query_lens.capture_stack import capture_stack
-from django_query_lens.log_ceiling import LogCeiling
-from django_query_lens.normalise_sql import normalise_sql
-from django_query_lens.query_record import QueryRecord
+from django_query_contract.capture_stack import capture_stack
+from django_query_contract.log_ceiling import LogCeiling
+from django_query_contract.normalise_sql import normalise_sql
+from django_query_contract.query_record import QueryRecord
 
 # Measured rather than guessed: six frames separate ``cursor.execute`` from the
 # line that iterated a queryset, so twenty-five leaves nineteen for whatever

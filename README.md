@@ -1,13 +1,13 @@
-# django-query-lens
+# django-query-contract
 
-[![CI](https://github.com/Artui/django-query-lens/workflows/tests/badge.svg)](https://github.com/Artui/django-query-lens/actions/workflows/tests.yml)
-[![PyPI](https://img.shields.io/pypi/v/django-query-lens.svg)](https://pypi.org/project/django-query-lens/)
-[![Python versions](https://img.shields.io/pypi/pyversions/django-query-lens.svg)](https://pypi.org/project/django-query-lens/)
-[![Django versions](https://img.shields.io/pypi/djversions/django-query-lens.svg)](https://pypi.org/project/django-query-lens/)
-[![Docs](https://img.shields.io/badge/docs-artui.github.io-blue.svg)](https://artui.github.io/django-query-lens/)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Artui/django-query-lens/gh-pages/coverage.json)](https://github.com/Artui/django-query-lens/actions/workflows/tests.yml)
+[![CI](https://github.com/Artui/django-query-contract/workflows/tests/badge.svg)](https://github.com/Artui/django-query-contract/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/django-query-contract.svg)](https://pypi.org/project/django-query-contract/)
+[![Python versions](https://img.shields.io/pypi/pyversions/django-query-contract.svg)](https://pypi.org/project/django-query-contract/)
+[![Django versions](https://img.shields.io/pypi/djversions/django-query-contract.svg)](https://pypi.org/project/django-query-contract/)
+[![Docs](https://img.shields.io/badge/docs-artui.github.io-blue.svg)](https://artui.github.io/django-query-contract/)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Artui/django-query-contract/gh-pages/coverage.json)](https://github.com/Artui/django-query-contract/actions/workflows/tests.yml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![License](https://img.shields.io/pypi/l/django-query-lens.svg)](LICENSE)
+[![License](https://img.shields.io/pypi/l/django-query-contract.svg)](LICENSE)
 
 A query-capture engine for Django, and a pytest plugin over it.
 
@@ -20,7 +20,7 @@ log, that is reported instead of papered over.
 ## Install
 
 ```bash
-pip install django-query-lens
+pip install django-query-contract
 ```
 
 The pytest plugin loads itself. There is nothing to add to `INSTALLED_APPS`, and
@@ -41,7 +41,7 @@ def test_listing_is_flat(django_assert_num_queries, authors):
 When it fails, the failure now carries a diagnosis underneath it:
 
 ```
------------------------------- django-query-lens ------------------------------
+------------------------------ django-query-contract ------------------------------
 13 statements captured: 13 on 'default'.
 
 Repeated statement shapes:
@@ -77,7 +77,7 @@ the assertion was handed.
 ## Reading the capture directly
 
 ```python
-from django_query_lens import QueryCapture
+from django_query_contract import QueryCapture
 
 with QueryCapture() as capture:
     render_author_list()
@@ -112,11 +112,11 @@ assumes it.
 
 ```ini
 [pytest]
-query_lens = false
-query_lens_stack_depth = 25
+query_contract = false
+query_contract_stack_depth = 25
 ```
 
-or `--no-query-lens` for one run.
+or `--no-query-contract` for one run.
 
 ## Status
 
@@ -124,7 +124,7 @@ Early. The capture engine and the pytest diagnosis. N+1 by
 (call stack, fingerprint), the growth assertion, call-site attribution and plan
 capture come next.
 
-Full documentation: <https://artui.github.io/django-query-lens/>
+Full documentation: <https://artui.github.io/django-query-contract/>
 
 ## License
 

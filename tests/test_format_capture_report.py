@@ -14,7 +14,7 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from django_query_lens import QueryCapture, format_capture_report
+from django_query_contract import QueryCapture, format_capture_report
 from tests.testapp.models import Author, Book
 
 pytestmark = pytest.mark.django_db

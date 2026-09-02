@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import os
 
-from django_query_lens.query_capture import QueryCapture
-from django_query_lens.query_record import QueryRecord
+from django_query_contract.query_capture import QueryCapture
+from django_query_contract.query_record import QueryRecord
 
 
 def format_capture_report(
