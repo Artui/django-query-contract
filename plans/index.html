@@ -548,13 +548,52 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-is-not-here-yet" class="md-nav__link">
+  <a href="#index-advice-and-why-there-is-none" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is not here yet
+        Index advice, and why there is none
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Index advice, and why there is none">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-is-here-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is here instead
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-filter-carries-a-value-and-this-package-retains-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A filter carries a value, and this package retains none
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#an-index-two-levels-down-is-still-an-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        An index two levels down is still an index
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -736,13 +775,52 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-is-not-here-yet" class="md-nav__link">
+  <a href="#index-advice-and-why-there-is-none" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is not here yet
+        Index advice, and why there is none
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Index advice, and why there is none">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-is-here-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is here instead
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-filter-carries-a-value-and-this-package-retains-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A filter carries a value, and this package retains none
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#an-index-two-levels-down-is-still-an-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        An index two levels down is still an index
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -904,6 +982,8 @@ missing on purpose:</p>
 detectors are dead on PyPI, and the most probable reason is that they classified
 by rule, cried wolf, and were uninstalled. A detector nobody disables is a
 different package from a detector that finds more.</p>
+<p>Index advice was declined for the same reason and is a longer story, told
+<a href="#index-advice-and-why-there-is-none">below</a>.</p>
 <h2 id="nothing-fails-on-a-finding">Nothing fails on a finding<a class="headerlink" href="#nothing-fails-on-a-finding" title="Permanent link">&para;</a></h2>
 <p>The same rule as everywhere else here. A finding is a diagnosis printed under a
 failure somebody else's assertion produced, or a report a caller asked for. A
@@ -957,12 +1037,94 @@ poisons the transaction.</p>
 <p>The refusal names the exception class and never its message, because a driver
 error can quote a bound value and this package
 <a href="../reference/">retains no parameters</a>.</p>
-<h2 id="what-is-not-here-yet">What is not here yet<a class="headerlink" href="#what-is-not-here-yet" title="Permanent link">&para;</a></h2>
-<p>Index advice -- "these twelve statements sequentially scanned a two-million-row
-table, here are the <code>CREATE INDEX</code> statements" -- is the output people actually
-want, and it falls out of having plans plus call sites. The record already
-carries what it needs: each node keeps its relation, its filter and the rows that
-filter threw away, beside the call stack that emitted the statement.</p>
+<h2 id="index-advice-and-why-there-is-none">Index advice, and why there is none<a class="headerlink" href="#index-advice-and-why-there-is-none" title="Permanent link">&para;</a></h2>
+<p>"These twelve statements sequentially scanned a two-million-row table, here are
+the <code>CREATE INDEX</code> statements" is the output people actually want, and this was
+the milestone that was going to produce it. It does not, and the reason is the
+rule that decides every other question here: <strong>a finding is a fact the server
+states, or an equality over measurements, never a number somebody picked.</strong></p>
+<p>Three routes to an assertable version were tried against a real server. All
+three ended in a threshold.</p>
+<p><strong>A sequential scan on a table another captured statement reaches by index.</strong>
+This one is the near miss, because it reads like a comparison between two
+measurements rather than a cut-off. It is not: two statements filtering
+<em>different columns</em> of one table are not measuring the same thing. Measured --
+one statement reached <code>testapp_order</code> through the foreign key index while
+another read it end to end for a predicate that kept <strong>every</strong> row, which is the
+plan PostgreSQL should have chosen and the one no index improves. Both halves of
+the rule hold and the conclusion is still wrong, because the index it would
+point at is on the other statement's column. There is a test that runs exactly
+that pair against a server.</p>
+<p><strong>A filter whose discarded rows PostgreSQL counted itself.</strong> <code>Rows Removed by
+Filter</code> is the server's number, not ours, which is what made it a candidate. The
+verdict is still nobody's: a five-row table discards four rows in the same shape
+a hundred-thousand-row table discards 99,999 -- same node type, same key, same
+everything a rule could read -- and only a magnitude separates them. The count
+does not even rank the candidates, because the read that discarded <em>nothing</em> is
+the whole-table read that was right to be a scan. There is a test that puts both
+tables in one capture.</p>
+<p><strong>Emitting the <code>CREATE INDEX</code> itself.</strong> That needs a column, and the only place
+a column can be got is PostgreSQL's rendered predicate -- an expression that
+would have to be parsed, in a package that
+<a href="../reference/#django_query_contract.normalise_sql">declines a SQL parser</a> on
+evidence, and whose text carries the bound value this package retains nowhere.</p>
+<h3 id="what-is-here-instead">What is here instead<a class="headerlink" href="#what-is-here-instead" title="Permanent link">&para;</a></h3>
+<p>Every fact the decision needs, and no decision. <code>group_by_relation</code> reads a
+capture back as the tables it touched, and <code>format_relation_access</code> prints them:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Relations these plans read, and how PostgreSQL reached them:
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  No index is recommended below, and that is a decision rather than an omission.
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>  Whether one is worth adding is a judgement about size -- how many rows is too
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  many to read -- and this package states what the server measured instead.
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  testapp_order  2 reads, 1 without an index
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>       filtering ((reference)::text = %s::text)
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>       most one read discarded: 99,999 rows, keeping 1
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>       read through testapp_order_customer_id_85c0ed1a
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>       from tests/test_orders.py:13 in test_dashboard
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>       PostgreSQL has 2 indexes on testapp_order:
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>         CREATE INDEX testapp_order_customer_id_85c0ed1a ON public.testapp_order USING btree (customer_id)
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>         CREATE UNIQUE INDEX testapp_order_pkey ON public.testapp_order USING btree (id)
+</span></code></pre></div>
+<p>The table, how PostgreSQL reached it, the predicate it applied, how many rows it
+said it threw away, the line that asked, and the indexes that already exist --
+in the server's own words, from <code>pg_get_indexdef</code>, so an expression index, a
+partial index and a non-default operator class all come out right without this
+package learning any of the three. Put the filter next to the index list and the
+gap is visible. The judgement is yours.</p>
+<p>It is a <strong>grouping</strong>, in the sense
+<a href="../attribution/">call-site attribution</a> is one, and not a detector. Nothing here
+is a finding, nothing fails on it, and there is no rule anywhere in it about
+which read is the interesting one -- which is exactly what makes it safe to put
+a sequential read of a table beside an indexed read of the same table, where a
+finding would not be.</p>
+<p>The relations are ordered by how many times they were read, and <strong>deliberately
+not by rows discarded</strong> -- which is the order a reader would find most useful,
+and is exactly why it is refused. Ranking tables by how badly they want an index
+is the judgement being declined, and a sort key is a quiet way of making it
+anyway.</p>
+<h3 id="a-filter-carries-a-value-and-this-package-retains-none">A filter carries a value, and this package retains none<a class="headerlink" href="#a-filter-carries-a-value-and-this-package-retains-none" title="Permanent link">&para;</a></h3>
+<p><code>EXPLAIN</code> renders a predicate with the parameter substituted. A real server
+writes this for a query bound with <code>%s</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Filter: ((reference)::text = '601980.6826913885'::text)
+</span></code></pre></div>
+<p>That is a customer's data, on a record this package would otherwise hold for the
+length of a capture and print into CI output. So <code>PlanNode.condition</code> is put
+through the same <a href="../reference/#django_query_contract.normalise_sql"><code>normalise_sql</code></a>
+rules the statement fingerprint is made with: the column, the operator and the
+casts survive, and the value becomes <code>%s</code>.</p>
+<p>That redaction is also what makes the predicate groupable. With the value in it,
+one statement shape run with twelve parameters is twelve conditions and no
+report could say the twelve executions did the same thing. Without it, they are
+one.</p>
+<h3 id="an-index-two-levels-down-is-still-an-index">An index two levels down is still an index<a class="headerlink" href="#an-index-two-levels-down-is-still-an-index" title="Permanent link">&para;</a></h3>
+<p>PostgreSQL splits a bitmap read across nodes: the <code>Bitmap Heap Scan</code> names the
+table and carries no index at all, while the <code>Bitmap Index Scan</code> beneath it
+names the index and no table. Put a <code>BitmapAnd</code> between them -- two indexes
+combined -- and the index is two levels down.</p>
+<p><code>PlanNode.indexes_used</code> walks down to find them, stopping at the next node that
+names a relation, because that node is a different read of a different table.
+Reading the node alone would report a table PostgreSQL reached through two
+indexes as one it read end to end, which is the single worst thing this report
+could say. Both shapes are pinned by a real server's payload.</p>
 
 
 
