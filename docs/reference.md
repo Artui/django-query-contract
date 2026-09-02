@@ -26,6 +26,20 @@
 
 ::: django_query_contract.GrowthPoint
 
+## The plan
+
+::: django_query_contract.PlanCapture
+
+::: django_query_contract.QueryPlan
+
+::: django_query_contract.PlanNode
+
+::: django_query_contract.PlanDefect
+
+::: django_query_contract.PlanFinding
+
+::: django_query_contract.PlansUnsupported
+
 ## The ceiling
 
 ::: django_query_contract.LogCeiling
@@ -55,3 +69,7 @@
 ::: django_query_contract.measure_query_growth
 
 ::: django_query_contract.format_query_growth
+
+::: django_query_contract.find_plan_defects
+
+::: django_query_contract.format_query_plans

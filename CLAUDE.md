@@ -6,10 +6,11 @@ workspace roadmap, not here; this file is about how the code is written.
 ## What this package is
 
 `django-query-contract` captures every statement a Django connection executes, with a
-normalised SQL fingerprint and the call stack that emitted it, and reads that
-capture back as a diagnosis. The pytest plugin and call-site attribution are two
-faces of it. A CI report and a runtime budget middleware are the other two, and
-they are not written yet.
+normalised SQL fingerprint, the call stack that emitted it and -- where one was
+asked for -- the plan PostgreSQL chose, and reads that capture back as a
+diagnosis. The pytest plugin and call-site attribution are two faces of it. A CI
+report and a runtime budget middleware are the other two, and they are not
+written yet.
 
 Two claims decide every design question here.
 
@@ -65,10 +66,12 @@ make docs-build    # mkdocs build --strict
 
 `QueryCapture`, `QueryRecord`, `StackFrame`, `NPlusOne`, `Attribution`,
 `LogCeiling`, `QueryLogCeilingWarning`, `Growth`, `GrowthPoint`, `QueryGrowth`,
-`normalise_sql`, `capture_stack`, `find_n_plus_one`, `group_by_call_site`,
-`assert_query_growth`, `measure_query_growth`, `format_capture_report`,
-`format_n_plus_one`, `format_n_plus_one_summary`, `format_attributions`,
-`format_query_growth`. Nouns for what is recorded, verbs for what is done to it.
+`PlanCapture`, `QueryPlan`, `PlanNode`, `PlanDefect`, `PlanFinding`,
+`PlansUnsupported`, `normalise_sql`, `capture_stack`, `find_n_plus_one`,
+`group_by_call_site`, `assert_query_growth`, `measure_query_growth`,
+`find_plan_defects`, `format_capture_report`, `format_n_plus_one`,
+`format_n_plus_one_summary`, `format_attributions`, `format_query_growth`,
+`format_query_plans`. Nouns for what is recorded, verbs for what is done to it.
 Nothing is named after pytest, because three of the four faces are not pytest.
 
 **`group_by_call_site` is a grouping and `find_n_plus_one` is a detector**, and
@@ -144,10 +147,19 @@ It is frozen at `1.0`.
   `--n-plus-one` listing somebody asked for.
 - **Report the ceiling, never paper over it.** A package about honest performance
   assertions does not get to repeat the failure it was built to expose.
-- **Degrade honestly and say where.** A capture rebuilt from a
-  `CaptureQueriesContext` has no stacks and no ceiling; it says so rather than
-  presenting an empty stack as a top-level call. When plan assertions arrive they
-  will skip with a reason on non-PostgreSQL rather than pass vacuously.
+- **Degrade honestly and say where -- except where degrading would be a lie.** A
+  capture rebuilt from a `CaptureQueriesContext` has no stacks and no ceiling; it
+  says so rather than presenting an empty stack as a top-level call. **Plan
+  capture is the one place that refuses instead**, and the difference is worth
+  keeping straight: a degraded capture is still a measurement, while an empty
+  plan capture is indistinguishable from a healthy one, so an assertion over it
+  would pass because the backend could not check it. `PlanCapture` raises
+  `PlansUnsupported` on entry and the `query_plans` fixture turns that into a
+  skip.
+  **The vendor is only half of it.** A plan over a table PostgreSQL has never
+  analyzed is a guess, so a capture asks the catalogue at the end of the block
+  and `unanalyzed_relations` says which. It deliberately says nothing about
+  whether the tables are big *enough*: "ten rows is too few" is a number.
 - **Retain no parameters.** A `bulk_create` is one execution and ten thousand
   values, and the runtime face would be holding customer data to answer a
   question about query counts. `param_count` is what a diagnosis needs; the plan
@@ -184,6 +196,12 @@ own module, a re-export in `__init__.py`, and a docs entry.
   second `Config`: each config builds its own pytest-django database blocker, so
   the outer one cannot give back what the inner one took, and the connection
   stays shut through teardown.
+- **Run the suite against PostgreSQL too when anything touches plan capture.**
+  `QUERY_CONTRACT_TEST_DATABASE=postgres PGHOST=... uv run --no-sync pytest`.
+  `tests/test_plan_capture_postgres.py` skips itself everywhere else, so a green
+  default run proves nothing about it -- and the default `other` alias stays
+  SQLite on that run on purpose, which is what drives the "one of these
+  connections cannot produce a plan" refusal through a real registry.
 - **Run the suite against the floor before pushing anything that touches
   `tests/`.** `uv lock --resolution lowest-direct --refresh` then
   `uv sync --frozen --all-groups`; restore `uv.lock` from git afterwards,
@@ -236,12 +254,22 @@ mypy-style `# type: ignore`, no emoji or marker glyphs in code, docs or
 changelogs. Never add a `--no-verify` escape hatch; fix the cause.
 
 **The coverage gate lives on the SQLite matrix**, unlike `django-data-shape`,
-which gates on Postgres. The difference is what the package is for: everything
-here is backend-neutral, so SQLite reaches every line. When plan assertions
-arrive they will be PostgreSQL-only, and the rule that keeps the gate here is to
-branch their refusals on the connection's **vendor**, so a degradation path is
-covered by passing a vendor rather than by running the suite on the backend being
-refused.
+which gates on Postgres. Almost everything here is backend-neutral, so SQLite
+reaches every line. Plan capture is PostgreSQL-only and stays covered there
+because **every refusal branches on the connection's `vendor` string and every
+plan is parsed from a payload** -- both reachable by passing a vendor or a
+payload rather than by running the suite on the backend being refused. The
+`pretend_postgres` fixture completes it: a backend's `vendor` is a class
+attribute, so an alias with the PostgreSQL engine answers `postgresql` without
+opening a socket, which is what makes the *accepting* half of the refusal
+reachable on SQLite too.
+
+**The `postgres` job is what keeps that from being self-agreement.** It runs the
+same entry points against a real server over a `django-data-shape` world, with
+no coverage gate, and fails if the plan tests skipped rather than ran. A refusal
+decided from a string and a parser fed a checked-in payload both agree with
+whatever this repository believes PostgreSQL does; that job is where the belief
+meets a server.
 
 ## Common pitfalls
 
@@ -266,6 +294,21 @@ refused.
   a driver API that is neither -- psycopg 3's `cursor.copy()`, which is how
   `django-data-shape` loads rows -- is invisible. Django's own query log has the
   same blind spot, so the two agree, and a test pins it.
+- **`EXPLAIN` must not go through `connection.cursor()`.** Django's
+  `execute_wrapper` and its `queries_log` both sit on the Python cursor, so a
+  plan taken through it would be captured by this package's own wrapper --
+  endlessly -- and counted by `django_assert_num_queries`, which counts through
+  that log. It goes out on `connection.connection.cursor()`, the driver's own,
+  which neither sees. The blind spot documented above is the mechanism here.
+- **A failing `EXPLAIN` inside a transaction poisons it.** Verified: the
+  connection goes to "current transaction is aborted" and every later statement
+  in the test fails. So the `EXPLAIN` runs under a savepoint -- and only when
+  `connection.in_atomic_block`, because PostgreSQL raises rather than warns on
+  `SAVEPOINT` outside a transaction block.
+- **`EXPLAIN ANALYZE` executes the statement**, so only a statement matching
+  `^\s*SELECT\b` is explained. The rule is "begins with SELECT" rather than
+  "does not begin with INSERT" because a data-modifying CTE is written
+  `WITH ... INSERT`.
 - **The plugin captures around the call phase only.** A limit or a log changed
   inside a test body is read after the ceiling has already been measured; set up
   that state in a fixture.

@@ -281,3 +281,43 @@ def test_statements_are_counted_per_connection(authors: list[Author]) -> None:
     with QueryCapture() as capture:
         list(Author.objects.all())
     assert "1 statements captured: 1 on 'default'." in format_capture_report(capture)
+
+
+def test_a_plan_capture_gains_a_block_about_what_the_planner_did() -> None:
+    """One report function answers "what did this block do" whichever capture is held.
+
+    Assembled rather than captured, unlike everything above it: a plan can only
+    come from PostgreSQL and this suite's gate runs on SQLite. What is being
+    checked here is only that the two reports compose -- the plan block's own
+    wording is ``test_format_query_plans.py``'s business.
+    """
+    from django_query_contract import PlanCapture, QueryPlan, QueryRecord
+    from tests.plan_payloads import SPILLED_SORT
+
+    capture = PlanCapture()
+    capture._records = [
+        QueryRecord(
+            index=0,
+            sql="SELECT id FROM testapp_book ORDER BY title",
+            fingerprint="SELECT id FROM testapp_book ORDER BY title",
+            alias="default",
+            vendor="postgresql",
+            many=False,
+            param_count=None,
+            plan=QueryPlan.from_explain(SPILLED_SORT, analyzed=True),
+        )
+    ]
+
+    report = format_capture_report(capture)
+
+    assert "1 statements captured: 1 on 'default'." in report
+    assert "spilled to disk  Sort" in report
+
+
+def test_a_plan_capture_that_took_no_plans_gains_nothing(authors: list[Author]) -> None:
+    """A capture is not a report about plans just because it could have taken some."""
+    from django_query_contract import PlanCapture
+
+    capture = PlanCapture()
+
+    assert format_capture_report(capture) == ""

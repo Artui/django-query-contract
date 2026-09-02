@@ -393,3 +393,30 @@ def test_without_the_flag_the_run_says_nothing(django_pytester: pytest.Pytester)
 
     result.assert_outcomes(passed=1)
     assert "N+1" not in result.stdout.str()
+
+
+_A_PLAN_TEST = """
+    import pytest
+    from django.db import connection
+
+    @pytest.mark.django_db
+    def test_plans(query_plans):
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+"""
+
+
+def test_a_plan_test_on_sqlite_skips_with_the_reason_rather_than_passing(
+    django_pytester: pytest.Pytester,
+) -> None:
+    """The whole "never pass vacuously" claim, in a real run rather than in prose.
+
+    The inner project is SQLite, which has no planner, so a test asking for plans
+    cannot mean anything. It could pass with an empty capture and nobody would
+    know; it does not. It skips, and the skip names the backend.
+    """
+    django_pytester.makepyfile(_A_PLAN_TEST)
+    result = django_pytester.runpytest_subprocess("-rs")
+
+    result.assert_outcomes(skipped=1, passed=0, failed=0)
+    result.stdout.fnmatch_lines(["*Plan capture needs PostgreSQL*"])

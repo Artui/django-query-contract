@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from django_query_contract.query_plan import QueryPlan
 from django_query_contract.stack_frame import StackFrame
 from django_query_contract.utils import innermost_frame_outside_django
 
@@ -70,6 +71,26 @@ class QueryRecord:
 
     stack_truncated: bool = False
     """``True`` when the stack was deeper than the capture's limit and outer frames were dropped."""
+
+    plan: QueryPlan | None = field(default=None)
+    """What PostgreSQL said it would do with this statement, when it was asked.
+
+    ``None`` means nobody asked: an ordinary
+    :class:`~django_query_contract.QueryCapture` takes no plans, and neither does
+    a capture rebuilt from a ``CaptureQueriesContext``. A
+    :class:`~django_query_contract.PlanCapture` puts a
+    :class:`~django_query_contract.QueryPlan` on every record it makes, including
+    the statements it declined to explain -- those carry a plan whose ``root`` is
+    ``None`` and whose ``refusal`` says why, so "not asked" and "asked and
+    declined" stay distinguishable.
+
+    **This is the first field added under the additive contract, and it is what
+    the contract was for.** The record has been public since 0.1.0 on the bet
+    that four faces would read it, and the docstring above has said since then
+    that the plan face runs ``EXPLAIN`` at execution time because that is where
+    the parameters still are. Adding the field changes nothing for a reader that
+    does not want it, which is the promise ``0.x`` made.
+    """
 
     @property
     def call_site(self) -> StackFrame | None:

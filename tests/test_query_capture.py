@@ -68,7 +68,10 @@ def test_a_record_carries_what_the_four_faces_need(authors: list[Author]) -> Non
     record = capture[0]
     assert record.index == 0
     assert record.alias == "default"
-    assert record.vendor == "sqlite"
+    # Read off the connection the statement ran on rather than pinned to one
+    # backend: this suite's default connection is SQLite, and the PostgreSQL job
+    # runs the same assertion against a server.
+    assert record.vendor == connections["default"].vendor
     assert record.many is False
     assert record.sql.startswith("SELECT")
     assert record.fingerprint == record.sql
@@ -240,7 +243,7 @@ def test_from_capture_context_serves_a_caller_who_already_has_one(
     record = capture[0]
     assert record.sql.startswith("SELECT")
     assert record.alias == "default"
-    assert record.vendor == "sqlite"
+    assert record.vendor == connections["default"].vendor
     assert record.stack == ()
     assert record.call_site is None
     assert record.param_count is None

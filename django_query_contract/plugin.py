@@ -22,7 +22,7 @@ uninstalled, and four of them are dead on PyPI already.
 from __future__ import annotations
 
 import warnings
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from typing import Any
 
 import pytest
@@ -32,12 +32,20 @@ from pluggy import Result
 from django_query_contract.find_n_plus_one import find_n_plus_one
 from django_query_contract.format_capture_report import format_capture_report
 from django_query_contract.format_n_plus_one_summary import format_n_plus_one_summary
+from django_query_contract.format_query_plans import format_query_plans
 from django_query_contract.n_plus_one import NPlusOne
+from django_query_contract.plan_capture import PlanCapture
 from django_query_contract.query_capture import QueryCapture
 from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarning
 from django_query_contract.utils import DEFAULT_STACK_DEPTH
 
 _CAPTURE_KEY = pytest.StashKey[QueryCapture]()
+
+# The plan capture a test asked for through the ``query_plans`` fixture, so the
+# report hook can put its findings under a failure. A second key rather than
+# reusing the one above, because the two capture different windows: the hook's
+# capture is the call phase, and a fixture's is everything set up after it.
+_PLAN_KEY = pytest.StashKey[PlanCapture]()
 
 # Findings gathered across the whole run, keyed by node id, for the end-of-run
 # listing. On the config rather than in a module-level variable: the run owns
@@ -49,6 +57,11 @@ _FINDINGS_KEY = pytest.StashKey[dict[str, tuple[NPlusOne, ...]]]()
 # ``---- django-query-contract ----``, and above the end-of-run listing. One
 # name for both, so a reader meets the package under the same heading twice.
 _SECTION_NAME = "django-query-contract"
+
+# The plan block is its own section rather than more lines in the one above,
+# because the two describe different windows and a reader has to be able to tell
+# which capture a statement came from.
+_PLAN_SECTION_NAME = "django-query-contract plans"
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -169,11 +182,19 @@ def pytest_runtest_makereport(
     capture = item.stash.get(_CAPTURE_KEY, None)
     if capture is not None:
         del item.stash[_CAPTURE_KEY]
-    if capture is None or not report.failed:
+    plans = item.stash.get(_PLAN_KEY, None)
+    if plans is not None:
+        del item.stash[_PLAN_KEY]
+    if not report.failed:
         return
-    text = format_capture_report(capture)
-    if text:
-        report.sections.append((_SECTION_NAME, text))
+    if capture is not None:
+        text = format_capture_report(capture)
+        if text:
+            report.sections.append((_SECTION_NAME, text))
+    if plans is not None:
+        planned = format_query_plans(plans)
+        if planned:
+            report.sections.append((_PLAN_SECTION_NAME, planned))
 
 
 # ``Any`` rather than ``pytest.TerminalReporter``, which this package cannot
@@ -198,6 +219,87 @@ def pytest_terminal_summary(terminalreporter: Any) -> None:
         return
     terminalreporter.write_sep("=", _SECTION_NAME)
     terminalreporter.write_line(format_n_plus_one_summary(collected))
+
+
+def _query_plan_connections() -> str | Iterable[str] | None:
+    """Which connections ``query_plans`` captures. Override to name one.
+
+    ``None`` means every configured connection, which is what
+    :class:`~django_query_contract.PlanCapture` takes it to mean -- and every one
+    of them then has to be PostgreSQL, because a capture that quietly skipped the
+    connection it could not explain would be the silent gap that class exists to
+    refuse.
+
+    That is the right default and the wrong one for a project whose second
+    database is a SQLite cache: there, every test asking for plans would skip
+    with a true sentence about a connection nobody meant. Overriding this
+    fixture in a ``conftest.py`` is the answer, and it is a fixture rather than
+    an ini setting because the projects that need it are the ones that already
+    override ``django_db_setup`` next to it.
+
+    ```python
+    # conftest.py
+    import pytest
+
+
+    @pytest.fixture
+    def query_plan_connections():
+        return "default"
+    ```
+    """
+    return None
+
+
+query_plan_connections = pytest.fixture(name="query_plan_connections")(_query_plan_connections)
+
+
+def _query_plans(
+    request: Any, query_plan_connections: str | Iterable[str] | None
+) -> Generator[PlanCapture, None, None]:
+    """Capture query plans around this test, or skip it with the reason there are none.
+
+    ```python
+    def test_the_dashboard_plan(db, orders, query_plans):
+        dashboard()
+
+        assert not query_plans.unanalyzed_relations
+    ```
+
+    Which connections it covers comes from the ``query_plan_connections``
+    fixture, so a project whose second database is not PostgreSQL can name the
+    one it means instead of skipping every plan test.
+
+    Yields a :class:`~django_query_contract.PlanCapture` entered around
+    everything set up after this fixture and around the test body, so the
+    statements a later fixture runs are captured too.
+
+    **The skip is the point of the fixture, and it is the only way this package
+    offers to get one.** Plan capture is PostgreSQL-only, and on any other
+    backend :class:`~django_query_contract.PlanCapture` raises rather than
+    yielding an empty capture -- an empty plan capture is indistinguishable from
+    a healthy one, so an assertion over it would pass because the backend could
+    not check it. A raise in a fixture is an *error*, though, and a suite that
+    errors on SQLite is a suite nobody runs. So the refusal arrives here as a
+    skip carrying the same sentence: a test that never ran is honest.
+
+    The capture is also left on the item, so a failing test gains a plan section
+    underneath the failure without the test having to print anything.
+
+    A plain generator function rather than the fixture itself, so this whole body
+    is reachable from a test that drives it directly. pytest 9 wraps a fixture in
+    an object that cannot be called, and a wrapper of one line here would be one
+    line no coverage gate could reach.
+    """
+    capture = PlanCapture(using=query_plan_connections, stack_depth=_stack_depth(request.config))
+    refusal = capture.refusal()
+    if refusal is not None:
+        pytest.skip(refusal)
+    request.node.stash[_PLAN_KEY] = capture
+    with capture:
+        yield capture
+
+
+query_plans = pytest.fixture(name="query_plans")(_query_plans)
 
 
 def _enabled(config: pytest.Config) -> bool:

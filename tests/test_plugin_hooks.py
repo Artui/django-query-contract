@@ -18,11 +18,12 @@ import warnings
 from typing import Any
 
 import pytest
+from _pytest.outcomes import Skipped
 from django.conf import empty, settings
 from django.db import connection
 from pluggy import Result
 
-from django_query_contract import QueryLogCeilingWarning, plugin
+from django_query_contract import PlanCapture, QueryLogCeilingWarning, plugin
 
 _A_TEST = """
 def test_nothing():
@@ -370,3 +371,99 @@ def test_a_passing_call_also_drops_its_capture(request: pytest.FixtureRequest) -
     _run_makereport(item, _make_report(item, "call", failing=False))
 
     assert plugin._CAPTURE_KEY not in item.stash
+
+
+def test_the_plan_fixture_skips_where_a_plan_could_not_mean_anything(
+    request: pytest.FixtureRequest,
+) -> None:
+    """The honest skip, driven through the fixture's own body.
+
+    A raise in a fixture is an error, and a suite that errors on SQLite is a
+    suite nobody runs -- so the refusal arrives as a skip carrying the same
+    sentence. This suite runs on SQLite by default, which is exactly the case.
+    """
+    generator = plugin._query_plans(request, plugin._query_plan_connections())
+
+    with pytest.raises(Skipped) as skipped:
+        next(generator)
+
+    assert "Plan capture needs PostgreSQL" in str(skipped.value)
+
+
+def test_the_plan_fixture_captures_and_leaves_the_capture_behind(
+    request: pytest.FixtureRequest, pretend_postgres: str
+) -> None:
+    """The accepting half, and the stash that lets a failure gain a plan section."""
+    item = _live_item(request)
+    generator = plugin._query_plans(request, pretend_postgres)
+
+    capture = next(generator)
+
+    assert isinstance(capture, PlanCapture)
+    assert item.stash[plugin._PLAN_KEY] is capture
+    with pytest.raises(StopIteration):
+        next(generator)
+
+
+def test_the_connections_fixture_means_every_one_of_them_by_default() -> None:
+    """``None`` is what ``PlanCapture`` reads as "every configured connection"."""
+    assert plugin._query_plan_connections() is None
+
+
+def test_a_failed_test_that_asked_for_plans_gains_a_plan_section(
+    request: pytest.FixtureRequest,
+) -> None:
+    from django_query_contract import PlanCapture, QueryPlan, QueryRecord
+    from tests.plan_payloads import SPILLED_SORT
+
+    item = _live_item(request)
+    capture = PlanCapture()
+    capture._records = [
+        QueryRecord(
+            index=0,
+            sql="SELECT id FROM testapp_book ORDER BY title",
+            fingerprint="SELECT id FROM testapp_book ORDER BY title",
+            alias="default",
+            vendor="postgresql",
+            many=False,
+            param_count=None,
+            plan=QueryPlan.from_explain(SPILLED_SORT, analyzed=True),
+        )
+    ]
+    item.stash[plugin._PLAN_KEY] = capture
+
+    report = _run_makereport(item, _make_report(item, "call", failing=True))
+
+    names = [name for name, _ in report.sections]
+    assert "django-query-contract plans" in names
+    assert plugin._PLAN_KEY not in item.stash
+    body = dict(report.sections)["django-query-contract plans"]
+    assert "spilled to disk" in body
+
+
+def test_a_passing_test_that_asked_for_plans_gains_nothing_and_drops_the_capture(
+    request: pytest.FixtureRequest,
+) -> None:
+    """Same retention rule as the ordinary capture: the report is the only reader."""
+    from django_query_contract import PlanCapture
+
+    item = _live_item(request)
+    item.stash[plugin._PLAN_KEY] = PlanCapture()
+
+    report = _run_makereport(item, _make_report(item, "call", failing=False))
+
+    assert report.sections == []
+    assert plugin._PLAN_KEY not in item.stash
+
+
+def test_a_failed_test_whose_plan_capture_saw_nothing_gains_no_empty_section(
+    request: pytest.FixtureRequest,
+) -> None:
+    from django_query_contract import PlanCapture
+
+    item = _live_item(request)
+    item.stash[plugin._PLAN_KEY] = PlanCapture()
+
+    report = _run_makereport(item, _make_report(item, "call", failing=True))
+
+    assert [name for name, _ in report.sections] == []

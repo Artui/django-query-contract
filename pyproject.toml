@@ -78,6 +78,18 @@ dev = [
     # flake8-tidy-imports namespace and the plugin is what defines them.
     "flake8-tidy-imports>=4.12.0",
     "django-stubs>=5.1.0",
+    # Plan capture is PostgreSQL-only, so the suite needs a driver to reach the
+    # one backend that can produce a plan at all. Dev-group rather than an extra
+    # of its own: the package issues ``EXPLAIN`` through whatever driver the
+    # connection already has and imports neither psycopg nor psycopg2, so there
+    # is nothing for a consumer to install beyond the driver they were always
+    # going to have.
+    "psycopg[binary]>=3.2.0",
+    # The database a plan assertion is only honest against. A plan over ten rows
+    # is a lie, so the Postgres-only tests build a shaped, analyzed world with
+    # the package that exists to build one rather than looping over
+    # ``objects.create`` and measuring the wrong database.
+    "django-data-shape[pytest]>=0.7.0",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -101,12 +113,14 @@ DJANGO_SETTINGS_MODULE = "tests.conftest_settings"
 asyncio_mode = "auto"
 testpaths = ["tests"]
 # The coverage gate rides on the default run, and the default run is SQLite.
-# Everything this package ships is backend-neutral: the capture is
+# Almost everything this package ships is backend-neutral: the capture is
 # ``execute_wrapper``, the fingerprint is a string transform, and the ceiling is
-# arithmetic over ``connection.queries_limit``. When plan assertions arrive they
-# will be PostgreSQL-only, and the rule that keeps the gate here is to branch
-# their refusals on the connection's *vendor* -- a refusal reachable only on the
-# backend it refuses is a refusal the gating job cannot see.
+# arithmetic over ``connection.queries_limit``. Plan capture is PostgreSQL-only
+# and stays covered here because every refusal branches on the connection's
+# *vendor* and every plan is parsed from a payload -- a refusal reachable only on
+# the backend it refuses is a refusal the gating job cannot see. What that cannot
+# check is whether a real server accepts what this package sends, which is what
+# the separate ``postgres`` CI job is for.
 #
 # ``-p no:django_query_contract`` disables this package's own pytest plugin for its
 # own suite, and it is load-bearing rather than shy. pytest imports entry-point
