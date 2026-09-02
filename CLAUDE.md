@@ -63,10 +63,11 @@ make docs-build    # mkdocs build --strict
 
 ## Public API naming
 
-`QueryCapture`, `QueryRecord`, `StackFrame`, `LogCeiling`,
-`QueryLogCeilingWarning`, `normalise_sql`, `capture_stack`,
-`format_capture_report`. Nouns for what is recorded, verbs for what is done to
-it. Nothing is named after pytest, because three of the four faces are not pytest.
+`QueryCapture`, `QueryRecord`, `StackFrame`, `NPlusOne`, `LogCeiling`,
+`QueryLogCeilingWarning`, `normalise_sql`, `capture_stack`, `find_n_plus_one`,
+`format_capture_report`, `format_n_plus_one`, `format_n_plus_one_summary`. Nouns
+for what is recorded, verbs for what is done to it. Nothing is named after
+pytest, because three of the four faces are not pytest.
 
 **`QueryRecord` is a public, documented artifact from the first release**, and
 the reason is that four faces read it and three of them are unwritten. A record
@@ -87,6 +88,23 @@ and never given a new meaning. It is frozen at `1.0`.
   is that they classified by rule -- `nplusone` listens for lazy loads -- so they
   cried wolf and were deleted. A detector nobody disables is a different package
   from a detector that finds more.
+  **The identity is the whole stack, not the call site**: two callers of one
+  helper are two defects with two fixes, and the call site alone would name the
+  one line that is fine. It excludes the connection alias, because the rule above
+  does not mention one and splitting on it would break one loop into two
+  findings. A record with **no** stack is not grouped at all -- guessing there
+  manufactures a finding out of a gap in the input.
+  **The identity is really the innermost `stack_depth` frames**, which is the one
+  place it can be wrong. Under pytest a query from a test function is 38 frames
+  deep and 30 of them are the runner's own, so `stack_truncated` is set on every
+  capture at any workable depth and neither report prints it. An application
+  stack deeper than the window can merge two paths -- which understates findings,
+  never invents one.
+- **Nothing fails on a finding.** A batched `bulk_create` is structurally the
+  defect and is reported like any other repetition; an exemption list would be
+  the first tunable. What keeps it from crying wolf is that a finding only
+  appears under a failure somebody else's assertion produced, or in the
+  `--n-plus-one` listing somebody asked for.
 - **Report the ceiling, never paper over it.** A package about honest performance
   assertions does not get to repeat the failure it was built to expose.
 - **Degrade honestly and say where.** A capture rebuilt from a
@@ -214,6 +232,10 @@ refused.
 - **The plugin captures around the call phase only.** A limit or a log changed
   inside a test body is read after the ceiling has already been measured; set up
   that state in a fixture.
+- **Do not name `pytest.TerminalReporter`.** That alias reached pytest's public
+  namespace well after the declared `pytest>=8.0` floor, so a module or a test
+  that references it passes at the pinned resolution and fails the floor job.
+  Take the reporter off the plugin manager and annotate it `Any`.
 
 ## Releasing
 

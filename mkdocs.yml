@@ -70,4 +70,5 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - N+1 detection: n-plus-one.md
   - API reference: reference.md

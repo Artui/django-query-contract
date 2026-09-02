@@ -1,8 +1,12 @@
 """A query-capture engine for Django, and a pytest plugin over it."""
 
 from django_query_contract.capture_stack import capture_stack
+from django_query_contract.find_n_plus_one import find_n_plus_one
 from django_query_contract.format_capture_report import format_capture_report
+from django_query_contract.format_n_plus_one import format_n_plus_one
+from django_query_contract.format_n_plus_one_summary import format_n_plus_one_summary
 from django_query_contract.log_ceiling import LogCeiling
+from django_query_contract.n_plus_one import NPlusOne
 from django_query_contract.normalise_sql import normalise_sql
 from django_query_contract.query_capture import QueryCapture
 from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarning
@@ -12,12 +16,16 @@ from django_query_contract.version import __version__
 
 __all__ = [
     "LogCeiling",
+    "NPlusOne",
     "QueryCapture",
     "QueryLogCeilingWarning",
     "QueryRecord",
     "StackFrame",
     "__version__",
     "capture_stack",
+    "find_n_plus_one",
     "format_capture_report",
+    "format_n_plus_one",
+    "format_n_plus_one_summary",
     "normalise_sql",
 ]

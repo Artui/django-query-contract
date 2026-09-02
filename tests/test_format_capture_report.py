@@ -41,20 +41,56 @@ def test_a_capture_with_nothing_in_it_says_nothing() -> None:
     assert format_capture_report(capture) == ""
 
 
-def test_a_repeated_shape_is_named_with_its_call_site(authors: list[Author]) -> None:
+def test_an_n_plus_one_is_named_with_its_call_site(authors: list[Author]) -> None:
+    """The whole section, on the defect it exists to describe.
+
+    The counts add up: four statements captured, three of them the finding, one
+    left over. A report that lists the interesting queries and stays quiet about
+    the rest invites a reader to assume the rest were fine.
+    """
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             list(author.books.all())
 
     report = format_capture_report(capture)
     assert "4 statements captured: 4 on 'default'." in report
-    assert "Repeated statement shapes:" in report
-    assert "3 x  #1, #2, #3" in report
+    assert "N+1 -- one statement shape, executed more than once from one call path:" in report
+    assert "3 x  from " in report
     assert '"testapp_book"."author_id" = %s' in report
-    assert "1 shape(s) ran once." in report
+    assert "queries #1, #2, #3" in report
+    assert "1 statement(s) were not repeated from any one call path." in report
 
 
-def test_shapes_are_ordered_by_how_often_they_repeated(authors: list[Author]) -> None:
+def test_a_failure_with_no_n_plus_one_says_that_too(authors: list[Author]) -> None:
+    """Useful under a failed count assertion: the extra query is not a loop.
+
+    A reader who has just been told they ran one query too many needs to know
+    whether the fix is a prefetch or something else, and "no N+1" answers it.
+    """
+    with QueryCapture(using="default") as capture:
+        list(Author.objects.all())
+        list(Book.objects.all())
+
+    report = format_capture_report(capture)
+    assert "No N+1: no statement shape repeated from a single call path." in report
+    assert "2 statement(s) were not repeated from any one call path." in report
+
+
+def test_the_same_statement_from_two_lines_is_two_findings(authors: list[Author]) -> None:
+    """The section reports each call path separately, because each is a fix."""
+    with QueryCapture(using="default") as capture:
+        for _ in range(2):
+            list(Author.objects.filter(pk=1))
+        for _ in range(3):
+            list(Author.objects.filter(pk=1))
+
+    report = format_capture_report(capture)
+    assert report.count("x  from ") == 2
+    assert "3 x  from " in report
+    assert "2 x  from " in report
+
+
+def test_findings_are_ordered_by_how_often_they_repeated(authors: list[Author]) -> None:
     """Most repeated first, then by first appearance so two runs agree."""
     with QueryCapture(using="default") as capture:
         for _ in range(2):
@@ -66,7 +102,7 @@ def test_shapes_are_ordered_by_how_often_they_repeated(authors: list[Author]) ->
     assert report.index("5 x ") < report.index("2 x ")
 
 
-def test_only_the_worst_shapes_are_listed(authors: list[Author]) -> None:
+def test_only_the_worst_findings_are_listed(authors: list[Author]) -> None:
     with QueryCapture(using="default") as capture:
         for _ in range(2):
             list(Author.objects.filter(pk=1))
@@ -75,9 +111,9 @@ def test_only_the_worst_shapes_are_listed(authors: list[Author]) -> None:
         for _ in range(4):
             list(Author.objects.filter(name="a0"))
 
-    report = format_capture_report(capture, max_shapes=1)
+    report = format_capture_report(capture, max_findings=1)
     assert "4 x " in report
-    assert "and 2 more repeated shapes." in report
+    assert "and 2 more findings." in report
 
 
 def test_a_long_statement_is_cut_and_says_so(authors: list[Author]) -> None:
@@ -93,28 +129,25 @@ def test_a_long_statement_is_cut_and_says_so(authors: list[Author]) -> None:
     assert "... (truncated)" not in untruncated
 
 
-def test_more_than_eight_repeats_are_elided(authors: list[Author]) -> None:
-    with QueryCapture(using="default") as capture:
-        for _ in range(9):
-            list(Author.objects.filter(pk=1))
-
-    report = format_capture_report(capture)
-    assert "9 x  #0, #1, #2, #3, #4, #5, #6, #7, ..." in report
-
-
-def test_a_capture_without_stacks_says_where_it_could_not_look() -> None:
+def test_a_capture_without_stacks_says_it_could_not_look() -> None:
     """Reconstructed from a ``CaptureQueriesContext``, which records no frames.
 
-    The report says so rather than leaving a blank where a call site should be:
-    the missing half is the argument for capturing separately, not something to
-    hide.
+    Two identical statements and not a word about an N+1, because there is no
+    evidence either way: the identity is half call stack and this input has
+    none. Grouping them anyway would manufacture a finding out of a gap, and
+    saying "no N+1" would be a clean bill of health nobody earned. So it counts
+    them and says why they were left out.
     """
     with CaptureQueriesContext(connection) as context:
         for _ in range(2):
             list(Author.objects.filter(pk=1))
 
     report = format_capture_report(QueryCapture.from_capture_context(context))
-    assert "from no frame outside Django (stack empty or truncated)" in report
+    assert "N+1" not in report
+    assert (
+        "2 statement(s) carried no call stack and were not grouped: "
+        "a capture rebuilt from a CaptureQueriesContext has none to give." in report
+    )
 
 
 def test_the_ceiling_is_reported_before_anything_else(tiny_query_log: int) -> None:

@@ -2,17 +2,10 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 
-import django
-
 from django_query_contract.stack_frame import StackFrame
-
-# Where Django itself lives. ``call_site`` walks outwards until it leaves this
-# directory, which is what turns twenty frames of queryset machinery into the
-# one line a reader can act on. Resolved once at import rather than per query.
-_DJANGO_ROOT = os.path.dirname(os.path.abspath(django.__file__)) + os.sep
+from django_query_contract.utils import innermost_frame_outside_django
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,8 +83,9 @@ class QueryRecord:
         framework, a factory library, a service layer -- did emit the query, and
         deciding that some libraries are more interesting than others is the
         kind of tuning this package exists without.
+
+        An :class:`~django_query_contract.NPlusOne` names its call site the same
+        way, through the same helper, so a finding and the records inside it can
+        never disagree about where they came from.
         """
-        for frame in reversed(self.stack):
-            if not frame.filename.startswith(_DJANGO_ROOT):
-                return frame
-        return None
+        return innermost_frame_outside_django(self.stack)

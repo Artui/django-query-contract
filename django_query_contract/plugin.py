@@ -12,6 +12,11 @@ already handles ``connection=`` and ``using=`` and a custom failure note, and it
 yields the captured queries. Wrapping it in a fixture of our own would
 re-implement all of that to add a paragraph. So the seam is: their assertion,
 our diagnosis, joined by a report section rather than by a wrapper.
+
+The N+1 listing follows the same rule from the other side. It is opt-in, it
+prints after the run rather than during it, and it changes no outcome -- because
+an N+1 that fails a build is how a detector earns the reputation that gets it
+uninstalled, and four of them are dead on PyPI already.
 """
 
 from __future__ import annotations
@@ -24,13 +29,24 @@ import pytest
 from django.conf import settings
 from pluggy import Result
 
+from django_query_contract.find_n_plus_one import find_n_plus_one
 from django_query_contract.format_capture_report import format_capture_report
+from django_query_contract.format_n_plus_one_summary import format_n_plus_one_summary
+from django_query_contract.n_plus_one import NPlusOne
 from django_query_contract.query_capture import QueryCapture
 from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarning
 
 _CAPTURE_KEY = pytest.StashKey[QueryCapture]()
 
-# What pytest prints above the block, as ``---- django-query-contract ----``.
+# Findings gathered across the whole run, keyed by node id, for the end-of-run
+# listing. On the config rather than in a module-level variable: the run owns
+# them, and a module global would be shared by two sessions in one interpreter
+# and survive into the next.
+_FINDINGS_KEY = pytest.StashKey[dict[str, tuple[NPlusOne, ...]]]()
+
+# What pytest prints above the failure section, as
+# ``---- django-query-contract ----``, and above the end-of-run listing. One
+# name for both, so a reader meets the package under the same heading twice.
 _SECTION_NAME = "django-query-contract"
 
 
@@ -49,11 +65,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "How many call-stack frames to keep per captured query.",
         default="25",
     )
-    parser.getgroup("django-query-contract").addoption(
+    group = parser.getgroup("django-query-contract")
+    group.addoption(
         "--no-query-contract",
         action="store_true",
         default=False,
         help="Turn capture off for this run without editing the ini file.",
+    )
+    # Opt-in, and it stays opt-in. An N+1 printed under every passing test is
+    # the crying wolf that killed four earlier detectors; a listing somebody
+    # asked for cannot cry anything. It also fails nothing -- the exit status is
+    # the same with the flag as without it.
+    group.addoption(
+        "--n-plus-one",
+        action="store_true",
+        default=False,
+        help="List every N+1 found, worst first, at the end of the run. Changes no "
+        "outcome. Needs capture, so it reports nothing under --no-query-contract.",
     )
 
 
@@ -81,6 +109,16 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, Result[Any], None]
     item.stash[_CAPTURE_KEY] = capture
     with capture:
         yield
+    if item.config.getoption("--n-plus-one"):
+        # Gathered here rather than at the end of the run, because the capture
+        # is the thing that gets read and a finding is the small part of it
+        # worth keeping. ``setdefault`` runs even when this test found nothing,
+        # so the listing can distinguish "asked, and there were none" from
+        # "never asked" and say the first out loud.
+        collected = item.config.stash.setdefault(_FINDINGS_KEY, {})
+        findings = find_n_plus_one(capture)
+        if findings:
+            collected[item.nodeid] = findings
     for ceiling in capture.exceeded_ceilings:
         warnings.warn(
             f"{item.nodeid}: {ceiling.executions} statements ran on connection "
@@ -115,6 +153,30 @@ def pytest_runtest_makereport(
     text = format_capture_report(capture)
     if text:
         report.sections.append((_SECTION_NAME, text))
+
+
+# ``Any`` rather than ``pytest.TerminalReporter``, which this package cannot
+# name: that alias reached pytest's public namespace well after the 8.0 floor
+# the plugin claims to work against, and the floor job proved the difference is
+# not theoretical. The hook needs three things from it -- ``config``,
+# ``write_sep`` and ``write_line`` -- all of which pytest 8.0 already had.
+def pytest_terminal_summary(terminalreporter: Any) -> None:
+    """Print the run's N+1 findings, when somebody asked for them.
+
+    Nothing here changes an outcome, and that is the design rather than a
+    limitation. This package ships no assertion: ``django_assert_num_queries``
+    is the assertion, and an N+1 that fails a build is how a detector earns the
+    reputation that gets it uninstalled. A finding is a diagnosis attached to a
+    failure somebody else's assertion produced, or -- here -- a list somebody
+    asked to see.
+    """
+    collected = terminalreporter.config.stash.get(_FINDINGS_KEY, None)
+    if collected is None:
+        # Not asked for, or capture never ran. Either way, say nothing at all
+        # rather than printing an empty section for every run of every suite.
+        return
+    terminalreporter.write_sep("=", _SECTION_NAME)
+    terminalreporter.write_line(format_n_plus_one_summary(collected))
 
 
 def _enabled(config: pytest.Config) -> bool:
