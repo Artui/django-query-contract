@@ -1,0 +1,1028 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A query-capture engine and pytest plugin for finding performance defects in Django at test time: normalised SQL fingerprints, call sites, and honest reporting above Django query-log ceiling.">
+      
+      
+      
+        <link rel="canonical" href="https://artui.github.io/django-query-contract/plans/">
+      
+      
+        <link rel="prev" href="../attribution/">
+      
+      
+        <link rel="next" href="../reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Plan capture - django-query-contract</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#plan-capture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="django-query-contract" class="md-header__button md-logo" aria-label="django-query-contract" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            django-query-contract
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Plan capture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Artui/django-query-contract" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/django-query-contract
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="django-query-contract" class="md-nav__button md-logo" aria-label="django-query-contract" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    django-query-contract
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Artui/django-query-contract" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/django-query-contract
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../n-plus-one/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    N+1 detection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../growth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Growth assertions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Call-site attribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan capture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan capture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#it-is-postgresql-only-and-it-refuses-rather-than-degrading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        It is PostgreSQL-only, and it refuses rather than degrading
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-plan-over-ten-rows-is-a-lie-and-the-vendor-check-cannot-see-that" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A plan over ten rows is a lie, and the vendor check cannot see that
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-finding-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a finding is
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a finding is">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-planner-was-blind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The planner was blind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#something-spilled-to-disk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Something spilled to disk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-reported-and-never-classified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is reported and never classified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-was-declined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What was declined
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nothing-fails-on-a-finding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nothing fails on a finding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-costs-and-what-runs-twice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it costs, and what runs twice
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-things-it-will-not-do-to-your-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two things it will not do to your test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-not-here-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is not here yet
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#it-is-postgresql-only-and-it-refuses-rather-than-degrading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        It is PostgreSQL-only, and it refuses rather than degrading
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-plan-over-ten-rows-is-a-lie-and-the-vendor-check-cannot-see-that" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A plan over ten rows is a lie, and the vendor check cannot see that
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-finding-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a finding is
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a finding is">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-planner-was-blind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The planner was blind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#something-spilled-to-disk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Something spilled to disk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-reported-and-never-classified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is reported and never classified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-was-declined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What was declined
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nothing-fails-on-a-finding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nothing fails on a finding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-costs-and-what-runs-twice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it costs, and what runs twice
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-things-it-will-not-do-to-your-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two things it will not do to your test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-not-here-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is not here yet
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Artui/django-query-contract/edit/main/docs/plans.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="plan-capture">Plan capture<a class="headerlink" href="#plan-capture" title="Permanent link">&para;</a></h1>
+<p>What PostgreSQL decided to do with a statement, what it then did, and where the
+two disagree.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_query_contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlanCapture</span><span class="p">,</span> <span class="n">format_query_plans</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_the_dashboard</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">orders</span><span class="p">):</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">with</span> <span class="n">PlanCapture</span><span class="p">()</span> <span class="k">as</span> <span class="n">plans</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="n">dashboard</span><span class="p">()</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">format_query_plans</span><span class="p">(</span><span class="n">plans</span><span class="p">))</span>
+</span></code></pre></div>
+<p>Under pytest there is a fixture that does the same thing and skips where a plan
+could not mean anything:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_the_dashboard</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">orders</span><span class="p">,</span> <span class="n">query_plans</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">dashboard</span><span class="p">()</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="k">assert</span> <span class="ow">not</span> <span class="n">query_plans</span><span class="o">.</span><span class="n">unanalyzed_relations</span>
+</span></code></pre></div>
+<h2 id="it-is-postgresql-only-and-it-refuses-rather-than-degrading">It is PostgreSQL-only, and it refuses rather than degrading<a class="headerlink" href="#it-is-postgresql-only-and-it-refuses-rather-than-degrading" title="Permanent link">&para;</a></h2>
+<p>Every other honest degradation in this package reports and carries on. A capture
+rebuilt from a <code>CaptureQueriesContext</code> says it has no call stacks; a block above
+Django's query-log ceiling says the count taken from that log is wrong. Those are
+still measurements.</p>
+<p>A plan capture on SQLite would not be a degraded measurement. It would be an
+empty one, and an empty one is indistinguishable from a healthy one -- so an
+assertion over it passes because the backend could not check it, which is the
+exact failure this package exists to expose.</p>
+<p>So <code>PlanCapture</code> raises <code>PlansUnsupported</code> on entry, before a statement has run,
+and the <code>query_plans</code> fixture turns that into a <strong>skip</strong> carrying the same
+sentence. A test that never ran is honest; a test that ran against a database
+with no planner is not.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>SKIPPED [1] Plan capture needs PostgreSQL; connection 'default' is sqlite.
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) and the plan vocabulary this package
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>reads are PostgreSQL's, and a plan assertion that passed because the backend
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>could not check it is worse than no assertion.
+</span></code></pre></div>
+<p>By default every configured connection has to be PostgreSQL, because a capture
+that quietly skipped the one it could not explain would be the silent gap the
+class exists to refuse. A project whose second database is a SQLite cache names
+the one it means by overriding a fixture:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># conftest.py</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">query_plan_connections</span><span class="p">():</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="k">return</span> <span class="s2">"default"</span>
+</span></code></pre></div>
+<h2 id="a-plan-over-ten-rows-is-a-lie-and-the-vendor-check-cannot-see-that">A plan over ten rows is a lie, and the vendor check cannot see that<a class="headerlink" href="#a-plan-over-ten-rows-is-a-lie-and-the-vendor-check-cannot-see-that" title="Permanent link">&para;</a></h2>
+<p>The backend is the easy half. The harder half is a database that <em>is</em> PostgreSQL
+and was given nothing to reason with: rows loaded in a fixture and never
+analyzed leave the planner guessing from a default selectivity, and the plan it
+prints is confident and meaningless. Measured while this package was designed --
+two million rows never analyzed produced a bitmap heap scan estimated at 10,000
+rows for two predicates whose real answers were 30,298 and 1,959,743.</p>
+<p>So a capture asks the catalogue, once, at the end of the block:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">plans</span><span class="o">.</span><span class="n">unanalyzed_relations</span>
+</span></code></pre></div>
+<p>and the report says it before anything else, because it can invalidate
+everything under it:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>  PostgreSQL has never gathered statistics for testapp_order.
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  Every plan below is a guess: the planner is working from a default
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  selectivity rather than from these tables. Load the rows, then ANALYZE.
+</span></code></pre></div>
+<p>It says nothing about whether the tables are <em>big enough</em>, and it cannot: "ten
+rows is too few" is a number, and a number is the knob this package refuses
+everywhere else. <a href="https://github.com/Artui/django-data-shape">django-data-shape</a>
+is what builds a database worth taking a plan over -- it owns the ordering,
+generate then load then index then <code>ANALYZE</code>, so the analyze-then-load trap
+cannot happen.</p>
+<h2 id="what-a-finding-is">What a finding is<a class="headerlink" href="#what-a-finding-is" title="Permanent link">&para;</a></h2>
+<p>Two kinds, and there are two because only two can be stated without a threshold.</p>
+<h3 id="the-planner-was-blind">The planner was blind<a class="headerlink" href="#the-planner-was-blind" title="Permanent link">&para;</a></h3>
+<p>Two or more executions of the same normalised SQL whose plans agree <strong>exactly</strong>
+on how many rows the query would produce, and whose measured rows do not. There
+is no magnitude in that sentence -- only <code>==</code> and <code>!=</code>.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>  planner blind  2 executions, one estimate of 20 rows, actuals 20,323, 6
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>       SELECT "testapp_order"."id" FROM "testapp_order" INNER JOIN ...
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>       from tests/test_dashboard.py:31 in whales, tests/test_dashboard.py:32 in tail
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>       queries #0, #1
+</span></code></pre></div>
+<p>That pair is measured, not invented: a Zipf fan-out of 400,000 rows over 20,000
+parents, joined through the parent rather than through the foreign key column.
+Across a join PostgreSQL has only <code>n_distinct</code> for the edge, so it hands every
+value of the join key the same average -- and an average is the one number that
+is wrong for both ends of a skewed distribution.</p>
+<p><strong>One measurement cannot make this claim.</strong> It cannot separate "the planner is
+wrong about this query" from "the planner is right on average and this row is
+unusual". That is the same rule the <a href="../growth/">growth assertion</a> keeps: a claim
+about a shape needs two points. A growth claim needs two worlds; a blindness
+claim needs two executions.</p>
+<p><strong>Its identity is the statement shape and deliberately not the call stack</strong>,
+which is the opposite of how an <a href="../n-plus-one/">N+1</a> is identified. The rule
+behind both is one rule: a finding is keyed on what the accused can see. An N+1
+accuses your code, so it is keyed on your code's call path. This accuses the
+planner, which is handed a statement and never hears about the stack.</p>
+<h3 id="something-spilled-to-disk">Something spilled to disk<a class="headerlink" href="#something-spilled-to-disk" title="Permanent link">&para;</a></h3>
+<p>A sort that reports <code>Sort Space Type: Disk</code>, a hash join that needed more than
+one batch, or a hash aggregate reporting disk usage. PostgreSQL states all three
+itself, and the threshold that decided them is <code>work_mem</code> -- the configuration
+of the database under test, not a number chosen here.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>  spilled to disk  Sort, external merge, 14,208 kB
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>       SELECT "testapp_order"."id" FROM "testapp_order" ORDER BY ...
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>       from tests/test_dashboard.py:44 in test_ordering
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>       queries #4
+</span></code></pre></div>
+<p>It is as much a finding about the server as about the query, which is worth
+knowing before acting on one.</p>
+<h3 id="what-is-reported-and-never-classified">What is reported and never classified<a class="headerlink" href="#what-is-reported-and-never-classified" title="Permanent link">&para;</a></h3>
+<p>The estimate-versus-actual ratio is on every node, and no code here turns it into
+a verdict:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Where the planner was furthest out (reported, not judged -- a node under a
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>LIMIT is meant to fall short):
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  1,016.1x  #0  Nested Loop: expected 20 rows, 20,323 arrived
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>       SELECT "testapp_order"."id" FROM "testapp_order" INNER JOIN ...
+</span></code></pre></div>
+<p>"The planner expected 20 rows and 20,323 arrived" is a fact about the plan.
+"More than fifty times out is a defect" is a policy about size, and this package
+does not write those. The caveat printed with the block is the reason: the
+commonest large ratio has no defect under it at all, because a node under a
+<code>LIMIT</code> stops early by design.</p>
+<h3 id="what-was-declined">What was declined<a class="headerlink" href="#what-was-declined" title="Permanent link">&para;</a></h3>
+<p>The design this package came from listed four candidate findings. Two are
+missing on purpose:</p>
+<ul>
+<li><strong>a sequential scan over a row threshold</strong> -- how many rows makes a scan wrong?</li>
+<li><strong>a nested loop with a large inner</strong> -- how large is large?</li>
+</ul>
+<p>Both are numbers wearing a description, and a number is a knob. Four Python N+1
+detectors are dead on PyPI, and the most probable reason is that they classified
+by rule, cried wolf, and were uninstalled. A detector nobody disables is a
+different package from a detector that finds more.</p>
+<h2 id="nothing-fails-on-a-finding">Nothing fails on a finding<a class="headerlink" href="#nothing-fails-on-a-finding" title="Permanent link">&para;</a></h2>
+<p>The same rule as everywhere else here. A finding is a diagnosis printed under a
+failure somebody else's assertion produced, or a report a caller asked for. A
+failing test that used the <code>query_plans</code> fixture gains a section:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>------------------------- django-query-contract plans --------------------------
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>6 statements captured, 4 of them explained.
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Plan findings -- what PostgreSQL's own output states:
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>  planner blind  2 executions, one estimate of 20 rows, actuals 20,323, 6
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>...
+</span></code></pre></div>
+<h2 id="what-it-costs-and-what-runs-twice">What it costs, and what runs twice<a class="headerlink" href="#what-it-costs-and-what-runs-twice" title="Permanent link">&para;</a></h2>
+<p><code>EXPLAIN ANALYZE</code> <strong>executes</strong> the statement. Measured against PostgreSQL 16 on
+a shaped 400,000-row world, a two-statement block took 8.9 ms on its own and
+14.8 ms with plan capture -- about <strong>1.7x</strong>, which is what running each statement
+twice buys. With <code>analyze=False</code> it was 9.1 ms, or 1.02x, because the server only
+plans.</p>
+<p><code>ANALYZE</code> is the default anyway: a plan with no measurement in it can produce no
+finding at all, and a plan capture that can produce no finding is the vacuous
+pass this package exists to refuse. <code>PlanCapture(analyze=False)</code> is there for
+reading the planner's choice without paying for it, and the report says that
+nothing was measured rather than showing an empty findings block.</p>
+<p>Because the statement runs twice, <strong>only a statement beginning with <code>SELECT</code> is
+explained</strong>. Explaining an <code>INSERT</code> would perform the insert, and then the
+statement would run again for real. That is why the rule is "begins with SELECT"
+rather than "does not begin with INSERT": a data-modifying CTE is written
+<code>WITH ... INSERT</code>, so the dangerous statement does not announce itself in its
+first word. Everything skipped is counted in the report with the reason:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>2 statement(s) carried no plan:
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>  2 x  a statement that does not begin with SELECT was not explained: EXPLAIN
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>       ANALYZE executes what it is given, so explaining a write would perform
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>       it, and then the statement would run again for real.
+</span></code></pre></div>
+<p>The one hole, stated rather than glossed: a <code>SELECT</code> calling a volatile function
+that writes will have that function called twice. No reading of the statement
+text could know, and this package does not parse SQL.</p>
+<h2 id="two-things-it-will-not-do-to-your-test">Two things it will not do to your test<a class="headerlink" href="#two-things-it-will-not-do-to-your-test" title="Permanent link">&para;</a></h2>
+<p><strong>It does not change what <code>django_assert_num_queries</code> counts.</strong> The <code>EXPLAIN</code>
+goes out on the driver connection, underneath Django's cursor, so neither it nor
+the savepoints around it reach <code>connection.queries_log</code> -- which is what that
+assertion counts through. The obvious implementation, <code>connection.cursor()</code>,
+would have inflated every count in a suite that turned plan capture on. There is
+a test that runs both together and pins it.</p>
+<p><strong>It does not break your transaction.</strong> A failing <code>EXPLAIN</code> inside an atomic
+block would leave the connection in "current transaction is aborted, commands
+ignored until end of transaction block", and every later statement in the test
+would fail. So the <code>EXPLAIN</code> runs under a savepoint, and a statement PostgreSQL
+declines to explain costs a plan rather than the test. Both halves are tested
+against a real server: one that the savepoint holds, and one that removing it
+poisons the transaction.</p>
+<p>The refusal names the exception class and never its message, because a driver
+error can quote a bound value and this package
+<a href="../reference/">retains no parameters</a>.</p>
+<h2 id="what-is-not-here-yet">What is not here yet<a class="headerlink" href="#what-is-not-here-yet" title="Permanent link">&para;</a></h2>
+<p>Index advice -- "these twelve statements sequentially scanned a two-million-row
+table, here are the <code>CREATE INDEX</code> statements" -- is the output people actually
+want, and it falls out of having plans plus call sites. The record already
+carries what it needs: each node keeps its relation, its filter and the rows that
+filter threw away, beside the call stack that emitted the statement.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

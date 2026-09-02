@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://artui.github.io/django-query-contract/reference/">
       
       
-        <link rel="prev" href="../attribution/">
+        <link rel="prev" href="../plans/">
       
       
       
@@ -367,6 +367,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../plans/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan capture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -635,6 +662,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#django_query_contract.QueryRecord.plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#django_query_contract.QueryRecord.call_site" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1088,6 +1126,564 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanCapture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanCapture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture.analyze" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analyze
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture.unanalyzed_relations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        unanalyzed_relations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture.refusal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        refusal
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        QueryPlan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QueryPlan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        root
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.analyzed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analyzed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.refusal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        refusal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        nodes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.worst_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        worst_estimate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.from_explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_explain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.refused" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        refused
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanNode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanNode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.node_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        node_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.relation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.condition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        condition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.estimated_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        estimated_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.actual_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        actual_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.loops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        loops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.rows_removed_by_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rows_removed_by_filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.sort_method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sort_method
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.sort_space_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sort_space_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.sort_space_used_kb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sort_space_used_kb
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.hash_batches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        hash_batches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.disk_usage_kb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        disk_usage_kb
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.shared_hit_blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shared_hit_blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.shared_read_blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shared_read_blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.children" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        children
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.spilled_to_disk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spilled_to_disk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.estimate_error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        estimate_error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.from_explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_explain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.walk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        walk
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanDefect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanDefect
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanDefect">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanDefect.PLANNER_BLIND" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PLANNER_BLIND
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanDefect.SPILLED_TO_DISK" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SPILLED_TO_DISK
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanFinding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanFinding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.defect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        defect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        records
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        nodes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.fingerprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fingerprint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.first_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        first_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.call_sites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        call_sites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.estimated_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        estimated_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.actual_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        actual_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlansUnsupported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlansUnsupported
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-ceiling" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1511,6 +2107,62 @@
     <span class="md-ellipsis">
       
         format_query_growth
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.find_plan_defects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        find_plan_defects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="find_plan_defects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.find_plan_defects.find_plan_defects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        find_plan_defects
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.format_query_plans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format_query_plans
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="format_query_plans">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.format_query_plans.format_query_plans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format_query_plans
       
     </span>
   </a>
@@ -1762,6 +2414,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#django_query_contract.QueryRecord.plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#django_query_contract.QueryRecord.call_site" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2215,6 +2878,564 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanCapture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanCapture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture.analyze" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analyze
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture.unanalyzed_relations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        unanalyzed_relations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanCapture.refusal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        refusal
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        QueryPlan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QueryPlan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        root
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.analyzed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analyzed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.refusal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        refusal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        nodes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.worst_estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        worst_estimate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.from_explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_explain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryPlan.refused" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        refused
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanNode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanNode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.node_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        node_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.relation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.condition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        condition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.estimated_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        estimated_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.actual_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        actual_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.loops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        loops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.rows_removed_by_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rows_removed_by_filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.sort_method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sort_method
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.sort_space_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sort_space_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.sort_space_used_kb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sort_space_used_kb
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.hash_batches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        hash_batches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.disk_usage_kb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        disk_usage_kb
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.shared_hit_blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shared_hit_blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.shared_read_blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shared_read_blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.children" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        children
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.spilled_to_disk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spilled_to_disk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.estimate_error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        estimate_error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.from_explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_explain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.walk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        walk
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanDefect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanDefect
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanDefect">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanDefect.PLANNER_BLIND" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PLANNER_BLIND
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanDefect.SPILLED_TO_DISK" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SPILLED_TO_DISK
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlanFinding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PlanFinding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.defect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        defect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        records
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        nodes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.fingerprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fingerprint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.first_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        first_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.call_sites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        call_sites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.estimated_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        estimated_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanFinding.actual_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        actual_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.PlansUnsupported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PlansUnsupported
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-ceiling" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2638,6 +3859,62 @@
     <span class="md-ellipsis">
       
         format_query_growth
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.find_plan_defects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        find_plan_defects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="find_plan_defects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.find_plan_defects.find_plan_defects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        find_plan_defects
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.format_query_plans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format_query_plans
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="format_query_plans">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.format_query_plans.format_query_plans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format_query_plans
       
     </span>
   </a>
@@ -3182,6 +4459,45 @@ and which cannot be measured without consuming it.</p>
     <div class="doc doc-contents ">
 
         <p><code>True</code> when the stack was deeper than the capture's limit and outer frames were dropped.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.QueryRecord.plan" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">plan</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryRecord.plan" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">plan</span><span class="p">:</span> <span class="n">QueryPlan</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>What PostgreSQL said it would do with this statement, when it was asked.</p>
+<p><code>None</code> means nobody asked: an ordinary
+:class:<code>~django_query_contract.QueryCapture</code> takes no plans, and neither does
+a capture rebuilt from a <code>CaptureQueriesContext</code>. A
+:class:<code>~django_query_contract.PlanCapture</code> puts a
+:class:<code>~django_query_contract.QueryPlan</code> on every record it makes, including
+the statements it declined to explain -- those carry a plan whose <code>root</code> is
+<code>None</code> and whose <code>refusal</code> says why, so "not asked" and "asked and
+declined" stay distinguishable.</p>
+<p><strong>This is the first field added under the additive contract, and it is what
+the contract was for.</strong> The record has been public since 0.1.0 on the bet
+that four faces would read it, and the docstring above has said since then
+that the plan face runs <code>EXPLAIN</code> at execution time because that is where
+the parameters still are. Adding the field changes nothing for a reader that
+does not want it, which is the promise <code>0.x</code> made.</p>
 
     </div>
 
@@ -4503,6 +5819,1507 @@ the world was only when it was told.</p>
 
     </div>
 
+</div><h2 id="the-plan">The plan<a class="headerlink" href="#the-plan" title="Permanent link">&para;</a></h2>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="django_query_contract.PlanCapture" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">PlanCapture</span>
+
+
+<a href="#django_query_contract.PlanCapture" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="QueryCapture (django_query_contract.query_capture.QueryCapture)" href="#django_query_contract.QueryCapture">QueryCapture</a></code></p>
+
+
+
+        <p>A :class:<code>~django_query_contract.QueryCapture</code> that also asks for the plan.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_query_contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlanCapture</span><span class="p">,</span> <span class="n">format_query_plans</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">PlanCapture</span><span class="p">()</span> <span class="k">as</span> <span class="n">capture</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">render_author_list</span><span class="p">()</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">format_query_plans</span><span class="p">(</span><span class="n">capture</span><span class="p">))</span>
+</span></code></pre></div>
+<p><strong>The plan is taken at execution time, and it has to be.</strong> This package
+retains no parameters -- a <code>bulk_create</code> arrives as one execution and ten
+thousand values, and holding them would mean keeping customer data in memory
+to answer a question about query counts -- so a plan cannot be taken after
+the fact from a record. The wrapper is the one moment the statement and its
+bindings are both in hand, and that was written into
+:class:<code>~django_query_contract.QueryRecord</code> from the first release, before
+this class existed.</p>
+<p>It is taken <strong>before</strong> the statement runs, for the same reason the record is
+written before it runs: a statement that raises is still a statement that was
+executed, and a plan dropped because the query failed would be missing from
+exactly the diagnosis that needed it.</p>
+<p><strong><code>EXPLAIN</code> goes out on the driver connection, under the Django cursor
+rather than through it</strong>, and that is what keeps composition intact. Django's
+<code>execute_wrapper</code> and its <code>queries_log</code> both sit on the Python cursor, so
+a plan taken through <code>connection.cursor()</code> would be captured by this very
+wrapper -- endlessly -- and would also be counted by
+<code>django_assert_num_queries</code>, which counts through <code>queries_log</code>. Measured
+both ways against a real server: the raw cursor is seen by neither. The
+package already documented that blind spot as a limitation of the capture;
+here it is the mechanism.</p>
+<p><strong>What it costs, measured.</strong> Against PostgreSQL 16 on a shaped 400,000-row
+world, a two-statement block took 8.9 ms on its own and 14.8 ms with plan
+capture: about <strong>1.7x</strong>, which is what running each statement twice buys.
+With <code>analyze=False</code> it was 9.1 ms, or 1.02x, because the server only plans.
+<code>ANALYZE</code> is the default anyway, because a plan with no measurement in it
+cannot produce a finding, and a plan capture that can produce no finding is
+the vacuous pass this package exists to refuse.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanCapture.analyze" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">analyze</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanCapture.analyze" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">analyze</span><span class="p">:</span> <span class="nb">bool</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether plans here were measured or only planned.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanCapture.unanalyzed_relations" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">unanalyzed_relations</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanCapture.unanalyzed_relations" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">unanalyzed_relations</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The tables in these plans that PostgreSQL has never gathered statistics for.</p>
+<p><strong>The other half of "never pass vacuously", and the half a vendor check
+cannot reach.</strong> Refusing SQLite covers the backend with no planner. This
+covers the backend that has one and was given nothing to reason with:
+rows loaded in a fixture and never analyzed leave the planner guessing
+from a default selectivity, and the plan it prints is confident and
+meaningless. Measured during this package's design: two million rows
+never analyzed produced a bitmap heap scan estimated at 10,000 rows for
+two predicates whose real answers were 30,298 and 1,959,743.</p>
+<p>It says nothing about whether the tables are <em>big enough</em>, and cannot:
+"ten rows is too few" is a number, and a number is the knob this package
+refuses. What it can do is print the row count the planner is working
+from beside the plan and let a reader judge.</p>
+<p>Empty before the block has finished, and empty on any capture that took
+no plans.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.PlanCapture.refusal" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">refusal</span>
+
+
+<a href="#django_query_contract.PlanCapture.refusal" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">refusal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Why plans cannot be captured on these connections, or <code>None</code>.</p>
+<p>Reads <code>vendor</code> off each connection and decides from the string, without
+opening anything. That is deliberate and it is what keeps this package's
+coverage gate on the portable matrix: a degradation path reachable only
+by running the suite on the backend it refuses is a path the gating job
+cannot see.</p>
+<p>Public because the two callers need the same sentence delivered two ways.
+<code>__enter__</code> raises it, and the <code>query_plans</code> fixture skips with it.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="django_query_contract.QueryPlan" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">QueryPlan</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>One statement's execution plan, or the stated reason there is not one.</p>
+<p>Hangs off :attr:<code>~django_query_contract.QueryRecord.plan</code>, so a plan travels
+with the statement it belongs to and with the call stack that emitted it.
+That pairing is the whole point: an index recommendation is a plan plus an
+address, and a plan in a list of its own would have to be joined back to the
+statement by index before anything could be said about it.</p>
+<p><strong>A refusal is a value here, not an absence.</strong> <code>EXPLAIN ANALYZE</code> executes
+the statement it is given, so this package runs it only on a statement that
+is known not to change anything, and there are several ordinary reasons a
+statement is skipped. Recording those as <code>plan=None</code> would make "nobody
+asked for plans" and "we declined to explain this one" the same observation,
+and a report could then only say nothing about either. So a skipped
+statement carries a plan whose :attr:<code>root</code> is <code>None</code> and whose
+:attr:<code>refusal</code> is the sentence saying why, and <code>plan is None</code> means one
+thing only: this capture was not a
+:class:<code>~django_query_contract.PlanCapture</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.QueryPlan.root" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">root</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan.root" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">root</span><span class="p">:</span> <span class="n">PlanNode</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The top of the plan tree. <code>None</code> when <code>refusal</code> says why there is none.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.QueryPlan.analyzed" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">analyzed</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan.analyzed" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">analyzed</span><span class="p">:</span> <span class="nb">bool</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether the plan carries measurements or only the planner's expectations.</p>
+<p><code>False</code> means <code>EXPLAIN</code> ran without <code>ANALYZE</code>: the shape of the plan is
+real, every <code>actual_rows</code> is <code>None</code>, and no finding in this package can
+be made from it. That is reported rather than left to be inferred from a
+tree of <code>None</code>s, because a plan with nothing to check against is exactly
+the shape a vacuous pass would take.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.QueryPlan.refusal" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">refusal</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan.refusal" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">refusal</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Why this statement was not explained, in a sentence. <code>None</code> when it was.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.QueryPlan.nodes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">nodes</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan.nodes" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">nodes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PlanNode</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Every node in the tree, parents before children. Empty for a refusal.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.QueryPlan.worst_estimate" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">worst_estimate</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan.worst_estimate" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">worst_estimate</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">PlanNode</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>How far out this plan's least accurate node was, and which node that is.</p>
+<p>An argmax rather than a cut-off, and that is deliberate: every measured
+plan has exactly one node the planner was most wrong about, so naming it
+introduces no number. Whether being wrong by that much matters is left to
+the reader, for the reasons
+:attr:<code>~django_query_contract.PlanNode.estimate_error</code> sets out.</p>
+<p>The factor comes back beside the node rather than being read off it
+again, so a caller cannot end up holding a node it has to re-test for a
+measurement this property already established it has.</p>
+<p><code>None</code> for a refusal and for a plan taken without <code>ANALYZE</code>, where
+there is no actual to be wrong about.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.QueryPlan.from_explain" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">from_explain</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan.from_explain" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">from_explain</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">analyzed</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueryPlan</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Build a plan from the JSON document <code>EXPLAIN (FORMAT JSON)</code> returns.</p>
+<p>That document is a list holding a single object, whose <code>Plan</code> key is
+the root node. The list is PostgreSQL's own shape and is unwrapped here
+rather than by the caller, so the one place that knows the wire format is
+the one place that reads it.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.QueryPlan.refused" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">refused</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryPlan.refused" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">refused</span><span class="p">(</span><span class="n">reason</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueryPlan</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>A plan that was not taken, carrying the reason it was not.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="django_query_contract.PlanNode" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">PlanNode</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>A single step of a plan: what PostgreSQL chose, and what happened when it ran.</p>
+<p>The fields are the subset of <code>EXPLAIN (ANALYZE, BUFFERS, TIMING OFF,
+FORMAT JSON)</code> this package can say something true about, and every one of
+them was read off a real server rather than off the documentation. What is
+kept and what is dropped both follow one rule.</p>
+<p><strong>No timings are kept, and the <code>TIMING OFF</code> in that statement is the same
+decision seen from the other side.</strong> This package's argument is that a
+performance assertion mentioning a number of milliseconds is a flaky test
+with extra steps, so a per-node duration would be a field inviting exactly
+the assertion the package exists to refuse. Turning the instrumentation off
+is therefore not a cost optimisation that happens to agree with the thesis;
+it is the thesis, and the cost saving is the bonus -- <code>ANALYZE</code> with
+timings on calls <code>gettimeofday</code> twice per row per node.</p>
+<p><strong>Rows are floats, not integers.</strong> <code>Plan Rows</code> is an integer today, but
+<code>Actual Rows</code> became fractional in PostgreSQL 18 for a node under more
+than one loop, where it is an average. Rounding it here to keep a tidier
+type would make this record quietly lossy on a server that is already
+shipping.</p>
+<p><strong>Row counts are per loop, on both sides.</strong> PostgreSQL divides a node's
+actual row count by <code>Actual Loops</code> before printing it, and the estimate it
+prints beside it is also per loop, so the two compare directly and
+:attr:<code>estimate_error</code> needs no arithmetic to make them commensurate.
+Multiply either by <code>loops</code> for the total.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.node_type" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">node_type</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.node_type" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">node_type</span><span class="p">:</span> <span class="nb">str</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>Seq Scan</code>, <code>Nested Loop</code>, <code>Sort</code> -- PostgreSQL's own name for the step.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.relation" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">relation</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.relation" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">relation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The table this node reads, when it reads one directly. <code>None</code> for a join or a sort.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.index" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">index</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.index" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">index</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The index this node reads, when it uses one. <code>None</code> for a sequential scan.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.condition" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">condition</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.condition" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">condition</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The <code>Filter</code> this node applied, as PostgreSQL rendered it.</p>
+<p>Kept because it is half of what index advice is made of: a filter over a
+relation, with the rows it threw away, is the statement a <code>CREATE INDEX</code>
+would answer. The advice itself is a later milestone; the record carrying
+what it needs is this one.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.estimated_rows" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">estimated_rows</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.estimated_rows" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">estimated_rows</span><span class="p">:</span> <span class="nb">float</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>Plan Rows</code>: how many rows per loop the planner expected this node to produce.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.actual_rows" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">actual_rows</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.actual_rows" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">actual_rows</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>Actual Rows</code>: how many it produced per loop. <code>None</code> when the plan was not analyzed.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.loops" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">loops</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.loops" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">loops</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>Actual Loops</code>: how many times this node was executed. <code>None</code> without <code>ANALYZE</code>.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.rows_removed_by_filter" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">rows_removed_by_filter</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.rows_removed_by_filter" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">rows_removed_by_filter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>How many rows this node read and discarded, per loop, when it filtered.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.sort_method" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">sort_method</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.sort_method" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sort_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>quicksort</code>, <code>external merge</code> -- how a sort node sorted. <code>None</code> if it is not one.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.sort_space_type" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">sort_space_type</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.sort_space_type" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sort_space_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>Memory</code> or <code>Disk</code>: where a sort node's working space came from.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.sort_space_used_kb" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">sort_space_used_kb</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.sort_space_used_kb" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sort_space_used_kb</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>How much of that space it used, in kilobytes.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.hash_batches" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">hash_batches</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.hash_batches" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">hash_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>How many batches a hash node needed. More than one means it did not fit in <code>work_mem</code>.</p>
+<p>Reads <code>Hash Batches</code> from a hash join and <code>HashAgg Batches</code> from a hash
+aggregate, because they are the same fact under two names and a reader
+asking "did this spill" should not have to know which node type produced it.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.disk_usage_kb" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">disk_usage_kb</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.disk_usage_kb" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">disk_usage_kb</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>Disk Usage</code>: the temporary space a hash aggregate spilled, in kilobytes.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.shared_hit_blocks" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">shared_hit_blocks</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.shared_hit_blocks" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">shared_hit_blocks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Buffer pages this node found in cache. <code>None</code> when <code>BUFFERS</code> was not asked for.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.shared_read_blocks" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">shared_read_blocks</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.shared_read_blocks" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">shared_read_blocks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Buffer pages this node had to read. The number a plan finding quotes as heap blocks.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.children" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">children</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.children" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">children</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PlanNode</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The nodes feeding this one, in the order PostgreSQL listed them.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.spilled_to_disk" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">spilled_to_disk</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.spilled_to_disk" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">spilled_to_disk</span><span class="p">:</span> <span class="nb">bool</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether this node ran out of <code>work_mem</code> and used the disk instead.</p>
+<p><strong>The one plan defect that needs no threshold of ours, because PostgreSQL
+already applied its own.</strong> A sort that says <code>Sort Space Type: Disk</code>, a
+hash join that needed more than one batch and a hash aggregate that
+reports disk usage are all the server stating that the memory it was
+given was not enough. The number that decided it is <code>work_mem</code>, which
+belongs to the database being tested rather than to this package, so
+there is nothing here to tune and nothing to be wrong about.</p>
+<p>That also means the finding is a claim about a <em>configuration</em> as much as
+about a query, which is why nothing in this package fails a test on it.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.estimate_error" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">estimate_error</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.estimate_error" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">estimate_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>How many times out the planner's estimate turned out to be, at least 1.0.</p>
+<p><strong>Reported, never classified, and that distinction is the design.</strong> "The
+planner expected 20 rows and 20,323 arrived" is a fact about this plan.
+"An estimate more than 50 times out is a defect" is a policy about size,
+and a policy about size is the knob this package refuses everywhere else.
+So this is a number on a record, ordered by a report and read by a human;
+no code in this package turns it into a verdict.</p>
+<p>There are also ordinary reasons for a large value that have nothing to do
+with a defect. A node under a <code>LIMIT</code> stops early by design, so its
+actual is <em>meant</em> to fall short of its estimate; measured on a plain
+<code>[:5]</code> query against fifty rows, the scan under the limit reports an
+estimate of 50 against an actual of 5. A rule that flagged that would cry
+wolf on the first query anybody pointed it at.</p>
+<p>Direction is not encoded, because both numbers are on the record and a
+report prints them side by side. <code>None</code> when the plan was not analyzed:
+without an actual there is nothing to be wrong about.</p>
+<p>Zero actual rows are compared as one. PostgreSQL never estimates below
+one row itself, so one is the floor the planner's own arithmetic uses,
+and a ratio against zero is not a number.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.PlanNode.from_explain" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">from_explain</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.from_explain" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">from_explain</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PlanNode</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Build a node, and its children, from one <code>Plan</code> object of the JSON output.</p>
+<p>Every key is read with a default because <code>EXPLAIN</code> emits a key only
+when it applies: a sequential scan has no <code>Index Name</code>, a plan taken
+without <code>ANALYZE</code> has no <code>Actual Rows</code>, and a node that never
+filtered has no <code>Rows Removed by Filter</code>. Requiring any of them would
+make this raise on the ordinary plan rather than on the unusual one.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.PlanNode.walk" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">walk</span>
+
+
+<a href="#django_query_contract.PlanNode.walk" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">walk</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">PlanNode</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>This node and every node under it, parents before children.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="django_query_contract.PlanDefect" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">PlanDefect</span>
+
+
+<a href="#django_query_contract.PlanDefect" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="enum.Enum">Enum</span></code></p>
+
+
+
+        <p>What a plan finding accuses, and there are only two because only two qualify.</p>
+<p><strong>A finding here holds by construction, exactly as an N+1 does.</strong> The plan
+that produced this package listed four candidates: sequential scans over a
+row threshold, nested loops with a large inner, sorts spilling to disk, and
+planner estimates off by orders of magnitude from actual. Two of them are
+numbers wearing a description -- <em>how many</em> rows makes a sequential scan
+wrong, <em>how</em> large an inner is large -- and a number is a knob. The four dead
+N+1 detectors on PyPI are what a package of knobs looks like a few years
+later, so both are declined here rather than shipped with a default nobody
+would agree with.</p>
+<p>The two that survived did so for different reasons, and the difference is
+worth keeping in view:</p>
+<ul>
+<li>a spill is a fact <strong>PostgreSQL asserts</strong>, using a threshold of its own
+  (<code>work_mem</code>) that belongs to the database rather than to this package;</li>
+<li>blindness is a fact about <strong>a pair of measurements</strong>, decided by equality
+  and inequality, with no magnitude anywhere in it.</li>
+</ul>
+<p>The estimate-versus-actual ratio itself is not here, and its absence is the
+design rather than an omission. It is on every node as
+:attr:<code>~django_query_contract.PlanNode.estimate_error</code>, ordered by the
+report and read by a person: "the planner expected 20 and 20,323 arrived" is
+a fact, while "more than fifty times out is a defect" is a policy about
+size. This package reports the first and refuses to write the second.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanDefect.PLANNER_BLIND" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">PLANNER_BLIND</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanDefect.PLANNER_BLIND" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">PLANNER_BLIND</span> <span class="o">=</span> <span class="s1">'planner blind'</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>One statement shape, one estimate, and more than one truth.</p>
+<p>Two or more executions of the same normalised SQL whose plans agree exactly
+on how many rows the query would produce, and whose measured rows do not.
+The planner cannot tell those executions apart; the data can. There is no
+threshold in that sentence -- only <code>==</code> and <code>!=</code> -- and it is the defect
+the shaped-database dependency exists for.</p>
+<p>Measured on a Zipf fan-out of 400,000 rows over 20,000 parents, joined
+through the parent rather than through the foreign key column: a whale and a
+tail row both estimated at <strong>20</strong> rows, against actuals of <strong>20,323</strong> and
+<strong>6</strong>. Across a join PostgreSQL has only <code>n_distinct</code> for the edge, so it
+hands every value of the join key the same average, and the average is the
+one number that is wrong for both ends of a skewed distribution.</p>
+<p><strong>The identity is the fingerprint alone, and deliberately not the call
+stack.</strong> That is the opposite choice from
+:class:<code>~django_query_contract.NPlusOne</code>, and the rule behind both is the
+same one: a finding is keyed on what the thing being accused can actually
+see. An N+1 accuses your code, so it is keyed on your code's call path. This
+accuses the planner, which is handed a statement and never hears about the
+stack, so keying on the stack would split one blind spot into one finding per
+line that happened to reach it.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanDefect.SPILLED_TO_DISK" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">SPILLED_TO_DISK</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanDefect.SPILLED_TO_DISK" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">SPILLED_TO_DISK</span> <span class="o">=</span> <span class="s1">'spilled to disk'</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>A sort, hash join or hash aggregate that did not fit in <code>work_mem</code>.</p>
+<p>PostgreSQL says so itself -- <code>Sort Space Type: Disk</code>, more than one hash
+batch, or a hash aggregate reporting disk usage -- so the threshold is
+<code>work_mem</code>, which is the configuration of the database under test and not
+a number chosen here.</p>
+<p>That is also its limitation, stated rather than glossed: it is as much a
+finding about the server as about the query, and a suite whose CI database
+is configured differently from production will find different ones. Nothing
+in this package fails a test on it.</p>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="django_query_contract.PlanFinding" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">PlanFinding</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>A defect PostgreSQL's own output states, and the evidence for it.</p>
+<p>:attr:<code>records</code> and :attr:<code>nodes</code> are parallel: <code>nodes[i]</code> is the node in
+<code>records[i]</code>'s plan that the finding is about. One shape carries both
+kinds, because both are "these executions, at these nodes" and giving each
+kind its own class would make a report iterate two lists to say one thing.</p>
+<p>A spill has one execution and the node that spilled.
+:attr:<code>~django_query_contract.PlanDefect.PLANNER_BLIND</code> has two or more
+executions and each of their root nodes, which is where a plan states how
+many rows the query produces.</p>
+<p>Nothing in this package fails a test on one of these. A finding is a
+diagnosis printed under a failure somebody else's assertion produced, for
+the reason :class:<code>~django_query_contract.NPlusOne</code> sets out at length: a
+detector that fails builds is a detector that gets uninstalled.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.defect" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">defect</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.defect" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">defect</span><span class="p">:</span> <span class="n">PlanDefect</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Which of the two kinds this is.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.records" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">records</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.records" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">records</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">QueryRecord</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The executions this finding is made of, in capture order. At least one.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.nodes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">nodes</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.nodes" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">nodes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PlanNode</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The node in each of those executions' plans that the finding is about.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.count" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">count</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.count" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">count</span><span class="p">:</span> <span class="nb">int</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>How many executions this finding rests on.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.fingerprint" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">fingerprint</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.fingerprint" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">fingerprint</span><span class="p">:</span> <span class="nb">str</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The normalised SQL shared by every execution here. See <code>normalise_sql</code>.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.first_index" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">first_index</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.first_index" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">first_index</span><span class="p">:</span> <span class="nb">int</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Position in the capture of the first execution involved.</p>
+<p>The tie-break that makes an ordering total, so two runs over one capture
+list findings in the same order.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.call_sites" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">call_sites</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.call_sites" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">call_sites</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">StackFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The distinct lines these executions came from, in the order first seen.</p>
+<p>A tuple rather than a single frame, because the identity of
+:attr:<code>~django_query_contract.PlanDefect.PLANNER_BLIND</code> is the statement
+shape and not the call path -- the planner is handed SQL and never hears
+about the stack -- so one finding can legitimately span several lines. A
+<code>None</code> in here is a record whose kept frames were all Django's own,
+reported rather than approximated for the reason
+:attr:<code>~django_query_contract.QueryRecord.call_site</code> gives.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.estimated_rows" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">estimated_rows</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.estimated_rows" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">estimated_rows</span><span class="p">:</span> <span class="nb">float</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The row count the planner expected, which every node here agrees on.</p>
+<p>For a spill there is one node and this is simply its estimate. For
+blindness the shared estimate is the finding: the grouping keys on it, so
+agreement is true by construction rather than by coincidence.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanFinding.actual_rows" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">actual_rows</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanFinding.actual_rows" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">actual_rows</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>What each execution actually produced at that node, in capture order.</p>
+<p><code>float | None</code> because that is what a node holds, and narrowing it here
+would be this class asserting something about how it was built.
+:func:<code>~django_query_contract.find_plan_defects</code> only ever makes a
+finding out of analyzed plans, so every entry is a real measurement --
+but this is a public record and a caller may hold one it built itself.</p>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="django_query_contract.PlansUnsupported" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">PlansUnsupported</span>
+
+
+<a href="#django_query_contract.PlansUnsupported" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="Exception">Exception</span></code></p>
+
+
+
+        <p>Plan capture was asked for on a connection that cannot produce a plan.</p>
+<p>Raised by :class:<code>~django_query_contract.PlanCapture</code> on entry, before a
+single statement has run, and carrying the sentence that names what was
+refused, which connection, and what that connection actually is.</p>
+<p><strong>It raises rather than degrading, and that is the whole point of the class.</strong>
+Every other honest degradation in this package reports and carries on: a
+capture rebuilt from a <code>CaptureQueriesContext</code> says it has no stacks, a
+block above the query-log ceiling says the count is wrong. Those are still
+measurements. A plan capture on SQLite would not be a degraded measurement,
+it would be an empty one, and an empty one is indistinguishable from a
+healthy one -- so an assertion over it passes because the backend could not
+check it, which is the exact failure this package exists to expose.</p>
+<p>The pytest face turns this into a <strong>skip</strong> rather than an error, through the
+<code>query_plans</code> fixture: a test that never ran is honest, and a test that ran
+against a database with no planner is not.</p>
+
+
+
+
+
+
+
+
+
+    </div>
+
 </div><h2 id="the-ceiling">The ceiling<a class="headerlink" href="#the-ceiling" title="Permanent link">&para;</a></h2>
 
 
@@ -5523,6 +8340,10 @@ the finding is defined -- more than one execution of one statement shape
 from one call stack, with no threshold and no rule about lazy loads -- and
 because nothing here fails a test on one. See
 :class:<code>~django_query_contract.NPlusOne</code>.</p>
+<p>A :class:<code>~django_query_contract.PlanCapture</code> gains a fourth block underneath
+all of it, describing what the planner did with the statements it explained.
+An ordinary capture has no plans and prints none, so one function still
+answers "what did this block do" whichever capture a caller is holding.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -5561,7 +8382,8 @@ because nothing here fails a test on one. See
             </td>
             <td>
               <div class="doc-md-description">
-                <p>How many findings to list before summarising the rest.</p>
+                <p>How many findings to list before summarising the rest.
+Applied to N+1 findings and, separately, to plan findings.</p>
               </div>
             </td>
             <td>
@@ -7003,6 +9825,399 @@ package, and the reader gets the call site rather than only the arithmetic.</p>
             <td>
               <div class="doc-md-description">
                 <p>The report, without a trailing newline.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="django_query_contract.find_plan_defects" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">find_plan_defects</span>
+
+
+<a href="#django_query_contract.find_plan_defects" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Read a capture's plans back as findings.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.find_plan_defects.find_plan_defects" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">find_plan_defects</span>
+
+
+<a href="#django_query_contract.find_plan_defects.find_plan_defects" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">find_plan_defects</span><span class="p">(</span><span class="n">records</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">QueryRecord</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PlanFinding</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Name the defects the captured plans state, blindness first.</p>
+<p>The whole of the reader, and it is short for the same reason
+:func:<code>~django_query_contract.find_n_plus_one</code> is: both defects are
+definitions rather than heuristics. One is a fact PostgreSQL printed; the
+other is an equality and an inequality over a pair of measurements. See
+:class:<code>~django_query_contract.PlanDefect</code> for why the other two candidates
+-- a sequential scan over a row threshold and a nested loop with a large
+inner -- are declined, and for why the estimate-versus-actual ratio is
+reported on every node instead of being classified here.</p>
+<p><strong>Only measured plans are considered.</strong> Without <code>ANALYZE</code> a plan carries
+the planner's expectations and nothing to check them against, so neither
+defect is decidable from one. Those statements are skipped rather than
+passed, and :func:<code>~django_query_contract.format_query_plans</code> says how many
+were skipped rather than reporting a clean bill of health it did not earn.</p>
+<p>Takes any iterable of records, so it reads a
+:class:<code>~django_query_contract.PlanCapture</code> directly, a slice of one, or the
+records of a single connection. A record with no plan -- every record from an
+ordinary :class:<code>~django_query_contract.QueryCapture</code> -- contributes nothing,
+so calling this on a capture that took no plans returns nothing rather than
+raising.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_query_contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlanCapture</span><span class="p">,</span> <span class="n">find_plan_defects</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">PlanCapture</span><span class="p">()</span> <span class="k">as</span> <span class="n">capture</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">render_author_list</span><span class="p">()</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">for</span> <span class="n">finding</span> <span class="ow">in</span> <span class="n">find_plan_defects</span><span class="p">(</span><span class="n">capture</span><span class="p">):</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">finding</span><span class="o">.</span><span class="n">defect</span><span class="p">,</span> <span class="n">finding</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">finding</span><span class="o">.</span><span class="n">actual_rows</span><span class="p">)</span>
+</span></code></pre></div>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>records</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Iterable">Iterable</span>[<a class="autorefs autorefs-internal" title="QueryRecord
+
+
+  
+      dataclass
+   (django_query_contract.query_record.QueryRecord)" href="#django_query_contract.QueryRecord">QueryRecord</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The executions to read.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="PlanFinding
+
+
+  
+      dataclass
+   (django_query_contract.plan_finding.PlanFinding)" href="#django_query_contract.PlanFinding">PlanFinding</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The findings, blindness first and then spills, each kind in capture</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code>...</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>order. The order across the two kinds is presentation and not a ranking:</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="PlanFinding
+
+
+  
+      dataclass
+   (django_query_contract.plan_finding.PlanFinding)" href="#django_query_contract.PlanFinding">PlanFinding</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>a spilled sort and a blind estimate have no common scale, and inventing</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="PlanFinding
+
+
+  
+      dataclass
+   (django_query_contract.plan_finding.PlanFinding)" href="#django_query_contract.PlanFinding">PlanFinding</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>one to sort them by would be the first knob.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="django_query_contract.format_query_plans" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">format_query_plans</span>
+
+
+<a href="#django_query_contract.format_query_plans" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Turn captured plans into the paragraph a reader needs, and no verdict.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.format_query_plans.format_query_plans" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">format_query_plans</span>
+
+
+<a href="#django_query_contract.format_query_plans.format_query_plans" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">format_query_plans</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">capture</span><span class="p">:</span> <span class="n">PlanCapture</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">max_findings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">max_estimates</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">max_sql</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">160</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Describe what the planner did, what it got wrong, and what was not asked.</p>
+<p>Four blocks, and the order is the argument. The findings come first because
+they are the only claims here that hold by construction. The estimate errors
+come after them and are explicitly <em>not</em> claims: they are two numbers
+PostgreSQL printed and the factor between them, ordered so the largest is
+visible, with no rule anywhere deciding which of them is a defect. The
+statements that carried no plan are counted last, so a reader can see that
+the numbers above do not cover everything.</p>
+<p>The block about relations with no statistics comes before all of it, because
+it can invalidate all of it: a plan over a table PostgreSQL has never
+analyzed is a guess, and a reader who does not know that will act on it.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>capture</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="PlanCapture (django_query_contract.plan_capture.PlanCapture)" href="#django_query_contract.PlanCapture">PlanCapture</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A closed :class:<code>~django_query_contract.PlanCapture</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_findings</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>How many findings to list before summarising the rest.</p>
+              </div>
+            </td>
+            <td>
+                  <code>5</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_estimates</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>How many statements to name in the estimate-error block.</p>
+              </div>
+            </td>
+            <td>
+                  <code>5</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_sql</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Where to cut a long statement. The record keeps the whole thing.</p>
+              </div>
+            </td>
+            <td>
+                  <code>160</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The report, without a trailing newline. Empty when no statement carried a</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>plan -- which is every capture that is not a <code>PlanCapture</code>, and a</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>PlanCapture</code> around a block that ran nothing.</p>
               </div>
             </td>
           </tr>
