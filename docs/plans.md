@@ -417,6 +417,13 @@ The refusal names the exception class and never its message, because a driver
 error can quote a bound value and this package
 [retains no parameters](reference.md).
 
+Cancellation is the one exception, and only because the remedy is derived from
+the class rather than read off the message. A refusal naming `QueryCanceled`
+(or `QueryCanceledError`, which is psycopg 2's word for it) also says that the
+cause is almost always `statement_timeout`, that `EXPLAIN (ANALYZE)` runs the
+statement a second time, and that the two ways out are more headroom or
+`analyze=False`.
+
 ## Index advice, and why there is none
 
 "These twelve statements sequentially scanned a two-million-row table, here are

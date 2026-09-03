@@ -24,6 +24,20 @@ from tests.plan_payloads import WHALE_JOIN
 _SELECT = "SELECT id FROM testapp_book WHERE author_id = %s"
 
 
+class QueryCanceled(Exception):
+    """psycopg 3's cancellation error, by name only.
+
+    The package imports neither psycopg nor psycopg2 -- it issues ``EXPLAIN``
+    through whatever driver the connection already has -- so it recognises a
+    cancellation by class name, and this module stays driver-free to match.
+    Declaring the real class here would test an import that does not exist.
+    """
+
+
+class QueryCanceledError(Exception):
+    """psycopg 2's spelling of the same thing, which is a different word."""
+
+
 class _Cursor:
     """A driver cursor that remembers what it was asked and answers with real JSON."""
 
@@ -236,6 +250,50 @@ def test_a_failing_explain_reports_the_error_class_and_never_its_message() -> No
     assert plan.refusal is not None
     assert "EXPLAIN raised RuntimeError" in plan.refusal
     assert "hunter2" not in plan.refusal
+
+
+def test_a_cancelled_explain_says_what_to_do_about_it() -> None:
+    """The one failure with a remedy, so it is the one that gets named.
+
+    Every other refusal here can only say which exception class arrived, because
+    a driver message can quote a bound value. A cancellation is different: the
+    cause is almost always ``statement_timeout``, the reason is that
+    ``EXPLAIN (ANALYZE)`` runs the statement a second time, and both remedies are
+    the caller's to apply. None of that is read off the error text, so none of
+    it can leak a value.
+    """
+    cursor = _Cursor(fails=QueryCanceled("canceling statement due to statement timeout"))
+
+    plan = PlanCapture()._explain(_Connection(cursor), "SELECT 1", None)
+
+    assert plan.refusal is not None
+    assert "QueryCanceled" in plan.refusal
+    assert "statement_timeout" in plan.refusal
+    assert "analyze=False" in plan.refusal
+    # The driver's own words stay out of it, cancellation or not.
+    assert "canceling statement" not in plan.refusal
+
+
+def test_psycopg2_spells_cancellation_differently_and_is_recognised_too() -> None:
+    """Two drivers, two class names, one condition. Neither is imported here."""
+    cursor = _Cursor(fails=QueryCanceledError("canceling statement due to statement timeout"))
+
+    plan = PlanCapture()._explain(_Connection(cursor), "SELECT 1", None)
+
+    assert plan.refusal is not None
+    assert "statement_timeout" in plan.refusal
+
+
+def test_any_other_failure_says_only_which_class_arrived() -> None:
+    """The remedy is named where there is one, and nowhere else."""
+    cursor = _Cursor(fails=ValueError("a bound value: 'secret@example.com'"))
+
+    plan = PlanCapture()._explain(_Connection(cursor), "SELECT 1", None)
+
+    assert plan.refusal is not None
+    assert "ValueError" in plan.refusal
+    assert "statement_timeout" not in plan.refusal
+    assert "secret@example.com" not in plan.refusal
 
 
 def test_a_transaction_django_did_not_open_is_still_savepointed() -> None:

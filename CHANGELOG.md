@@ -26,6 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     failure, verified against a real server either side of an atomic block -- the
     case that escaped was the one where no savepoint was taken at all.
 
+- **A cancelled `EXPLAIN` now says what to do about it.** Cancellation is the one
+  failure here with a remedy the caller can act on, so it is the one refusal
+  that says more than a class name: the cause is almost always
+  `statement_timeout`, `EXPLAIN (ANALYZE)` runs the statement a second time, and
+  the ways out are more headroom or `analyze=False`. Everything it adds is
+  derived from the exception class and never from its message, so the rule that
+  keeps a bound value out of a refusal is untouched. Both spellings are
+  recognised -- psycopg 3 raises `QueryCanceled` and psycopg 2 raises
+  `QueryCanceledError` -- matched by name, because this package imports neither
+  driver and issues `EXPLAIN` through whichever one the connection already has.
+
 ### Documentation
 - **Plan capture needs timeout headroom, and 1.7x is a floor rather than a
   budget.** The multiplier is worst on exactly the statements a plan is most

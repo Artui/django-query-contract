@@ -546,6 +546,10 @@ def test_a_statement_cancelled_by_a_timeout_is_refused_like_any_other_failure() 
 
         assert plan.refusal is not None
         assert "QueryCanceled" in plan.refusal
+        # Named against the real driver's real exception, not only the stub's:
+        # the class name is what the remedy is keyed on, so a driver renaming it
+        # would take the remedy away silently.
+        assert "statement_timeout" in plan.refusal
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             assert cursor.fetchone() == (1,)
