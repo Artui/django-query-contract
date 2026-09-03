@@ -38,6 +38,12 @@ _PLANNED_FLAGS = "FORMAT JSON"
 # statement text that could know, and this package does not parse SQL.
 _READ_ONLY = re.compile(r"^\s*SELECT\b", re.IGNORECASE)
 
+# The two spellings of a cancelled statement, matched by name because this
+# package imports neither driver -- it issues EXPLAIN through whichever one the
+# connection already has. psycopg 3 raises QueryCanceled and psycopg 2 raises
+# QueryCanceledError, and a consumer meeting either wants the same sentence.
+_CANCELLED = frozenset({"QueryCanceled", "QueryCanceledError"})
+
 # A savepoint around the EXPLAIN, so a statement PostgreSQL declines to explain
 # costs a plan rather than the whole transaction. Verified rather than assumed:
 # without it, a failing EXPLAIN inside an atomic block leaves the connection in
@@ -291,10 +297,26 @@ class PlanCapture(QueryCapture):
                 # quote the value that caused it, and this package retains no
                 # parameters -- an error path is not where that rule gets an
                 # exception. The statement itself is on the record beside this.
+                name = type(error).__name__
+                # Cancellation is the one failure here with a remedy the caller
+                # can act on, so it is the one that gets more than a class name.
+                # Everything said about it is derived from the class, never from
+                # the message, so naming it leaks nothing the rule above
+                # protects. A plan lost this way is lost on the slowest statement
+                # in the suite, which is the one the plan was wanted for.
+                remedy = (
+                    " A cancellation here is almost always statement_timeout, and EXPLAIN "
+                    "(ANALYZE) runs the statement a second time -- so a query comfortably "
+                    "inside the timeout can have its plan capture fall outside it. Raise "
+                    "statement_timeout for the tests that capture plans, or capture with "
+                    "analyze=False, which only plans."
+                    if name in _CANCELLED
+                    else ""
+                )
                 return QueryPlan.refused(
-                    f"EXPLAIN raised {type(error).__name__} and the plan was not taken. "
+                    f"EXPLAIN raised {name} and the plan was not taken. "
                     "The message is withheld because a driver error can quote a bound "
-                    "value, and this package retains none."
+                    f"value, and this package retains none.{remedy}"
                 )
             if guarded:
                 cursor.execute(_RELEASE)
