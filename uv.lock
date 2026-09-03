@@ -428,15 +428,15 @@ wheels = [
 
 [[package]]
 name = "django-data-shape"
-version = "0.10.0"
+version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django", version = "5.2.17", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "django", version = "6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/fd/9740a4430bd3c43c5ef0d4f6f4b73038a389fbac99bbd416302f11f0328f/django_data_shape-0.10.0.tar.gz", hash = "sha256:b87476e01a009a2784222b01461568e7bcc029f5821ba05a7b1514af0745a45e", size = 327150, upload-time = "2026-09-03T08:35:39.167Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/2c/d81d81256abe7c2560699d594ac115f35d10f1bcc55250a7cf29614a3acb/django_data_shape-0.12.0.tar.gz", hash = "sha256:c77deb600780534395555579016d5a6bd8b95dcac8f777506719c57acd6be46d", size = 363468, upload-time = "2026-09-03T12:29:04.844Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/ab/4f80b86c144db3558c90f8139fc8ae7ce61d2658dec7675b277930d0740c/django_data_shape-0.10.0-py3-none-any.whl", hash = "sha256:9de3e0a6f12c61e40f201af1abc14818fb0f7570a542d59c927686886afe9a88", size = 140140, upload-time = "2026-09-03T08:35:37.184Z" },
+    { url = "https://files.pythonhosted.org/packages/07/7e/16286a4a23130903dcb352ac1a56bd9f6c8005e21ff9a1b9e5ebd48d5b61/django_data_shape-0.12.0-py3-none-any.whl", hash = "sha256:c13b2b9a9d42cae6080492635d5bbddd0cac0cf02007d9fdc480dd10ad26fe52", size = 155078, upload-time = "2026-09-03T12:29:03.497Z" },
 ]
 
 [package.optional-dependencies]
