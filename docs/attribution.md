@@ -46,6 +46,23 @@ reported rather than approximated with the innermost frame available, because
 "the query came from `django/db/models/query.py`" is true of every query ever
 executed and tells a reader nothing.
 
+### A monkeypatching library sits between you and Django
+
+Anything that patches the ORM in place is, by this rule, a frame outside Django,
+so it becomes the answer. `django-zeal` is the common case: several top
+attributions in a real capture came back as `zeal/patch.py` in `wrapper` rather
+than the reporting code, because the patch is genuinely the innermost non-Django
+frame and the rule is not lying about that.
+
+**The next frame down is the one you want**, and
+[reading the stack yourself](#reading-it-yourself) is how to get it.
+
+There is deliberately no exclusion list. Naming `zeal` here would mean naming the
+next such library, and the one after -- and a package that decides some of your
+installed code is less real than the rest has started guessing on your behalf,
+which is the tuning every dead N+1 detector died of. The consumer who reported
+this said the same thing unprompted and would rather it stayed knob-free.
+
 Two things can produce that `None`:
 
 - the capture kept no stack at all, which is every record in one rebuilt by

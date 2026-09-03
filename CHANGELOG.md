@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A failing `EXPLAIN` no longer aborts a transaction this package did not
+  open.** The savepoint guard read `connection.in_atomic_block`, which answers
+  *did Django open a transaction* -- not *is this connection in one*. Manual
+  transaction management, which Django documents and `ATOMIC_REQUESTS` reaches by
+  another road, puts the driver inside a transaction with that flag still
+  `False`, so no savepoint was taken and a statement PostgreSQL declined to
+  explain left the connection in "current transaction is aborted", cascading
+  `InFailedSqlTransaction` into every later statement. A consumer lost two full
+  suite runs to it. The guard now also asks `get_autocommit()`.
+  - **The test double was missing the method, which is why every test agreed
+    with the bug.** The stub connection answered `in_atomic_block` and nothing
+    else, so a guard reading only that had nothing to disagree with it. It
+    answers both now.
+  - **The reported cause was a cancelled statement escaping the savepoint, and
+    that is not what happens.** A cancel is caught and refused like any other
+    failure, verified against a real server either side of an atomic block -- the
+    case that escaped was the one where no savepoint was taken at all.
+
+### Documentation
+- **Plan capture needs timeout headroom, and 1.7x is a floor rather than a
+  budget.** The multiplier is worst on exactly the statements a plan is most
+  wanted for, because instrumenting a plan whose nodes loop millions of times
+  costs more than instrumenting one that scans once. A consumer measured a
+  15-second endpoint pass a 120-second `statement_timeout` under `analyze=True`.
+- **`total_actual_rows` is not a budget currency**, said plainly where it is
+  introduced. It is the number that finally exposes fan-out, which is exactly
+  why the first instinct is to assert a ceiling on it -- and it moves with the
+  plan the server chose on the day: three consecutive pairs on unchanged code
+  read 46,768 then 542,613, 84,731 then 416,086, 2,462 then 76,475. The rule is
+  the one durations get.
+- **The free check is promoted to its own section.** `analyze=False` plus
+  `unanalyzed_relations` costs about 1.02x, which is cheap enough to leave on
+  permanently, and it is the check most likely to fire on a suite that has never
+  used this package: a consumer found their entire performance fixture had never
+  been `ANALYZE`d, and one `ANALYZE` took that suite from 531s to 210s.
+- **A monkeypatching library becomes the call site, and the next frame down is
+  the answer.** `django-zeal` patches the ORM in place, so it is genuinely the
+  innermost frame outside Django and the rule is not wrong about that. Named as
+  an expectation rather than fixed with an exclusion list, which is the tuning
+  every dead N+1 detector died of.
+
+
 ## [0.7.0] — 2026-09-03
 
 ### Added

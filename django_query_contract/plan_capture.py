@@ -257,7 +257,18 @@ class PlanCapture(QueryCapture):
         # outside a transaction block outright -- verified, it raises rather than
         # warning -- and outside one there is nothing to protect: a failed
         # statement in autocommit poisons only itself.
-        guarded = connection.in_atomic_block
+        #
+        # Both halves are needed, and reading only the first was a defect. Django
+        # answers two different questions here: `in_atomic_block` is "did *I*
+        # open a transaction", and `get_autocommit()` is "is this connection in
+        # one at all". Manual transaction management -- `set_autocommit(False)`,
+        # which Django documents and ATOMIC_REQUESTS reaches by another road --
+        # puts the driver inside a transaction with `in_atomic_block` still
+        # False. No savepoint was taken there, so a statement PostgreSQL declined
+        # to explain aborted the caller's whole transaction and every later
+        # statement on the connection raised InFailedSqlTransaction. A consumer
+        # lost two suite runs to it.
+        guarded = connection.in_atomic_block or not connection.get_autocommit()
         cursor = connection.connection.cursor()
         try:
             if guarded:
