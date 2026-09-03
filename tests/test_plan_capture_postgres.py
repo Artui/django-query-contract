@@ -488,3 +488,67 @@ def test_the_planners_estimate_is_divided_by_something_else_entirely(world, db) 
     assert divisor > 1.0
     assert divisor != parallel.loops
     assert parallel.estimated_rows * parallel.loops != serial.estimated_rows
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_failing_explain_is_savepointed_when_django_did_not_open_the_transaction() -> None:
+    """The guard has to ask the connection, not Django's own bookkeeping.
+
+    ``in_atomic_block`` answers "did Django open a transaction", and manual
+    transaction management -- ``set_autocommit(False)``, which Django documents
+    and ``ATOMIC_REQUESTS`` reaches by another road -- puts the driver inside one
+    with that flag still False. No savepoint was taken there, so a statement
+    PostgreSQL declined to explain aborted the whole transaction and every later
+    statement on that connection raised ``InFailedSqlTransaction``.
+
+    A consumer lost two full suite runs to this and reported the cause as a
+    cancelled statement escaping the savepoint. It is not: a cancel is caught
+    and refused like any other failure, verified either side of an atomic block.
+    What escaped was the case where the savepoint was never taken at all.
+    """
+    connection.set_autocommit(False)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        assert not connection.in_atomic_block
+        assert not connection.get_autocommit()
+
+        plan = PlanCapture(analyze=True, using=["default"])._explain(
+            connection, "SELECT * FROM a_table_that_is_not_there", None
+        )
+        assert plan.refusal is not None
+        assert "UndefinedTable" in plan.refusal
+
+        # The whole point: the connection is still usable afterwards.
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            assert cursor.fetchone() == (1,)
+    finally:
+        connection.rollback()
+        connection.set_autocommit(True)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_statement_cancelled_by_a_timeout_is_refused_like_any_other_failure() -> None:
+    """The mechanism that was reported, checked rather than assumed.
+
+    ``EXPLAIN (ANALYZE)`` runs the statement, so a query comfortably inside
+    ``statement_timeout`` can have its plan capture fall outside it -- which is
+    worth knowing, and is documented. What it does not do is escape the guard.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute("SET statement_timeout = '300ms'")
+    try:
+        plan = PlanCapture(analyze=True, using=["default"])._explain(
+            connection, "SELECT pg_sleep(2)", None
+        )
+
+        assert plan.refusal is not None
+        assert "QueryCanceled" in plan.refusal
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            assert cursor.fetchone() == (1,)
+    finally:
+        with connection.cursor() as cursor:
+            cursor.execute("SET statement_timeout = 0")

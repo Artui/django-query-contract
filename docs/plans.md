@@ -94,6 +94,23 @@ is what builds a database worth taking a plan over -- it owns the ordering,
 generate then load then index then `ANALYZE`, so the analyze-then-load trap
 cannot happen.
 
+### The cheapest assertion in the package, and the one that pays
+
+`PlanCapture(analyze=False)` plus `assert not plans.unanalyzed_relations` costs
+about **1.02x** -- the server plans and does not execute -- which is cheap enough
+to leave switched on permanently rather than reaching for when something looks
+slow. Nothing else here has that property: the measured findings are worth more
+per run and cost enough that you turn them on deliberately.
+
+It is also the check most likely to fire on a suite that has never used this
+package. A consumer ran it for the first time and found that **their entire
+performance fixture had never been `ANALYZE`d** -- every plan that suite had
+taken since it was written was over tables the planner could not see. One
+`ANALYZE` took the suite from 531s to 210s.
+
+If you adopt one thing from this page, adopt this one, and add the measured
+findings afterwards.
+
 ## Every row count is per loop, and that changes what an assertion means
 
 `actual_rows`, `rows_removed_by_filter` and `estimated_rows` are what PostgreSQL
@@ -147,6 +164,22 @@ divides by the loop count and rounds before printing, so multiplying back can be
 out by up to `loops / 2` -- the totals above are each one row off the truth. That
 is stated rather than hidden, because the alternative is a number the server does
 not print at all.
+
+**And they are not a budget currency.** The first instinct on meeting these is to
+write `assert node.total_actual_rows < 50_000`, precisely because this is the
+number that finally exposes fan-out -- and it is the wrong assertion. It moves
+with the plan the server chose on the day, which moves with the statistics, the
+row count and how many workers were free. A consumer tried it and recorded three
+consecutive pairs on unchanged code: 46,768 then 542,613; 84,731 then 416,086;
+2,462 then 76,475.
+
+A row count is evidence about a plan, not a threshold to hold a build against.
+Assert on the **shape** -- that a relation was not read without an index, that
+nothing was planner-blind, that the statement count did not grow with the data --
+and read the totals when one of those fires. It is the same rule durations get,
+and for the same reason: a performance assertion that mentions milliseconds is a
+flaky test with extra steps, and one that mentions a row count is the same test
+with a more convincing number in it.
 
 ### There is no total for the estimate, on purpose
 
@@ -318,6 +351,19 @@ a shaped 400,000-row world, a two-statement block took 8.9 ms on its own and
 twice buys. With `analyze=False` it was 9.1 ms, or 1.02x, because the server only
 plans.
 
+**Take 1.7x as a floor, not a budget.** It is one measurement on one shaped
+world, and the multiplier is worst on exactly the statements you most want a
+plan for: instrumenting a plan whose nodes loop millions of times costs far more
+than instrumenting a plan that scans once. A consumer measured a 15-second
+endpoint go past a 120-second `statement_timeout` under `analyze=True`.
+
+So **plan capture needs timeout headroom**. A cancelled `EXPLAIN` is caught and
+refused like any other failure -- there is a test that cancels one with a
+`statement_timeout` and asserts the connection survives -- but the plan is lost,
+and losing it on the slowest statement in the suite is losing the one that
+mattered. Raise `statement_timeout` for the tests that capture plans, or capture
+them with `analyze=False`.
+
 `ANALYZE` is the default anyway: a plan with no measurement in it can produce no
 finding at all, and a plan capture that can produce no finding is the vacuous
 pass this package exists to refuse. `PlanCapture(analyze=False)` is there for
@@ -351,13 +397,21 @@ assertion counts through. The obvious implementation, `connection.cursor()`,
 would have inflated every count in a suite that turned plan capture on. There is
 a test that runs both together and pins it.
 
-**It does not break your transaction.** A failing `EXPLAIN` inside an atomic
-block would leave the connection in "current transaction is aborted, commands
-ignored until end of transaction block", and every later statement in the test
-would fail. So the `EXPLAIN` runs under a savepoint, and a statement PostgreSQL
+**It does not break your transaction.** A failing `EXPLAIN` inside a transaction
+would leave the connection in "current transaction is aborted, commands ignored
+until end of transaction block", and every later statement in the test would
+fail. So the `EXPLAIN` runs under a savepoint, and a statement PostgreSQL
 declines to explain costs a plan rather than the test. Both halves are tested
 against a real server: one that the savepoint holds, and one that removing it
 poisons the transaction.
+
+"Inside a transaction" is asked of the connection rather than of Django. Django
+answers two different questions -- `in_atomic_block` is *did I open one*, and
+`get_autocommit()` is *is this connection in one at all* -- and they disagree
+under manual transaction management, where `set_autocommit(False)` puts the
+driver in a transaction with `in_atomic_block` still `False`. Reading only the
+first left that case unguarded, which is how a consumer lost two suite runs to a
+cascade of `InFailedSqlTransaction`.
 
 The refusal names the exception class and never its message, because a driver
 error can quote a bound value and this package

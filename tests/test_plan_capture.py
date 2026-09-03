@@ -68,11 +68,26 @@ class _Connection:
         *,
         alias: str = "default",
         in_atomic_block: bool = True,
+        autocommit: bool = True,
     ):
         self.alias = alias
         self.in_atomic_block = in_atomic_block
+        self.autocommit = autocommit
         self.cursor_object = cursor if cursor is not None else _Cursor()
         self.connection: _Driver | None = _Driver(self.cursor_object)
+
+    def get_autocommit(self) -> bool:
+        """Django's second transaction question, and the double used to lack it.
+
+        A real connection answers "did Django open a transaction"
+        (``in_atomic_block``) and "is this connection in one at all"
+        (``get_autocommit``) separately, and they disagree under manual
+        transaction management. This double answered only the first, so every
+        test here agreed with a savepoint guard that read only the first --
+        which is how a connection outside Django's own atomic block came to have
+        a failed EXPLAIN abort the caller's transaction.
+        """
+        return self.autocommit
 
 
 def _statements(cursor: _Cursor) -> list[str]:
@@ -221,6 +236,17 @@ def test_a_failing_explain_reports_the_error_class_and_never_its_message() -> No
     assert plan.refusal is not None
     assert "EXPLAIN raised RuntimeError" in plan.refusal
     assert "hunter2" not in plan.refusal
+
+
+def test_a_transaction_django_did_not_open_is_still_savepointed() -> None:
+    """`in_atomic_block` False and autocommit off: the driver is in a transaction."""
+    cursor = _Cursor()
+    connection = _Connection(cursor, in_atomic_block=False, autocommit=False)
+
+    PlanCapture()._explain(connection, "SELECT 1", None)
+
+    assert "SAVEPOINT django_query_contract_plan" in _statements(cursor)
+    assert "RELEASE SAVEPOINT django_query_contract_plan" in _statements(cursor)
 
 
 def test_a_failing_explain_outside_a_transaction_rolls_nothing_back() -> None:
