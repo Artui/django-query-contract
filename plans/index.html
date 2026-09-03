@@ -451,6 +451,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="A plan over ten rows is a lie, and the vendor check cannot see that">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-cheapest-assertion-in-the-package-and-the-one-that-pays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The cheapest assertion in the package, and the one that pays
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -733,6 +750,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="A plan over ten rows is a lie, and the vendor check cannot see that">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-cheapest-assertion-in-the-package-and-the-one-that-pays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The cheapest assertion in the package, and the one that pays
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1032,6 +1066,19 @@ everywhere else. <a href="https://github.com/Artui/django-data-shape">django-dat
 is what builds a database worth taking a plan over -- it owns the ordering,
 generate then load then index then <code>ANALYZE</code>, so the analyze-then-load trap
 cannot happen.</p>
+<h3 id="the-cheapest-assertion-in-the-package-and-the-one-that-pays">The cheapest assertion in the package, and the one that pays<a class="headerlink" href="#the-cheapest-assertion-in-the-package-and-the-one-that-pays" title="Permanent link">&para;</a></h3>
+<p><code>PlanCapture(analyze=False)</code> plus <code>assert not plans.unanalyzed_relations</code> costs
+about <strong>1.02x</strong> -- the server plans and does not execute -- which is cheap enough
+to leave switched on permanently rather than reaching for when something looks
+slow. Nothing else here has that property: the measured findings are worth more
+per run and cost enough that you turn them on deliberately.</p>
+<p>It is also the check most likely to fire on a suite that has never used this
+package. A consumer ran it for the first time and found that <strong>their entire
+performance fixture had never been <code>ANALYZE</code>d</strong> -- every plan that suite had
+taken since it was written was over tables the planner could not see. One
+<code>ANALYZE</code> took the suite from 531s to 210s.</p>
+<p>If you adopt one thing from this page, adopt this one, and add the measured
+findings afterwards.</p>
 <h2 id="every-row-count-is-per-loop-and-that-changes-what-an-assertion-means">Every row count is per loop, and that changes what an assertion means<a class="headerlink" href="#every-row-count-is-per-loop-and-that-changes-what-an-assertion-means" title="Permanent link">&para;</a></h2>
 <p><code>actual_rows</code>, <code>rows_removed_by_filter</code> and <code>estimated_rows</code> are what PostgreSQL
 printed, and PostgreSQL prints them <strong>per loop</strong>. Over a small database every
@@ -1095,6 +1142,20 @@ divides by the loop count and rounds before printing, so multiplying back can be
 out by up to <code>loops / 2</code> -- the totals above are each one row off the truth. That
 is stated rather than hidden, because the alternative is a number the server does
 not print at all.</p>
+<p><strong>And they are not a budget currency.</strong> The first instinct on meeting these is to
+write <code>assert node.total_actual_rows &lt; 50_000</code>, precisely because this is the
+number that finally exposes fan-out -- and it is the wrong assertion. It moves
+with the plan the server chose on the day, which moves with the statistics, the
+row count and how many workers were free. A consumer tried it and recorded three
+consecutive pairs on unchanged code: 46,768 then 542,613; 84,731 then 416,086;
+2,462 then 76,475.</p>
+<p>A row count is evidence about a plan, not a threshold to hold a build against.
+Assert on the <strong>shape</strong> -- that a relation was not read without an index, that
+nothing was planner-blind, that the statement count did not grow with the data --
+and read the totals when one of those fires. It is the same rule durations get,
+and for the same reason: a performance assertion that mentions milliseconds is a
+flaky test with extra steps, and one that mentions a row count is the same test
+with a more convincing number in it.</p>
 <h3 id="there-is-no-total-for-the-estimate-on-purpose">There is no total for the estimate, on purpose<a class="headerlink" href="#there-is-no-total-for-the-estimate-on-purpose" title="Permanent link">&para;</a></h3>
 <p>The measurements are divided by the loop count. The estimate is not, and the two
 multiplications are different ones:</p>
@@ -1246,6 +1307,17 @@ a shaped 400,000-row world, a two-statement block took 8.9 ms on its own and
 14.8 ms with plan capture -- about <strong>1.7x</strong>, which is what running each statement
 twice buys. With <code>analyze=False</code> it was 9.1 ms, or 1.02x, because the server only
 plans.</p>
+<p><strong>Take 1.7x as a floor, not a budget.</strong> It is one measurement on one shaped
+world, and the multiplier is worst on exactly the statements you most want a
+plan for: instrumenting a plan whose nodes loop millions of times costs far more
+than instrumenting a plan that scans once. A consumer measured a 15-second
+endpoint go past a 120-second <code>statement_timeout</code> under <code>analyze=True</code>.</p>
+<p>So <strong>plan capture needs timeout headroom</strong>. A cancelled <code>EXPLAIN</code> is caught and
+refused like any other failure -- there is a test that cancels one with a
+<code>statement_timeout</code> and asserts the connection survives -- but the plan is lost,
+and losing it on the slowest statement in the suite is losing the one that
+mattered. Raise <code>statement_timeout</code> for the tests that capture plans, or capture
+them with <code>analyze=False</code>.</p>
 <p><code>ANALYZE</code> is the default anyway: a plan with no measurement in it can produce no
 finding at all, and a plan capture that can produce no finding is the vacuous
 pass this package exists to refuse. <code>PlanCapture(analyze=False)</code> is there for
@@ -1272,16 +1344,29 @@ the savepoints around it reach <code>connection.queries_log</code> -- which is w
 assertion counts through. The obvious implementation, <code>connection.cursor()</code>,
 would have inflated every count in a suite that turned plan capture on. There is
 a test that runs both together and pins it.</p>
-<p><strong>It does not break your transaction.</strong> A failing <code>EXPLAIN</code> inside an atomic
-block would leave the connection in "current transaction is aborted, commands
-ignored until end of transaction block", and every later statement in the test
-would fail. So the <code>EXPLAIN</code> runs under a savepoint, and a statement PostgreSQL
+<p><strong>It does not break your transaction.</strong> A failing <code>EXPLAIN</code> inside a transaction
+would leave the connection in "current transaction is aborted, commands ignored
+until end of transaction block", and every later statement in the test would
+fail. So the <code>EXPLAIN</code> runs under a savepoint, and a statement PostgreSQL
 declines to explain costs a plan rather than the test. Both halves are tested
 against a real server: one that the savepoint holds, and one that removing it
 poisons the transaction.</p>
+<p>"Inside a transaction" is asked of the connection rather than of Django. Django
+answers two different questions -- <code>in_atomic_block</code> is <em>did I open one</em>, and
+<code>get_autocommit()</code> is <em>is this connection in one at all</em> -- and they disagree
+under manual transaction management, where <code>set_autocommit(False)</code> puts the
+driver in a transaction with <code>in_atomic_block</code> still <code>False</code>. Reading only the
+first left that case unguarded, which is how a consumer lost two suite runs to a
+cascade of <code>InFailedSqlTransaction</code>.</p>
 <p>The refusal names the exception class and never its message, because a driver
 error can quote a bound value and this package
 <a href="../reference/">retains no parameters</a>.</p>
+<p>Cancellation is the one exception, and only because the remedy is derived from
+the class rather than read off the message. A refusal naming <code>QueryCanceled</code>
+(or <code>QueryCanceledError</code>, which is psycopg 2's word for it) also says that the
+cause is almost always <code>statement_timeout</code>, that <code>EXPLAIN (ANALYZE)</code> runs the
+statement a second time, and that the two ways out are more headroom or
+<code>analyze=False</code>.</p>
 <h2 id="index-advice-and-why-there-is-none">Index advice, and why there is none<a class="headerlink" href="#index-advice-and-why-there-is-none" title="Permanent link">&para;</a></h2>
 <p>"These twelve statements sequentially scanned a two-million-row table, here are
 the <code>CREATE INDEX</code> statements" is the output people actually want, and this was

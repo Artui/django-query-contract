@@ -424,6 +424,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The call site is the innermost frame outside Django">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-monkeypatching-library-sits-between-you-and-django" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A monkeypatching library sits between you and Django
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -600,6 +617,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The call site is the innermost frame outside Django">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-monkeypatching-library-sits-between-you-and-django" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A monkeypatching library sits between you and Django
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -735,6 +769,19 @@ kind of tuning this package is built without.</p>
 reported rather than approximated with the innermost frame available, because
 "the query came from <code>django/db/models/query.py</code>" is true of every query ever
 executed and tells a reader nothing.</p>
+<h3 id="a-monkeypatching-library-sits-between-you-and-django">A monkeypatching library sits between you and Django<a class="headerlink" href="#a-monkeypatching-library-sits-between-you-and-django" title="Permanent link">&para;</a></h3>
+<p>Anything that patches the ORM in place is, by this rule, a frame outside Django,
+so it becomes the answer. <code>django-zeal</code> is the common case: several top
+attributions in a real capture came back as <code>zeal/patch.py</code> in <code>wrapper</code> rather
+than the reporting code, because the patch is genuinely the innermost non-Django
+frame and the rule is not lying about that.</p>
+<p><strong>The next frame down is the one you want</strong>, and
+<a href="#reading-it-yourself">reading the stack yourself</a> is how to get it.</p>
+<p>There is deliberately no exclusion list. Naming <code>zeal</code> here would mean naming the
+next such library, and the one after -- and a package that decides some of your
+installed code is less real than the rest has started guessing on your behalf,
+which is the tuning every dead N+1 detector died of. The consumer who reported
+this said the same thing unprompted and would rather it stayed knob-free.</p>
 <p>Two things can produce that <code>None</code>:</p>
 <ul>
 <li>the capture kept no stack at all, which is every record in one rebuilt by
