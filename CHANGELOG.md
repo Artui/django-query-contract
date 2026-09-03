@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-09-03
+
 ### Fixed
 - **A failing `EXPLAIN` no longer aborts a transaction this package did not
   open.** The savepoint guard read `connection.in_atomic_block`, which answers
@@ -548,7 +550,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Artui/django-query-contract/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Artui/django-query-contract/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Artui/django-query-contract/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Artui/django-query-contract/compare/v0.4.0...v0.5.0
