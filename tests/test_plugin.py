@@ -303,6 +303,65 @@ def test_a_block_above_the_ceiling_warns_even_when_it_passes(
     )
 
 
+def test_one_test_filling_the_log_does_not_make_the_next_one_warn(
+    django_pytester: pytest.Pytester,
+) -> None:
+    """The leak this package closes, and the whole of what closing it changes.
+
+    Django empties ``queries_log`` in ``TransactionTestCase._pre_setup``, which
+    pytest-django runs -- for a test that asked for the database. The second test
+    below does not: it reaches an already-open connection through
+    ``django_db_blocker``, which is what a suite with a session-scoped world does
+    all the time. Without the reset hook it inherits the five entries the first
+    test left, and this package tells it that its own single statement is
+    invisible.
+
+    Both halves are pinned. The guilty test still warns, because a block that
+    outruns the log on its own is exactly what the warning is for; the one after
+    it does not.
+
+    The limit is shrunk once for the session rather than per test, deliberately.
+    A fixture that rebuilt the deque each time would be doing the hook's job and
+    this test would pass with the hook removed.
+    """
+    django_pytester.makeconftest(
+        """
+        from collections import deque
+
+        import pytest
+        from django.db import connection
+
+
+        @pytest.fixture(autouse=True, scope="session")
+        def small_query_log(django_db_setup):
+            connection.queries_limit = 5
+            connection.queries_log = deque(maxlen=5)
+            connection.force_debug_cursor = True
+        """
+    )
+    django_pytester.makepyfile(
+        """
+        import pytest
+        from django.db import connection
+
+        @pytest.mark.django_db
+        def test_fills_the_log():
+            with connection.cursor() as cursor:
+                for _ in range(6):
+                    cursor.execute("SELECT 1")
+
+        def test_is_innocent(django_db_blocker):
+            with django_db_blocker.unblock(), connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+        """
+    )
+    result = django_pytester.runpytest_subprocess()
+
+    result.assert_outcomes(passed=2)
+    result.stdout.fnmatch_lines(["*QueryLogCeilingWarning: *test_fills_the_log: 6 statements ran*"])
+    result.stdout.no_fnmatch_line("*test_is_innocent: 1 statements ran*")
+
+
 def test_the_inner_runs_collect_no_coverage(django_pytester: pytest.Pytester) -> None:
     """The fix above, asserted rather than assumed.
 

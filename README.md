@@ -286,6 +286,16 @@ out is a defect" is a policy about size, and this package does not write those.
 The two candidate findings that needed one -- a sequential scan over a row
 threshold, a nested loop with a large inner -- were declined.
 
+**Every row count on a plan node is per loop**, which is PostgreSQL's own
+convention and the one thing about these numbers that changes meaning as a
+database grows. The same `SELECT COUNT(*)` over 1,200,000 rows reports
+`Rows Removed by Filter: 1124098` in one process and `374699` in three, because
+the server reached for two workers on its own -- so an assertion written against
+a small world is written against a number the big one does not report. Read
+`node.total_actual_rows` and `node.total_rows_removed_by_filter`, which multiply
+by `loops` and are unchanged where it is 1. There is deliberately **no total for
+the estimate**: the planner divides that one by a number the plan does not print.
+
 A plan over ten rows is a lie, so a capture also asks the catalogue whether the
 tables it planned over have ever been analyzed, and says so before anything
 else. [django-data-shape](https://github.com/Artui/django-data-shape) is what

@@ -10,7 +10,7 @@ from django_query_contract.plan_finding import PlanFinding
 from django_query_contract.plan_node import PlanNode
 from django_query_contract.query_plan import QueryPlan
 from django_query_contract.query_record import QueryRecord
-from django_query_contract.utils import relative_to_cwd, shorten
+from django_query_contract.utils import loops_note, relative_to_cwd, row_count, shorten
 
 
 def format_query_plans(
@@ -100,10 +100,10 @@ def _finding_lines(capture: PlanCapture, *, max_findings: int, max_sql: int) -> 
 def _finding(finding: PlanFinding, *, max_sql: int) -> str:
     """One finding as an indented block, headline first."""
     if finding.defect is PlanDefect.PLANNER_BLIND:
-        actuals = ", ".join(_rows(value) for value in finding.actual_rows)
+        actuals = ", ".join(row_count(value) for value in finding.actual_rows)
         headline = (
             f"  planner blind  {finding.count} executions, one estimate of "
-            f"{_rows(finding.estimated_rows)} rows, actuals {actuals}"
+            f"{row_count(finding.estimated_rows)} rows, actuals {actuals}"
         )
     else:
         node = finding.nodes[0]
@@ -125,9 +125,9 @@ def _spill_detail(node: PlanNode) -> str:
         part
         for part in (
             node.sort_method,
-            None if node.sort_space_used_kb is None else f"{_rows(node.sort_space_used_kb)} kB",
+            None if node.sort_space_used_kb is None else f"{row_count(node.sort_space_used_kb)} kB",
             None if node.hash_batches is None else f"{node.hash_batches} batches",
-            None if node.disk_usage_kb is None else f"{_rows(node.disk_usage_kb)} kB on disk",
+            None if node.disk_usage_kb is None else f"{row_count(node.disk_usage_kb)} kB on disk",
         )
         if part is not None
     ]
@@ -146,6 +146,11 @@ def _estimate_lines(
     the block rather than left to the documentation, because the commonest large
     ratio has no defect under it at all: a node under a ``LIMIT`` stops early by
     design, so its actual is meant to fall short of its estimate.
+
+    A node that ran more than once gets a second caveat under it, for the same
+    reason and in the same place: both printed numbers are per loop, so on the
+    inner side of a join they describe one execution of several and the total is
+    the one a reader has in mind. See :func:`_per_loop`.
     """
     scored: list[tuple[float, QueryRecord, PlanNode]] = []
     for record, plan in explained:
@@ -169,11 +174,41 @@ def _estimate_lines(
         lines.append(
             f"  {error:,.1f}x  #{record.index}  {node.node_type}"
             f"{'' if node.relation is None else ' on ' + node.relation}: expected "
-            f"{_rows(node.estimated_rows)} rows, {_rows(node.actual_rows)} arrived"
+            f"{row_count(node.estimated_rows)} rows, {row_count(node.actual_rows)} arrived"
         )
+        lines.extend(_per_loop(node))
         lines.append(f"       {shorten(record.fingerprint, max_sql)}")
     if len(scored) > max_estimates:
         lines.append(f"  and {len(scored) - max_estimates} more statements.")
+    return lines
+
+
+def _per_loop(node: PlanNode) -> list[str]:
+    """Say that the two numbers above are shares, and what the whole was.
+
+    Silent for a node that ran once, which is every node of every plan taken
+    over a database too small to be scanned in parallel -- so this changes
+    nothing about the report a reader already knows and appears exactly where
+    the numbers above would otherwise quietly mean something else.
+
+    **The parallel line is a second sentence and not a longer first one**,
+    because it says something different in kind. The per-loop caveat is about
+    what the reader should multiply; the parallel one is about a number in this
+    block being wrong, which is the only such admission the report makes. See
+    :attr:`~django_query_contract.PlanNode.estimate_error`.
+    """
+    note = loops_note(node.loops, parallel_aware=node.parallel_aware)
+    if note is None:
+        return []
+    lines = [
+        f"       both counts are per loop, across {note}: "
+        f"{row_count(node.total_actual_rows)} rows in total"
+    ]
+    if node.parallel_aware:
+        lines.append(
+            "       the factor above reads high: a parallel node's estimate is divided by a "
+            "number the plan does not print, and its measurement by the loop count"
+        )
     return lines
 
 
@@ -215,8 +250,3 @@ def _sites(finding: PlanFinding) -> str:
         else relative_to_cwd(str(site))
         for site in finding.call_sites
     )
-
-
-def _rows(value: float | None) -> str:
-    """A row count as a reader wants it, or the fact that it was never measured."""
-    return "not measured" if value is None else f"{value:,.0f}"

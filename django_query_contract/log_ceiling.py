@@ -50,8 +50,21 @@ class LogCeiling:
     """Statements this capture counted. Unbounded, and therefore the true number."""
 
     @property
-    def headroom(self) -> int | None:
+    def headroom_at_enter(self) -> int | None:
         """How many more entries the log could hold when the capture opened.
+
+        **Named for the moment it describes, because it never moves.** A capture
+        reads ``len(connection.queries_log)`` on the way in and never again, so
+        this number is fixed for the length of the block: four thousand
+        statements later it still reports the room there was at the start.
+
+        That is the right number rather than a stale one -- it is what
+        :attr:`visible` needs, and it is the only one obtainable. Django writes a
+        statement to the log only when the debug cursor is on, and a capture
+        counts every execution through ``execute_wrapper`` whether it is or not,
+        so how much of the log this block consumed cannot be derived from either
+        end. What was wrong was the name, sitting beside a field already spelled
+        ``log_length_at_enter``.
 
         ``None`` when the log is unbounded.
         """
@@ -62,7 +75,7 @@ class LogCeiling:
     @property
     def visible(self) -> int:
         """What a ``CaptureQueriesContext`` opened at the same moment would report."""
-        headroom = self.headroom
+        headroom = self.headroom_at_enter
         if headroom is None:
             return self.executions
         return min(self.executions, headroom)

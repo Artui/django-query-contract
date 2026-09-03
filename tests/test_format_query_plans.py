@@ -15,7 +15,13 @@ from django_query_contract import (
     StackFrame,
     format_query_plans,
 )
-from tests.plan_payloads import SPILLED_SORT, WHALE_JOIN, tail_join
+from tests.plan_payloads import (
+    NESTED_LOOP_FILTERED_INNER,
+    PARALLEL_SCAN,
+    SPILLED_SORT,
+    WHALE_JOIN,
+    tail_join,
+)
 
 _SQL = "SELECT b.id FROM child b JOIN parent a ON (b.parent_id = a.id) WHERE a.name = %s"
 
@@ -253,3 +259,40 @@ def test_a_block_of_nothing_but_writes_has_plans_to_count_and_no_relations_to_na
 
     assert "1 statements captured, 0 of them explained." in report
     assert "Relations these plans read" not in report
+
+
+def test_the_estimate_block_says_when_its_two_numbers_are_per_loop() -> None:
+    """The worst node here ran 299 times, so neither printed number is the whole story.
+
+    Without the second line a reader sees "expected 20 rows, 2 arrived" about the
+    inner side of a join that really produced 715 rows and discarded 17,342, and
+    has no way to tell that the two counts describe one execution of 299.
+    """
+    report = format_query_plans(_capture([_record(0, _measured(NESTED_LOOP_FILTERED_INNER))]))
+
+    assert "10.0x  #0  Bitmap Heap Scan on testapp_order: expected 20 rows, 2 arrived" in report
+    assert "both counts are per loop, across 299 loops (once per row of the outer side)" in report
+    assert "598 rows in total" in report
+
+
+def test_a_parallel_node_says_its_factor_reads_high_and_why() -> None:
+    """The one place a number in this report is systematically wrong, said out loud.
+
+    The estimate on a parallel-aware node was divided by the workers plus a
+    fraction of the leader; the measurement beside it was divided by the
+    processes that ran. The two divisors differ, so the factor is inflated by
+    exactly their ratio: the planner was 5.3 times out on the serial twin of this
+    statement, and the block below reads 6.6x.
+    """
+    report = format_query_plans(_capture([_record(0, _measured(PARALLEL_SCAN))]))
+
+    assert "3 loops (parallel workers)" in report
+    assert "divided by a number the plan does not print" in report
+
+
+def test_a_plan_whose_nodes_all_ran_once_gains_no_extra_line() -> None:
+    """Which is every plan over a database small enough not to be scanned in parallel."""
+    report = format_query_plans(_capture([_record(0, _measured(WHALE_JOIN))]))
+
+    assert "per loop" not in report
+    assert "loops" not in report

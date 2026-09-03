@@ -389,3 +389,102 @@ def test_the_rows_removed_rule_fires_the_same_way_on_five_rows_as_on_a_hundred_t
     # Indistinguishable but for the size, which is the whole finding.
     assert tiny[0] == 4.0
     assert large[0] > 99_000
+
+
+def _parallel_settings(cursor) -> None:
+    """Make PostgreSQL choose a parallel plan over a table this size.
+
+    The world here is 100,000 rows, which is a tenth of what the server reaches
+    for workers over unprompted -- and building a world that big for one test
+    would cost the job more than the test is worth. So the costs that keep it
+    serial are set to zero for this transaction only. Nothing about the numbers
+    the plan then reports is affected by these settings: they change which plan
+    is chosen, not how it is measured.
+    """
+    cursor.execute("SET LOCAL max_parallel_workers_per_gather = 2")
+    cursor.execute("SET LOCAL parallel_setup_cost = 0")
+    cursor.execute("SET LOCAL parallel_tuple_cost = 0")
+    cursor.execute("SET LOCAL min_parallel_table_scan_size = 0")
+
+
+def _scan(capture, *, parallel: bool):
+    """The node that read ``testapp_order`` in the last plan of a capture."""
+    plan = capture.records[-1].plan
+    assert plan is not None and plan.root is not None
+    (node,) = [
+        node
+        for node in plan.nodes
+        if node.relation == "testapp_order" and node.parallel_aware is parallel
+    ]
+    return node
+
+
+def test_a_scan_split_across_workers_reports_a_share_and_totals_to_the_truth(world, db) -> None:
+    """The finding this milestone came from, against a server rather than a payload.
+
+    Every number this package prints about a scan is per loop, and a real server
+    starts dividing them the moment a table is worth more than one process. The
+    same statement is run twice below, once with parallelism priced out of reach
+    and once with it free, and the assertion is that the per-loop numbers
+    **disagree** while the totals agree -- because a checked-in payload can only
+    ever agree with itself about which of those two is the reconstruction.
+    """
+    matching = Order.objects.filter(reference__lt="2").count()
+    discarded = 100_000 - matching
+    assert 0 < matching < 100_000, "the predicate has to keep some rows and drop some"
+
+    with connection.cursor() as cursor:
+        cursor.execute("SET LOCAL max_parallel_workers_per_gather = 0")
+    with PlanCapture(using="default") as serial_capture:
+        Order.objects.filter(reference__lt="2").count()
+    with connection.cursor() as cursor:
+        _parallel_settings(cursor)
+    with PlanCapture(using="default") as parallel_capture:
+        Order.objects.filter(reference__lt="2").count()
+
+    serial = _scan(serial_capture, parallel=False)
+    parallel = _scan(parallel_capture, parallel=True)
+
+    assert serial.loops == 1.0
+    assert serial.actual_rows == float(matching)
+    assert serial.rows_removed_by_filter == float(discarded)
+    # More than one process, or this test proved nothing about the case it
+    # exists for. Asserted rather than skipped: a skip here would turn the job
+    # that runs this file green while testing the thing it was added for.
+    assert parallel.loops is not None and parallel.loops > 1.0
+    assert parallel.actual_rows != serial.actual_rows
+    assert parallel.rows_removed_by_filter != serial.rows_removed_by_filter
+    # And the totals put them back together, to within the rounding PostgreSQL
+    # did when it divided by the loop count.
+    assert parallel.total_actual_rows is not None
+    assert parallel.total_rows_removed_by_filter is not None
+    assert abs(parallel.total_actual_rows - matching) <= parallel.loops / 2
+    assert abs(parallel.total_rows_removed_by_filter - discarded) <= parallel.loops / 2
+
+
+def test_the_planners_estimate_is_divided_by_something_else_entirely(world, db) -> None:
+    """Why no total is offered for the estimate, checked against a live server.
+
+    The measurements above are divided by the loop count. The estimate is
+    divided by the number of workers plus the fraction of one the planner credits
+    the leader with, which is not in the output at all -- so the ratio between
+    the serial estimate and the parallel one is not the loop count, and no
+    arithmetic over this node recovers what the planner actually predicted.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute("SET LOCAL max_parallel_workers_per_gather = 0")
+    with PlanCapture(using="default") as serial_capture:
+        Order.objects.filter(reference__lt="2").count()
+    with connection.cursor() as cursor:
+        _parallel_settings(cursor)
+    with PlanCapture(using="default") as parallel_capture:
+        Order.objects.filter(reference__lt="2").count()
+
+    serial = _scan(serial_capture, parallel=False)
+    parallel = _scan(parallel_capture, parallel=True)
+
+    assert parallel.loops is not None and parallel.loops > 1.0
+    divisor = serial.estimated_rows / parallel.estimated_rows
+    assert divisor > 1.0
+    assert divisor != parallel.loops
+    assert parallel.estimated_rows * parallel.loops != serial.estimated_rows

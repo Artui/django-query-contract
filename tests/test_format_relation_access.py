@@ -15,7 +15,7 @@ from django_query_contract import (
     StackFrame,
     format_relation_access,
 )
-from tests.plan_payloads import BITMAP_AND, UNINDEXED_SCAN, WHALE_JOIN
+from tests.plan_payloads import BITMAP_AND, PARALLEL_SCAN, SERIAL_SCAN, UNINDEXED_SCAN, WHALE_JOIN
 
 _SQL = "SELECT id FROM testapp_order WHERE reference = %s"
 
@@ -174,3 +174,26 @@ def test_a_statement_with_no_call_site_is_reported_rather_than_approximated() ->
     report = format_relation_access(_capture([record]))
 
     assert "no frame outside Django" in report
+
+
+def test_a_read_split_across_workers_reports_the_whole_read_and_shows_the_arithmetic() -> None:
+    """The number a reader acts on is the total, and the printed one is named beside it.
+
+    Without the second line the two payloads below -- one statement, one process
+    against three -- would produce reports that disagree by a factor of three
+    with nothing in either of them explaining why.
+    """
+    report = format_relation_access(_capture([_record(0, _measured(PARALLEL_SCAN))]))
+
+    assert "most one read discarded: 1,124,097 rows, keeping 75,903" in report
+    assert "3 loops (parallel workers)" in report
+    assert "374,699 discarded per loop" in report
+
+
+def test_the_same_read_in_one_process_prints_no_arithmetic_at_all() -> None:
+    """A node that ran once has nothing to decompose, so the line does not appear."""
+    report = format_relation_access(_capture([_record(0, _measured(SERIAL_SCAN))]))
+
+    assert "most one read discarded: 1,124,098 rows, keeping 75,902" in report
+    assert "per loop" not in report
+    assert "loops" not in report

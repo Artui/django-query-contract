@@ -9,6 +9,9 @@ import pytest
 from django_query_contract import PlanNode
 from tests.plan_payloads import (
     BITMAP_AND,
+    NESTED_LOOP_INNER,
+    PARALLEL_SCAN,
+    SERIAL_SCAN,
     SPILLED_HASH,
     SPILLED_SORT,
     UNINDEXED_SCAN,
@@ -270,3 +273,155 @@ def test_a_join_does_not_borrow_the_indexes_of_the_relations_beneath_it() -> Non
     assert root.node_type == "Nested Loop"
     assert root.relation is None
     assert root.indexes_used == ()
+
+
+def _only(
+    payload: list[dict[str, object]], node_type: str, *, parallel: bool | None = None
+) -> PlanNode:
+    """The single node of a kind in a payload, so a test names a shape not a path."""
+    found = [
+        node
+        for node in _root(payload).walk()
+        if node.node_type == node_type and (parallel is None or node.parallel_aware is parallel)
+    ]
+    assert len(found) == 1, f"{node_type} appears {len(found)} times"
+    return found[0]
+
+
+def test_a_scan_under_a_gather_reports_one_workers_share_of_every_count() -> None:
+    """The finding this milestone came from, in the numbers a real server wrote.
+
+    ``SELECT COUNT(*) FROM testapp_order WHERE md5(reference) < %s`` over
+    1,200,000 rows: 75,902 matched and 1,124,098 were discarded, and the node
+    says 25,301 and 374,699 because three processes each did a third of the work.
+    Nothing about the node announces that; ``Actual Loops`` is the only place the
+    3 appears.
+    """
+    scan = _only(PARALLEL_SCAN, "Seq Scan")
+
+    assert scan.parallel_aware is True
+    assert scan.loops == 3.0
+    assert scan.actual_rows == 25301.0
+    assert scan.rows_removed_by_filter == 374699.0
+
+
+def test_the_total_is_the_per_loop_number_multiplied_by_the_loops() -> None:
+    """The arithmetic, and it is arithmetic rather than a judgement.
+
+    Both totals land within one row of the truth, and one row is the whole error:
+    PostgreSQL prints the average rounded to a whole number, so multiplying it
+    back can be out by up to half a loop in either direction.
+    """
+    scan = _only(PARALLEL_SCAN, "Seq Scan")
+
+    assert scan.total_actual_rows == 75903.0
+    assert scan.total_rows_removed_by_filter == 1124097.0
+    # What really happened, read off the twin payload that ran the same
+    # statement in one process.
+    serial = _only(SERIAL_SCAN, "Seq Scan")
+    assert serial.actual_rows == 75902.0
+    assert serial.rows_removed_by_filter == 1124098.0
+    assert abs(scan.total_actual_rows - serial.actual_rows) <= scan.loops / 2
+    assert abs(scan.total_rows_removed_by_filter - serial.rows_removed_by_filter) <= scan.loops / 2
+
+
+def test_the_same_statement_in_one_process_totals_to_itself() -> None:
+    """A node that ran once is its own total, which is why the old readings held.
+
+    The pair is the point: every number below is the same measurement as the
+    parallel one above, and only the totals make the two payloads agree.
+    """
+    serial = _only(SERIAL_SCAN, "Seq Scan")
+
+    assert serial.parallel_aware is False
+    assert serial.loops == 1.0
+    assert serial.total_actual_rows == serial.actual_rows
+    assert serial.total_rows_removed_by_filter == serial.rows_removed_by_filter
+
+
+def test_the_inner_side_of_a_nested_loop_totals_to_what_the_join_produced() -> None:
+    """The other way a node runs more than once, and the same multiplication.
+
+    ``loops`` on an inner node is the number of outer rows rather than a number
+    of processes, so the two shapes are not the same fact -- but they are the
+    same arithmetic, and the join above states the answer to check it against.
+    """
+    root = _root(NESTED_LOOP_INNER)
+    inner = _only(NESTED_LOOP_INNER, "Index Scan")
+
+    assert inner.loops == 1260.0
+    assert inner.actual_rows == 60.0
+    assert inner.total_actual_rows == 75600.0
+    assert root.actual_rows == 75600.0
+
+
+def test_the_estimate_is_not_totalled_and_the_nested_loop_says_why() -> None:
+    """The refusal, checked against the payload that would have made it look right.
+
+    ``Plan Rows`` on this inner node is 60, exactly what it measured, so a total
+    built the same way would read 60 x 1,260 = 75,600 and agree with the
+    measurement to the row. The planner's own estimate for the join above it is
+    **400,020** -- it expected 6,667 outer rows and got 1,260 -- so the number a
+    ``total_estimated_rows`` would report is the one plan number nobody
+    predicted, on the most badly mis-estimated plan in the suite.
+    """
+    root = _root(NESTED_LOOP_INNER)
+    inner = _only(NESTED_LOOP_INNER, "Index Scan")
+
+    assert not hasattr(inner, "total_estimated_rows")
+    assert inner.estimated_rows * inner.loops == root.actual_rows == 75600.0
+    assert root.estimated_rows == 400020.0
+
+
+def test_a_parallel_estimate_is_divided_by_a_number_the_plan_never_prints() -> None:
+    """The second half of the refusal, and the half that has no honest repair.
+
+    The two payloads are the same statement one setting apart. The measurements
+    differ by ``loops``; the estimates differ by 2.4, which is two workers plus
+    the 0.4 the planner credits the leader with -- a number that appears nowhere
+    in the output. So there is no arithmetic over a node that recovers the
+    planner's own total.
+    """
+    parallel = _only(PARALLEL_SCAN, "Seq Scan")
+    serial = _only(SERIAL_SCAN, "Seq Scan")
+
+    assert parallel.estimated_rows * parallel.loops == 500001.0
+    assert serial.estimated_rows == 400000.0
+    assert serial.estimated_rows / parallel.estimated_rows == pytest.approx(2.4, abs=0.001)
+
+
+def test_a_plan_taken_without_analyze_has_no_totals_either() -> None:
+    """No loops means no multiplication, and a total of ``None`` rather than of one."""
+    node = PlanNode.from_explain({"Node Type": "Seq Scan", "Plan Rows": 100})
+
+    assert node.loops is None
+    assert node.total_actual_rows is None
+    assert node.total_rows_removed_by_filter is None
+    assert node.parallel_aware is False
+
+
+def test_a_node_that_never_filtered_has_no_discarded_total() -> None:
+    """``Rows Removed by Filter`` is emitted only where a filter ran, and absent is not zero."""
+    node = PlanNode.from_explain(
+        {"Node Type": "Seq Scan", "Plan Rows": 100, "Actual Rows": 100, "Actual Loops": 4}
+    )
+
+    assert node.rows_removed_by_filter is None
+    assert node.total_rows_removed_by_filter is None
+    assert node.total_actual_rows == 400.0
+
+
+def test_a_measurement_with_no_loop_count_is_not_multiplied_by_a_guess() -> None:
+    """A hand-built record can hold one without the other, and one is not the default.
+
+    ``PlanNode`` is public, so a caller may construct one from something that is
+    not this parser. Treating a missing loop count as 1 would turn a gap in the
+    input into a number, which is the move this package refuses everywhere.
+    """
+    node = PlanNode.from_explain(
+        {"Node Type": "Seq Scan", "Plan Rows": 10, "Actual Rows": 10, "Rows Removed by Filter": 3}
+    )
+
+    assert node.loops is None
+    assert node.total_actual_rows is None
+    assert node.total_rows_removed_by_filter is None

@@ -76,6 +76,14 @@ def _run_call_hook(item: pytest.Item, body: Any = None) -> None:
         next(generator)
 
 
+def _run_setup_hook(item: pytest.Item) -> None:
+    """Drive ``pytest_runtest_setup`` by hand, standing in for the setup phase."""
+    generator = plugin.pytest_runtest_setup(item)
+    next(generator)
+    with pytest.raises(StopIteration):
+        next(generator)
+
+
 def _make_report(item: pytest.Item, when: str, failing: bool) -> pytest.TestReport:
     """A real ``TestReport`` for the given phase and outcome."""
 
@@ -467,3 +475,83 @@ def test_a_failed_test_whose_plan_capture_saw_nothing_gains_no_empty_section(
     report = _run_makereport(item, _make_report(item, "call", failing=True))
 
     assert [name for name, _ in report.sections] == []
+
+
+@pytest.mark.django_db
+def test_the_setup_hook_empties_the_log_so_one_test_cannot_charge_another(
+    request: pytest.FixtureRequest, tiny_query_log: int
+) -> None:
+    """A log an earlier test filled makes this test's ceiling warning name this test.
+
+    Django clears ``queries_log`` itself, in ``TestCase.setUpClass``, with the
+    comment that ``assertNumQueries`` stops working when it overflows --
+    pytest-django overrides that classmethod to skip the rest of what it does, so
+    under pytest nothing clears it and the first test to overflow it makes every
+    test after it warn. The warning is true and the test it names is innocent,
+    which is the crying-wolf failure this package refuses everywhere else.
+    """
+    connection.queries_log.extend(
+        {"sql": "SELECT 1", "time": "0.000"} for _ in range(tiny_query_log)
+    )
+    item = _live_item(request)
+
+    def body() -> None:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _run_setup_hook(item)
+        _run_call_hook(item, body)
+
+    assert not [entry for entry in caught if entry.category is QueryLogCeilingWarning]
+    assert item.stash[plugin._CAPTURE_KEY].ceilings[0].log_length_at_enter == 0
+
+
+@pytest.mark.django_db
+def test_a_block_that_outruns_the_log_by_itself_still_warns(
+    request: pytest.FixtureRequest, tiny_query_log: int
+) -> None:
+    """The falsification of the test above: clearing the log hides nothing of its own.
+
+    Emptying the log removes what an earlier test put there and nothing else. A
+    block that runs more statements than the log can hold is still past the
+    ceiling from an empty start, and that is the case the warning exists for.
+    """
+    item = _live_item(request)
+
+    def body() -> None:
+        with connection.cursor() as cursor:
+            for _ in range(tiny_query_log + 2):
+                cursor.execute("SELECT 1")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _run_setup_hook(item)
+        _run_call_hook(item, body)
+
+    (raised,) = [entry for entry in caught if entry.category is QueryLogCeilingWarning]
+    assert "already held 0" in str(raised.message)
+
+
+def test_the_flag_stands_the_setup_hook_down_too(pytester: pytest.Pytester) -> None:
+    """A run with capture off is a run this package does not touch at all."""
+    item = _item(pytester, "--no-query-contract")
+    connection.queries_log.append({"sql": "SELECT 1", "time": "0.000"})
+
+    try:
+        _run_setup_hook(item)
+
+        assert len(connection.queries_log) == 1
+    finally:
+        connection.queries_log.clear()
+
+
+def test_the_setup_hook_leaves_a_project_without_django_settings_alone(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """There are no connections to reset, and asking for them would raise."""
+    item = _item(pytester)
+    monkeypatch.setattr(settings, "_wrapped", empty)
+
+    _run_setup_hook(item)

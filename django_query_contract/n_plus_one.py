@@ -61,9 +61,15 @@ class NPlusOne:
     test function and the frames it drops cannot tell two call paths apart
     anyway. It is an application whose own stack is deeper than the window that
     can put two paths in one bucket -- and the error it makes is a *merge*: two
-    findings reported as one, never a repetition that did not happen. Raise
-    ``stack_depth`` to narrow the window, and read ``stack_truncated`` to know
-    it was one.
+    findings reported as one, never a repetition that did not happen.
+
+    **The way to find out is to raise ``stack_depth`` and see whether the finding
+    splits**, which is a second measurement rather than a flag.
+    :attr:`stack_truncated` cannot answer it and this docstring used to say it
+    could: under a test runner it is ``True`` of every capture at any workable
+    depth, so it is a constant and a constant tells a reader nothing. A merge is
+    the thing that stops being one when the window widens, and there is a test
+    that widens it.
 
     **Legitimate repetition is still a finding.** A ``bulk_create`` batched into
     a hundred inserts is one statement shape executed a hundred times from one
@@ -119,8 +125,16 @@ class NPlusOne:
         Not printed per finding by either report, and that is on purpose. Under
         a test runner this is true of every capture at any workable depth -- the
         dropped frames are the runner's own -- so a caveat on every line would
-        say nothing on any of them. It is here for a reader who wants to know
-        whether the window described above was full.
+        say nothing on any of them.
+
+        **Which also means it is not the way to find out whether this finding
+        merged two call paths**, though it was documented as one until 0.7.0. It
+        says the window was full, which it always is under pytest; it cannot say
+        whether the frames that fell outside it were the ones that mattered. The
+        answer to that is a second measurement -- raise ``stack_depth`` and see
+        whether the finding splits -- and it is the only answer there is. What
+        this is good for is a capture taken outside a test runner, where a full
+        window is news.
         """
         return any(record.stack_truncated for record in self.records)
 
