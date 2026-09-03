@@ -454,6 +454,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#every-row-count-is-per-loop-and-that-changes-what-an-assertion-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Every row count is per loop, and that changes what an assertion means
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Every row count is per loop, and that changes what an assertion means">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#so-read-the-totals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        So read the totals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#there-is-no-total-for-the-estimate-on-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        There is no total for the estimate, on purpose
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-a-finding-is" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -473,6 +512,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="The planner was blind">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reproducing-it-needs-the-right-query-shape-and-enough-parents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducing it needs the right query shape and enough parents
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -681,6 +737,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#every-row-count-is-per-loop-and-that-changes-what-an-assertion-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Every row count is per loop, and that changes what an assertion means
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Every row count is per loop, and that changes what an assertion means">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#so-read-the-totals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        So read the totals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#there-is-no-total-for-the-estimate-on-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        There is no total for the estimate, on purpose
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-a-finding-is" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -700,6 +795,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="The planner was blind">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reproducing-it-needs-the-right-query-shape-and-enough-parents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducing it needs the right query shape and enough parents
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -920,22 +1032,155 @@ everywhere else. <a href="https://github.com/Artui/django-data-shape">django-dat
 is what builds a database worth taking a plan over -- it owns the ordering,
 generate then load then index then <code>ANALYZE</code>, so the analyze-then-load trap
 cannot happen.</p>
+<h2 id="every-row-count-is-per-loop-and-that-changes-what-an-assertion-means">Every row count is per loop, and that changes what an assertion means<a class="headerlink" href="#every-row-count-is-per-loop-and-that-changes-what-an-assertion-means" title="Permanent link">&para;</a></h2>
+<p><code>actual_rows</code>, <code>rows_removed_by_filter</code> and <code>estimated_rows</code> are what PostgreSQL
+printed, and PostgreSQL prints them <strong>per loop</strong>. Over a small database every
+node runs once, <code>loops</code> is 1, and the printed number is the whole truth. Over a
+big one it is a share, and nothing in the plan announces the change except a loop
+count nobody was reading.</p>
+<p>Two things cause it, and they are not the same thing:</p>
+<ul>
+<li>a <strong>parallel</strong> node ran once in each participating process, so the work was
+  <em>divided</em>;</li>
+<li>the inner side of a <strong>nested loop</strong> ran once per row of the outer side, so the
+  work was <em>repeated</em>.</li>
+</ul>
+<p>Measured on one statement over 1,200,000 rows, run twice with nothing changed but
+whether parallelism was allowed:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>one process</th>
+<th>three processes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Rows Removed by Filter</code></td>
+<td>1,124,098</td>
+<td>374,699</td>
+</tr>
+<tr>
+<td><code>Actual Rows</code></td>
+<td>75,902</td>
+<td>25,301</td>
+</tr>
+<tr>
+<td><code>Actual Loops</code></td>
+<td>1</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>Both plans did the same work. An assertion written against the left-hand column
+is written against numbers the right-hand plan does not report, and a suite that
+grew its fixtures past the point where PostgreSQL reaches for a second process
+would see it change with no error and no warning.</p>
+<h3 id="so-read-the-totals">So read the totals<a class="headerlink" href="#so-read-the-totals" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">node</span><span class="o">.</span><span class="n">total_actual_rows</span>  <span class="c1"># actual_rows multiplied by loops</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">node</span><span class="o">.</span><span class="n">total_rows_removed_by_filter</span>  <span class="c1"># rows_removed_by_filter multiplied by loops</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">node</span><span class="o">.</span><span class="n">parallel_aware</span>  <span class="c1"># which of the two causes the loops were</span>
+</span></code></pre></div>
+<p>Where <code>loops</code> is 1 these are the numbers they always were, so adopting them costs
+nothing on a small world. Where it is not, they are what a reader means. The
+report prints them, and shows its working:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>  testapp_order  1 read, 1 without an index
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>       filtering ((reference)::text &lt; %s::text)
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>       most one read discarded: 1,124,097 rows, keeping 75,903
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>       across 3 loops (parallel workers); PostgreSQL states 374,699 discarded per loop
+</span></code></pre></div>
+<p><strong>They are reconstructions, and the error is bounded by half a loop.</strong> PostgreSQL
+divides by the loop count and rounds before printing, so multiplying back can be
+out by up to <code>loops / 2</code> -- the totals above are each one row off the truth. That
+is stated rather than hidden, because the alternative is a number the server does
+not print at all.</p>
+<h3 id="there-is-no-total-for-the-estimate-on-purpose">There is no total for the estimate, on purpose<a class="headerlink" href="#there-is-no-total-for-the-estimate-on-purpose" title="Permanent link">&para;</a></h3>
+<p>The measurements are divided by the loop count. The estimate is not, and the two
+multiplications are different ones:</p>
+<ul>
+<li>Under a <code>Gather</code>, the planner divided its estimate by the number of workers
+  plus the fraction of a worker it credits the leader with -- 2.4 for two workers,
+  against a loop count of 3. Measured on the pair above: 400,000 estimated
+  serially against 166,667 on the parallel node, and 400,000 / 166,667 is exactly
+  2.4. That divisor is not in the output, so no arithmetic over the node recovers
+  it.</li>
+<li>Under a nested loop, <code>loops</code> is the number of outer rows that <em>arrived</em>, which
+  is a measurement. Multiplying a per-loop estimate by it gives a number nobody
+  predicted: measured on an inner node estimating 60 rows over 1,260 loops, the
+  product is 75,600, which is exactly what the join produced -- while the
+  planner's own estimate for that join was 400,020.</li>
+</ul>
+<p>A <code>total_estimated_rows</code> would therefore be wrong under a <code>Gather</code>, and would
+agree with the measurement under a nested loop. The second is worse: it would
+read as perfect agreement on the plan the planner got most wrong.</p>
+<p><strong>One consequence is visible in the report.</strong> <code>estimate_error</code> on a parallel-aware
+node divides an estimate scaled by 2.4 by a measurement scaled by 3, so it reads
+about 25% high even where the planner was right -- on the pair above, 6.6x against
+a real error of 5.3x. There is no honest repair, so the block says so under the
+node it applies to.</p>
 <h2 id="what-a-finding-is">What a finding is<a class="headerlink" href="#what-a-finding-is" title="Permanent link">&para;</a></h2>
 <p>Two kinds, and there are two because only two can be stated without a threshold.</p>
 <h3 id="the-planner-was-blind">The planner was blind<a class="headerlink" href="#the-planner-was-blind" title="Permanent link">&para;</a></h3>
 <p>Two or more executions of the same normalised SQL whose plans agree <strong>exactly</strong>
 on how many rows the query would produce, and whose measured rows do not. There
 is no magnitude in that sentence -- only <code>==</code> and <code>!=</code>.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>  planner blind  2 executions, one estimate of 20 rows, actuals 20,323, 6
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>       SELECT "testapp_order"."id" FROM "testapp_order" INNER JOIN ...
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>       from tests/test_dashboard.py:31 in whales, tests/test_dashboard.py:32 in tail
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>       queries #0, #1
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>  planner blind  2 executions, one estimate of 20 rows, actuals 20,323, 6
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>       SELECT "testapp_order"."id" FROM "testapp_order" INNER JOIN ...
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>       from tests/test_dashboard.py:31 in whales, tests/test_dashboard.py:32 in tail
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>       queries #0, #1
 </span></code></pre></div>
 <p>That pair is measured, not invented: a Zipf fan-out of 400,000 rows over 20,000
 parents, joined through the parent rather than through the foreign key column.
 Across a join PostgreSQL has only <code>n_distinct</code> for the edge, so it hands every
 value of the join key the same average -- and an average is the one number that
 is wrong for both ends of a skewed distribution.</p>
+<h4 id="reproducing-it-needs-the-right-query-shape-and-enough-parents">Reproducing it needs the right query shape and enough parents<a class="headerlink" href="#reproducing-it-needs-the-right-query-shape-and-enough-parents" title="Permanent link">&para;</a></h4>
+<p>The example above joins <strong>through the parent</strong>, and the wording matters. Filter
+the child's foreign key column directly and PostgreSQL consults that column's
+most-common-values list, which is a different mechanism with a different answer.
+Both are measured below, on a Zipf fan-out where parent <em>k</em> holds roughly 1/<em>k</em>
+of the rows:</p>
+<table>
+<thead>
+<tr>
+<th>Distinct parents</th>
+<th>MCV entries</th>
+<th>What the estimates do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>50</td>
+<td>50</td>
+<td>every parent priced individually, and right to within 10%</td>
+</tr>
+<tr>
+<td>5,000</td>
+<td>100</td>
+<td>the hundred commonest priced individually; every other parent shares one number</td>
+</tr>
+</tbody>
+</table>
+<p>At 50 parents the list covers all of them, so the head <em>and</em> the tail are priced
+separately and no two executions share an estimate -- the finding is not merely
+hard to reproduce, it is <strong>unreachable</strong>, and correctly so, because the planner
+was not blind. At 5,000 it holds 100 entries, which is <code>default_statistics_target</code>,
+and every parent outside it is estimated at <strong>402</strong> rows against measured answers
+of 4,000, 800 and 80. That is one estimate and more than one truth: the finding.</p>
+<p>So two things decide whether a direct filter can produce this:</p>
+<ul>
+<li><strong>the tail is where it lives.</strong> The head of a skewed fan-out is in the MCV list
+  and is priced roughly right, which is the opposite of where a reader looks
+  first;</li>
+<li><strong>there has to be a tail at all</strong>, which means more distinct parents than the
+  statistics target -- 100 by default, and per-column through
+  <code>ALTER TABLE ... ALTER COLUMN ... SET STATISTICS</code>.</li>
+</ul>
+<p>Joining through the parent sidesteps both. The join condition is a column
+comparison, no MCV list applies to it, and every value of the join key gets the
+same average -- so head and tail both qualify at any parent count. That is why
+the measured example above is written that way, and it is worth copying.</p>
 <p><strong>One measurement cannot make this claim.</strong> It cannot separate "the planner is
 wrong about this query" from "the planner is right on average and this row is
 unusual". That is the same rule the <a href="../growth/">growth assertion</a> keeps: a claim
@@ -951,20 +1196,20 @@ planner, which is handed a statement and never hears about the stack.</p>
 one batch, or a hash aggregate reporting disk usage. PostgreSQL states all three
 itself, and the threshold that decided them is <code>work_mem</code> -- the configuration
 of the database under test, not a number chosen here.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>  spilled to disk  Sort, external merge, 14,208 kB
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>       SELECT "testapp_order"."id" FROM "testapp_order" ORDER BY ...
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>       from tests/test_dashboard.py:44 in test_ordering
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>       queries #4
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>  spilled to disk  Sort, external merge, 14,208 kB
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>       SELECT "testapp_order"."id" FROM "testapp_order" ORDER BY ...
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>       from tests/test_dashboard.py:44 in test_ordering
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>       queries #4
 </span></code></pre></div>
 <p>It is as much a finding about the server as about the query, which is worth
 knowing before acting on one.</p>
 <h3 id="what-is-reported-and-never-classified">What is reported and never classified<a class="headerlink" href="#what-is-reported-and-never-classified" title="Permanent link">&para;</a></h3>
 <p>The estimate-versus-actual ratio is on every node, and no code here turns it into
 a verdict:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Where the planner was furthest out (reported, not judged -- a node under a
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>LIMIT is meant to fall short):
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  1,016.1x  #0  Nested Loop: expected 20 rows, 20,323 arrived
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>       SELECT "testapp_order"."id" FROM "testapp_order" INNER JOIN ...
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Where the planner was furthest out (reported, not judged -- a node under a
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>LIMIT is meant to fall short):
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  1,016.1x  #0  Nested Loop: expected 20 rows, 20,323 arrived
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>       SELECT "testapp_order"."id" FROM "testapp_order" INNER JOIN ...
 </span></code></pre></div>
 <p>"The planner expected 20 rows and 20,323 arrived" is a fact about the plan.
 "More than fifty times out is a defect" is a policy about size, and this package
@@ -988,12 +1233,12 @@ different package from a detector that finds more.</p>
 <p>The same rule as everywhere else here. A finding is a diagnosis printed under a
 failure somebody else's assertion produced, or a report a caller asked for. A
 failing test that used the <code>query_plans</code> fixture gains a section:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>------------------------- django-query-contract plans --------------------------
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>6 statements captured, 4 of them explained.
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Plan findings -- what PostgreSQL's own output states:
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>  planner blind  2 executions, one estimate of 20 rows, actuals 20,323, 6
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>...
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>------------------------- django-query-contract plans --------------------------
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>6 statements captured, 4 of them explained.
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>Plan findings -- what PostgreSQL's own output states:
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  planner blind  2 executions, one estimate of 20 rows, actuals 20,323, 6
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>...
 </span></code></pre></div>
 <h2 id="what-it-costs-and-what-runs-twice">What it costs, and what runs twice<a class="headerlink" href="#what-it-costs-and-what-runs-twice" title="Permanent link">&para;</a></h2>
 <p><code>EXPLAIN ANALYZE</code> <strong>executes</strong> the statement. Measured against PostgreSQL 16 on
@@ -1012,10 +1257,10 @@ statement would run again for real. That is why the rule is "begins with SELECT"
 rather than "does not begin with INSERT": a data-modifying CTE is written
 <code>WITH ... INSERT</code>, so the dangerous statement does not announce itself in its
 first word. Everything skipped is counted in the report with the reason:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>2 statement(s) carried no plan:
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>  2 x  a statement that does not begin with SELECT was not explained: EXPLAIN
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>       ANALYZE executes what it is given, so explaining a write would perform
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>       it, and then the statement would run again for real.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>2 statement(s) carried no plan:
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>  2 x  a statement that does not begin with SELECT was not explained: EXPLAIN
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>       ANALYZE executes what it is given, so explaining a write would perform
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>       it, and then the statement would run again for real.
 </span></code></pre></div>
 <p>The one hole, stated rather than glossed: a <code>SELECT</code> calling a volatile function
 that writes will have that function called twice. No reading of the statement
@@ -1071,18 +1316,18 @@ evidence, and whose text carries the bound value this package retains nowhere.</
 <h3 id="what-is-here-instead">What is here instead<a class="headerlink" href="#what-is-here-instead" title="Permanent link">&para;</a></h3>
 <p>Every fact the decision needs, and no decision. <code>group_by_relation</code> reads a
 capture back as the tables it touched, and <code>format_relation_access</code> prints them:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Relations these plans read, and how PostgreSQL reached them:
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  No index is recommended below, and that is a decision rather than an omission.
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>  Whether one is worth adding is a judgement about size -- how many rows is too
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  many to read -- and this package states what the server measured instead.
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  testapp_order  2 reads, 1 without an index
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>       filtering ((reference)::text = %s::text)
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>       most one read discarded: 99,999 rows, keeping 1
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>       read through testapp_order_customer_id_85c0ed1a
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>       from tests/test_orders.py:13 in test_dashboard
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>       PostgreSQL has 2 indexes on testapp_order:
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>         CREATE INDEX testapp_order_customer_id_85c0ed1a ON public.testapp_order USING btree (customer_id)
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>         CREATE UNIQUE INDEX testapp_order_pkey ON public.testapp_order USING btree (id)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Relations these plans read, and how PostgreSQL reached them:
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>  No index is recommended below, and that is a decision rather than an omission.
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>  Whether one is worth adding is a judgement about size -- how many rows is too
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>  many to read -- and this package states what the server measured instead.
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>  testapp_order  2 reads, 1 without an index
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>       filtering ((reference)::text = %s::text)
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>       most one read discarded: 99,999 rows, keeping 1
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>       read through testapp_order_customer_id_85c0ed1a
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>       from tests/test_orders.py:13 in test_dashboard
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>       PostgreSQL has 2 indexes on testapp_order:
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>         CREATE INDEX testapp_order_customer_id_85c0ed1a ON public.testapp_order USING btree (customer_id)
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>         CREATE UNIQUE INDEX testapp_order_pkey ON public.testapp_order USING btree (id)
 </span></code></pre></div>
 <p>The table, how PostgreSQL reached it, the predicate it applied, how many rows it
 said it threw away, the line that asked, and the indexes that already exist --
@@ -1104,7 +1349,7 @@ anyway.</p>
 <h3 id="a-filter-carries-a-value-and-this-package-retains-none">A filter carries a value, and this package retains none<a class="headerlink" href="#a-filter-carries-a-value-and-this-package-retains-none" title="Permanent link">&para;</a></h3>
 <p><code>EXPLAIN</code> renders a predicate with the parameter substituted. A real server
 writes this for a query bound with <code>%s</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Filter: ((reference)::text = '601980.6826913885'::text)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>Filter: ((reference)::text = '601980.6826913885'::text)
 </span></code></pre></div>
 <p>That is a customer's data, on a record this package would otherwise hold for the
 length of a capture and print into CI output. So <code>PlanNode.condition</code> is put

@@ -1508,6 +1508,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.parallel_aware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parallel_aware
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#django_query_contract.PlanNode.rows_removed_by_filter" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1622,6 +1633,28 @@
     <span class="md-ellipsis">
       
         spilled_to_disk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.total_actual_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        total_actual_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.total_rows_removed_by_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        total_rows_removed_by_filter
       
     </span>
   </a>
@@ -1900,10 +1933,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#django_query_contract.LogCeiling.headroom" class="md-nav__link">
+  <a href="#django_query_contract.LogCeiling.headroom_at_enter" class="md-nav__link">
     <span class="md-ellipsis">
       
-        headroom
+        headroom_at_enter
       
     </span>
   </a>
@@ -3465,6 +3498,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.parallel_aware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parallel_aware
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#django_query_contract.PlanNode.rows_removed_by_filter" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3579,6 +3623,28 @@
     <span class="md-ellipsis">
       
         spilled_to_disk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.total_actual_rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        total_actual_rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.PlanNode.total_rows_removed_by_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        total_rows_removed_by_filter
       
     </span>
   </a>
@@ -3857,10 +3923,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#django_query_contract.LogCeiling.headroom" class="md-nav__link">
+  <a href="#django_query_contract.LogCeiling.headroom_at_enter" class="md-nav__link">
     <span class="md-ellipsis">
       
-        headroom
+        headroom_at_enter
       
     </span>
   </a>
@@ -5083,9 +5149,14 @@ preamble, so at the default depth of 25 the window reaches well past the
 test function and the frames it drops cannot tell two call paths apart
 anyway. It is an application whose own stack is deeper than the window that
 can put two paths in one bucket -- and the error it makes is a <em>merge</em>: two
-findings reported as one, never a repetition that did not happen. Raise
-<code>stack_depth</code> to narrow the window, and read <code>stack_truncated</code> to know
-it was one.</p>
+findings reported as one, never a repetition that did not happen.</p>
+<p><strong>The way to find out is to raise <code>stack_depth</code> and see whether the finding
+splits</strong>, which is a second measurement rather than a flag.
+:attr:<code>stack_truncated</code> cannot answer it and this docstring used to say it
+could: under a test runner it is <code>True</code> of every capture at any workable
+depth, so it is a constant and a constant tells a reader nothing. A merge is
+the thing that stops being one when the window widens, and there is a test
+that widens it.</p>
 <p><strong>Legitimate repetition is still a finding.</strong> A <code>bulk_create</code> batched into
 a hundred inserts is one statement shape executed a hundred times from one
 line, and there is no structural difference between that and a defect --
@@ -5287,8 +5358,15 @@ from a different depth each time.</p>
 <p>Not printed per finding by either report, and that is on purpose. Under
 a test runner this is true of every capture at any workable depth -- the
 dropped frames are the runner's own -- so a caveat on every line would
-say nothing on any of them. It is here for a reader who wants to know
-whether the window described above was full.</p>
+say nothing on any of them.</p>
+<p><strong>Which also means it is not the way to find out whether this finding
+merged two call paths</strong>, though it was documented as one until 0.7.0. It
+says the window was full, which it always is under pytest; it cannot say
+whether the frames that fell outside it were the ones that mattered. The
+answer to that is a second measurement -- raise <code>stack_depth</code> and see
+whether the finding splits -- and it is the only answer there is. What
+this is good for is a capture taken outside a test runner, where a full
+window is news.</p>
 
     </div>
 
@@ -5919,6 +5997,14 @@ here as one entry rather than twelve.</p>
 same reason: every set of reads has one that discarded the most, so
 naming it introduces no number of ours. Whether that many is too many is
 the judgement this class declines.</p>
+<p><strong>The number is the whole read and not one loop of it</strong>, which is
+:attr:<code>~django_query_contract.PlanNode.total_rows_removed_by_filter</code>
+rather than the count printed on the node. A read PostgreSQL split
+across three processes is still one read of this table, and it discarded
+everything the three of them discarded. Ranking on the printed number
+instead would order two reads by how many workers the server happened to
+start: measured on one statement over 1,200,000 rows, the parallel plan
+prints 374,699 and the serial plan 1,124,098 for the same work.</p>
 <p><code>None</code> when no read here filtered at all. PostgreSQL emits
 <code>Rows Removed by Filter</code> only where it applied one, so zero would be a
 measurement it never made.</p>
@@ -7109,11 +7195,37 @@ timings on calls <code>gettimeofday</code> twice per row per node.</p>
 than one loop, where it is an average. Rounding it here to keep a tidier
 type would make this record quietly lossy on a server that is already
 shipping.</p>
-<p><strong>Row counts are per loop, on both sides.</strong> PostgreSQL divides a node's
-actual row count by <code>Actual Loops</code> before printing it, and the estimate it
-prints beside it is also per loop, so the two compare directly and
-:attr:<code>estimate_error</code> needs no arithmetic to make them commensurate.
-Multiply either by <code>loops</code> for the total.</p>
+<p><strong>Row counts are per loop, and that is the one thing about this record that
+changes meaning as a database grows.</strong> PostgreSQL divides a node's actual row
+count by <code>Actual Loops</code> before printing it, and does the same to
+<code>Rows Removed by Filter</code>. In a small world every node runs once, <code>loops</code>
+is 1, and the printed number is the whole truth. In a big one the same
+statement is handed to three processes, or the same scan is run once per
+outer row, and the printed number becomes a share -- with nothing in the plan
+announcing the change except the loop count nobody was reading.</p>
+<p>Measured, and the pair is checked in: the same
+<code>SELECT COUNT(*) ... WHERE md5(reference) &lt; %s</code> over 1,200,000 rows reports
+<code>Rows Removed by Filter: 1124098</code> in one process and <code>374699</code> in three.
+So :attr:<code>total_actual_rows</code> and :attr:<code>total_rows_removed_by_filter</code> are
+here, and they are what a report and an assertion should read.</p>
+<p><strong>The estimate is not totalled, and refusing that is the harder half of the
+decision.</strong> The two multiplications are not the same one:</p>
+<ul>
+<li>Under a <code>Gather</code>, <code>loops</code> counts the processes that actually ran, while
+  the planner divided its estimate by <code>parallel_workers</code> plus the fraction
+  of a worker it credits the leader with -- 2.4 for two workers, against a
+  loop count of 3. Measured on the pair above: 400,000 estimated serially,
+  166,667 on the parallel node, and 400,000 / 166,667 is 2.4 exactly. The
+  divisor is not in the output, so no arithmetic here recovers it.</li>
+<li>Under a nested loop, <code>loops</code> is the number of <em>outer rows that arrived</em>,
+  which is a measurement. Multiplying a per-loop estimate by it produces a
+  number the planner never predicted -- measured on an inner node estimating
+  60 rows over 1,260 loops, the product is 75,600, which is exactly what the
+  join measured while the planner's own estimate for it was 400,020.</li>
+</ul>
+<p>A <code>total_estimated_rows</code> would therefore be wrong under a <code>Gather</code> and
+would agree with the measurement under a nested loop, which is worse: it
+would read as perfect agreement on the plan the planner got most wrong.</p>
 
 
 
@@ -7314,6 +7426,43 @@ without it, they are one.</p>
     <div class="doc doc-contents ">
 
         <p><code>Actual Loops</code>: how many times this node was executed. <code>None</code> without <code>ANALYZE</code>.</p>
+<p>The divisor behind every other measurement on this record, and the field a
+reader of a small database never has to think about because it is 1 there.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.parallel_aware" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">parallel_aware</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.parallel_aware" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">parallel_aware</span><span class="p">:</span> <span class="nb">bool</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p><code>Parallel Aware</code>: whether this node is one process's share of a parallel scan.</p>
+<p><strong>Why a loop count is not self-explanatory.</strong> More than one loop has two
+quite different causes, and this is the only field that tells them apart. A
+parallel-aware node ran once in each participating process, so its <code>loops</code>
+is a count of processes and the work was divided; a node under a nested loop
+ran once per outer row, so its <code>loops</code> is a measurement of the outer side
+and the work was repeated. The totals are the same arithmetic either way --
+see :attr:<code>total_actual_rows</code> -- but :attr:<code>estimate_error</code> is only
+comparable in the second case, for the reason set out on it.</p>
+<p><code>False</code> for every node of a plan taken without <code>ANALYZE</code> as well, which
+is correct rather than a default: parallelism is a property of the plan and
+<code>EXPLAIN</code> prints <code>Parallel Aware</code> whether or not it measured anything.</p>
 
     </div>
 
@@ -7338,6 +7487,9 @@ without it, they are one.</p>
     <div class="doc doc-contents ">
 
         <p>How many rows this node read and discarded, per loop, when it filtered.</p>
+<p>Per loop, and therefore the number that reads as 374,699 on a scan that
+discarded 1,124,098 rows because three parallel workers each did a third of
+it. :attr:<code>total_rows_removed_by_filter</code> is the one to assert on.</p>
 
     </div>
 
@@ -7614,6 +7766,80 @@ about a query, which is why nothing in this package fails a test on it.</p>
 
 
 
+<h3 id="django_query_contract.PlanNode.total_actual_rows" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">total_actual_rows</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.total_actual_rows" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">total_actual_rows</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Every row this node produced, across all of its executions.</p>
+<p>:attr:<code>actual_rows</code> multiplied by :attr:<code>loops</code>, which is the number a
+reader means when they say "how many rows did this read return" and the
+number an assertion written against a one-loop plan was really making a
+claim about. Where <code>loops</code> is 1 it is :attr:<code>actual_rows</code> unchanged, so
+adopting it costs nothing on the small worlds where the two agree.</p>
+<p><strong>It is a reconstruction and not a measurement, and the difference is
+one row.</strong> PostgreSQL divides the count by the loop count and rounds
+before printing, so multiplying back can be out by up to half a loop in
+either direction: measured on a three-process scan that really produced
+75,902 rows, the node says 25,301 and this says 75,903. The residue is
+bounded by <code>loops / 2</code> and it is stated here rather than hidden,
+because the alternative -- an exact total -- is a number the server does
+not print at all.</p>
+<p><code>None</code> without a measurement or without a loop count. A missing loop
+count is not treated as 1: this record is public and a caller may have
+built one from something that is not this parser, and turning a gap in
+the input into a number is the move this package refuses everywhere else.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.PlanNode.total_rows_removed_by_filter" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">total_rows_removed_by_filter</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.PlanNode.total_rows_removed_by_filter" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">total_rows_removed_by_filter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Every row this node read and discarded, across all of its executions.</p>
+<p>The same multiplication as :attr:<code>total_actual_rows</code>, with the same
+rounding residue, over the number a report quotes when it says how much
+of a table a read threw away. That number is the one that moves most
+alarmingly when a world gets big enough to be scanned in parallel, and
+it moves <em>downwards</em>: a scan discarding 1,124,098 rows in one process
+reports 374,699 in three.</p>
+<p><code>None</code> when this node applied no filter. PostgreSQL emits
+<code>Rows Removed by Filter</code> only where it applied one, so a zero here
+would be a measurement it never made.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h3 id="django_query_contract.PlanNode.estimate_error" class="doc doc-heading">
             <span class="doc doc-object-name doc-attribute-name">estimate_error</span>
 
@@ -7641,6 +7867,17 @@ actual is <em>meant</em> to fall short of its estimate; measured on a plain
 <code>[:5]</code> query against fifty rows, the scan under the limit reports an
 estimate of 50 against an actual of 5. A rule that flagged that would cry
 wolf on the first query anybody pointed it at.</p>
+<p><strong>On a parallel-aware node it is inflated, and by a bounded amount.</strong> The
+two numbers are both per loop, but they were divided by different
+denominators: the measurement by the processes that ran, the estimate by
+<code>parallel_workers</code> plus the fraction of a worker the planner credits
+the leader with. Measured, two workers means dividing the estimate by 2.4
+and the measurement by 3, so a node the planner priced within 1% reports
+a ratio of about 1.25. The inflation is at most that -- the two divisors
+never differ by more than the leader's share -- so this stays the ratio
+of the two numbers PostgreSQL printed, and :attr:<code>parallel_aware</code> is on
+the record so a report can say which nodes it applies to. There is no
+repair available: the divisor the planner used is not in the output.</p>
 <p>Direction is not encoded, because both numbers are on the record and a
 report prints them side by side. <code>None</code> when the plan was not analyzed:
 without an actual there is nothing to be wrong about.</p>
@@ -8134,6 +8371,15 @@ agreement is true by construction rather than by coincidence.</p>
     <div class="doc doc-contents ">
 
         <p>What each execution actually produced at that node, in capture order.</p>
+<p><strong>Per loop like every other row count in this package</strong>, which is worth
+saying here rather than leaving to be rediscovered. For
+:attr:<code>~django_query_contract.PlanDefect.PLANNER_BLIND</code> it makes no
+difference: those nodes are plan roots, a plan's root runs exactly once,
+and a node that ran once is its own total. A spill is reported on
+whichever node spilled, which can be the inner side of a join that ran
+thousands of times, and there each number here describes one of those
+executions -- :attr:<code>~django_query_contract.PlanNode.total_actual_rows</code>
+on the node beside it is the whole of what that read produced.</p>
 <p><code>float | None</code> because that is what a node holds, and narrowing it here
 would be this class asserting something about how it was built.
 :func:<code>~django_query_contract.find_plan_defects</code> only ever makes a
@@ -8387,21 +8633,32 @@ it says so instead of quietly being right where the other is wrong.</p>
 
 
 
-<h3 id="django_query_contract.LogCeiling.headroom" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">headroom</span>
+<h3 id="django_query_contract.LogCeiling.headroom_at_enter" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">headroom_at_enter</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#django_query_contract.LogCeiling.headroom" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">headroom</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+<a href="#django_query_contract.LogCeiling.headroom_at_enter" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">headroom_at_enter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>How many more entries the log could hold when the capture opened.</p>
+<p><strong>Named for the moment it describes, because it never moves.</strong> A capture
+reads <code>len(connection.queries_log)</code> on the way in and never again, so
+this number is fixed for the length of the block: four thousand
+statements later it still reports the room there was at the start.</p>
+<p>That is the right number rather than a stale one -- it is what
+:attr:<code>visible</code> needs, and it is the only one obtainable. Django writes a
+statement to the log only when the debug cursor is on, and a capture
+counts every execution through <code>execute_wrapper</code> whether it is or not,
+so how much of the log this block consumed cannot be derived from either
+end. What was wrong was the name, sitting beside a field already spelled
+<code>log_length_at_enter</code>.</p>
 <p><code>None</code> when the log is unbounded.</p>
 
     </div>
@@ -10875,6 +11132,13 @@ rendered by <code>format_capture_report</code> -- the same report that appears u
 a failing <code>django_assert_num_queries</code>, which means the N+1 that explains
 the growth is described exactly as it would be anywhere else in this
 package, and the reader gets the call site rather than only the arithmetic.</p>
+<p><strong>The claim is required and has no default</strong>, which is worth saying because
+the obvious reading of "render this measurement" is that a measurement is
+enough. It is not: one curve reads as a pass against
+:attr:<code>~django_query_contract.Growth.LINEAR</code> and a failure against
+:attr:<code>~django_query_contract.Growth.CONSTANT</code>, and the headline sentence has
+to say which. Defaulting to either would put a claim nobody made into a
+report, which is the whole failure mode this package is about.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -10918,7 +11182,8 @@ package, and the reader gets the call site rather than only the arithmetic.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The claim to judge it against.</p>
+                <p>The claim to judge it against. Positional, and required -- see
+above.</p>
               </div>
             </td>
             <td>
