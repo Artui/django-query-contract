@@ -86,6 +86,16 @@ class PlanFinding:
     def actual_rows(self) -> tuple[float | None, ...]:
         """What each execution actually produced at that node, in capture order.
 
+        **Per loop like every other row count in this package**, which is worth
+        saying here rather than leaving to be rediscovered. For
+        :attr:`~django_query_contract.PlanDefect.PLANNER_BLIND` it makes no
+        difference: those nodes are plan roots, a plan's root runs exactly once,
+        and a node that ran once is its own total. A spill is reported on
+        whichever node spilled, which can be the inner side of a join that ran
+        thousands of times, and there each number here describes one of those
+        executions -- :attr:`~django_query_contract.PlanNode.total_actual_rows`
+        on the node beside it is the whole of what that read produced.
+
         ``float | None`` because that is what a node holds, and narrowing it here
         would be this class asserting something about how it was built.
         :func:`~django_query_contract.find_plan_defects` only ever makes a

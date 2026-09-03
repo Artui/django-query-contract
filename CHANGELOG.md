@@ -7,6 +7,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Notes
+- **Every row count on a plan node is per loop, and that is now readable as a
+  total.** `actual_rows` and `rows_removed_by_filter` are exactly what PostgreSQL
+  prints, and PostgreSQL divides both by `Actual Loops` first. Over a small
+  database every node runs once and the printed number is the whole truth; over a
+  big one the same statement is handed to three processes, or the same scan runs
+  once per outer row, and the number silently becomes a share. An assertion
+  written against the first world goes on passing against a different claim in
+  the second, with no error and no warning -- which is the one failure mode this
+  package exists to refuse, found in its own output by a consumer composing it
+  with [django-data-shape](https://github.com/Artui/django-data-shape) over 1.5M
+  rows.
+- **`PlanNode.total_actual_rows` and `PlanNode.total_rows_removed_by_filter`**
+  multiply by `loops`, and `PlanNode.parallel_aware` says which of the two causes
+  the loops were: a parallel node's work was *divided* between processes, a
+  nested loop's inner side *repeated* once per outer row. Where `loops` is 1 the
+  totals are the numbers they always were, so adopting them costs nothing on a
+  small world. They are reconstructions -- PostgreSQL rounds the average before
+  printing it, so multiplying back can be out by up to `loops / 2` -- and that is
+  stated on the accessor rather than hidden, because the alternative is a number
+  the server does not print at all.
+- **There is deliberately no total for the estimate**, and the two payloads that
+  decided it are checked in. Under a `Gather` the planner divides its estimate by
+  `parallel_workers` plus the fraction of a worker it credits the leader with:
+  measured, 400,000 estimated serially against 166,667 on the parallel node,
+  which is 2.4 and not the loop count of 3, and 2.4 appears nowhere in the
+  output. Under a nested loop `loops` is the number of outer rows that *arrived*,
+  so multiplying a per-loop estimate by it produces a number nobody predicted --
+  measured on an inner node estimating 60 rows over 1,260 loops, the product is
+  75,600, exactly what the join measured, while the planner's own estimate for
+  that join was 400,020. A `total_estimated_rows` would be wrong under a `Gather`
+  and would agree with the measurement under a nested loop, which is worse: it
+  would read as perfect agreement on the plan the planner got most wrong.
+- **`PlanNode.estimate_error` is inflated on a parallel-aware node and now says
+  so.** It divides an estimate scaled by 2.4 by a measurement scaled by 3, so it
+  reads about 25% high even where the planner was right -- 6.6x against a real
+  5.3x on the checked-in pair. There is no repair, because the divisor is not in
+  the output, so the ratio stays what the server's two numbers say and the report
+  prints the caveat under the node it applies to.
+- **`RelationAccess.most_rows_discarded` now ranks and reports on the whole
+  read**, not one loop of it. A read PostgreSQL split across three processes is
+  still one read of that table and it discarded everything the three of them
+  discarded; ranking on the printed number would order two reads by how many
+  workers the server happened to start. The relation block shows its working --
+  `across 3 loops (parallel workers); PostgreSQL states 374,699 discarded per
+  loop` -- so the report can still be checked against `EXPLAIN` output line by
+  line. **This changes the value the property returns** for a multi-loop node.
+- **Two new payloads, and they are a pair.** One `SELECT COUNT(*)` over 1,200,000
+  rows, captured twice with nothing different but whether parallelism was
+  allowed: `Rows Removed by Filter` reads 1,124,098 in one process and 374,699 in
+  three, for the same work. A checked-in payload can only ever agree with itself
+  about which of two numbers is the reconstruction, so the same claim is asserted
+  against a live server in the `postgres` job as well, where the two plans are
+  produced by running one statement twice.
+
+- **`LogCeiling.headroom` is now `LogCeiling.headroom_at_enter`.** The number was
+  always right and the name was not: a capture reads the log length once, on the
+  way in, so four thousand statements later it still reports the room there was
+  at the start. It sits beside a field already spelled `log_length_at_enter`. The
+  log length at *exit* is not obtainable -- Django writes a statement to the log
+  only when the debug cursor is on, while a capture counts every execution
+  regardless -- so this is the only honest reading and it is now named for the
+  moment it describes.
+- **The query log is emptied at the start of each test, which is what stops one
+  test's ceiling warning naming another test.** Django clears `queries_log`
+  itself in `TransactionTestCase._pre_setup`, with the comment that
+  `assertNumQueries` stops working once it overflows -- pytest-django runs that,
+  but only for a test that asked for the database. Verified at a log shrunk to
+  five entries: a test that runs six statements leaves it full, and the next test
+  that does not use the `db` fixture is told its own single statement is
+  invisible, under its own name. The reset happens before any fixture of the test
+  has run, which is where Django would have done it and is the only place that
+  cannot disturb a fixture holding a `CaptureQueriesContext` open across the test
+  body. `--no-query-contract` turns it off with everything else.
+
+- **Corrected: `stack_truncated` was documented as the way to know whether a
+  finding merged two call paths, and it cannot be.** Under a test runner it is
+  `True` on every capture at every depth a suite would use, because the frames
+  beyond the window are pytest's own -- so it is a constant, and a constant
+  distinguishes nothing. What does is a second measurement: raise `stack_depth`
+  and see whether the finding splits, because a merge is the thing that stops
+  being one when the window widens. There is now a test that widens it, on twelve
+  identical frames of recursion between two callers and a query.
+- **The "planner blind" documentation says which query shape can reproduce it,
+  and how many parents that needs.** Filter a child's foreign key column directly
+  and PostgreSQL consults that column's most-common-values list, so the head of a
+  skewed fan-out is priced individually and roughly right and only the tail
+  shares an estimate -- and the tail exists only where there are more distinct
+  parents than `default_statistics_target`. Measured: at 50 parents the list
+  covers all of them and every one is priced to within 10%, so the finding is
+  unreachable and correctly so; at 5,000 the list holds 100 and every parent
+  outside it is estimated at 402 rows against measured answers of 4,000, 800 and
+  80. Joining *through the parent* sidesteps both, because a column comparison
+  has no MCV list and every value gets the same average -- which is why the
+  documented example is written that way.
+- **The `measure_query_growth` documentation shows `format_query_growth`**, whose
+  second argument is required and had no example. It stays required and gets no
+  default: one curve reads as a pass against `LINEAR` and a failure against
+  `CONSTANT`, so defaulting would put a claim nobody made into a report.
+
 ## [0.6.0] — 2026-09-02
 
 ### Notes

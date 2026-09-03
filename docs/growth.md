@@ -240,11 +240,17 @@ def test_the_listing(world, django_assert_num_queries):
 plots a curve rather than failing a build:
 
 ```python
-from django_query_contract import Growth, measure_query_growth
+from django_query_contract import Growth, format_query_growth, measure_query_growth
 
 measured = measure_query_growth(world, lambda: render_author_list())
 print(measured.factors, measured.counts)
 print(measured.holds(Growth.LINEAR))
+
+# The same paragraph a failed assertion would have printed. The claim is an
+# argument because a curve on its own is not a verdict: the same measurement
+# reads as a pass against LINEAR and a failure against CONSTANT, so a renderer
+# with no claim in it would have to invent one.
+print(format_query_growth(measured, Growth.CONSTANT))
 ```
 
 One measurement can be judged against more than one claim, which is occasionally

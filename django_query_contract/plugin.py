@@ -27,6 +27,7 @@ from typing import Any
 
 import pytest
 from django.conf import settings
+from django.db import connections
 from pluggy import Result
 
 from django_query_contract.find_n_plus_one import find_n_plus_one
@@ -102,6 +103,61 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="List every N+1 found, worst first, at the end of the run. Changes no "
         "outcome. Needs capture, so it reports nothing under --no-query-contract.",
     )
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_setup(item: pytest.Item) -> Generator[None, Result[Any], None]:
+    """Start each test from an empty query log, so no test is charged another's.
+
+    **Django does this itself, and the gap is which tests it does it for.**
+    ``TransactionTestCase._pre_setup`` ends by clearing ``queries_log``, with the
+    comment that ``assertNumQueries`` stops working once the log overflows.
+    pytest-django runs ``_pre_setup`` -- but only for a test that asked for the
+    database, and only over the aliases that test declares. A test that runs a
+    statement without the ``db`` fixture, through a connection an earlier test or
+    a session-scoped fixture opened, inherits whatever was left in the log.
+
+    Verified rather than reasoned about, at a log shrunk to five entries: a test
+    that runs six statements leaves it full, and the next test that does not use
+    the ``db`` fixture starts with five in it. Its own single statement is then
+    invisible to a count taken from the log, and this package says so -- under
+    that test's name, about a full log that test did not fill. The warning is
+    true and it accuses the wrong file, which is the crying wolf that gets a
+    detector uninstalled.
+
+    So the log is emptied here, at the start of the setup phase, which is where
+    Django would have emptied it and is before any fixture of this test has run.
+    That last part is why it is here and not around the call phase: a fixture
+    holding a ``CaptureQueriesContext`` open across the test body took its
+    starting index before this point, and moving the reset later would leave that
+    index pointing past the end of the log. It also means a test whose own
+    fixtures fill the log still warns -- correctly, and naming the test whose
+    fixtures did it.
+
+    ``--no-query-contract`` turns this off with everything else, and there is no
+    separate switch: a knob for it would be a knob for whether this package tells
+    the truth about one test at a time.
+    """
+    if _enabled(item.config) and settings.configured:
+        _reset_query_logs()
+    yield
+
+
+def _reset_query_logs() -> None:
+    """Empty ``queries_log`` on every configured connection.
+
+    Every connection rather than the ones a test declares, for the same reason
+    :class:`~django_query_contract.QueryCapture` covers every alias by default:
+    the assertion this diagnoses takes a ``using=`` of its own, and a reset that
+    covered only ``default`` would leave the multi-database case with the leak
+    this hook exists to close.
+
+    Indexing ``connections`` builds the wrapper object without opening anything,
+    so this is safe under pytest-django's database blocker and on an alias whose
+    server does not exist.
+    """
+    for alias in connections:
+        connections[alias].queries_log.clear()
 
 
 @pytest.hookimpl(hookwrapper=True)

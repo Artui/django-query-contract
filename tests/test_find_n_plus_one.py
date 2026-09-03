@@ -277,3 +277,56 @@ def test_one_line_querying_two_databases_stays_one_finding() -> None:
     (finding,) = find_n_plus_one(capture)
     assert finding.count == 2
     assert finding.aliases == ("default", "other")
+
+
+def _through_a_deep_helper(depth: int) -> None:
+    """Recurse, then query twice from one line. The recursion frames are identical."""
+    if depth:
+        _through_a_deep_helper(depth - 1)
+        return
+    for _ in range(2):
+        list(Author.objects.filter(pk=1))
+
+
+def _one_caller(authors: list[Author]) -> None:
+    _through_a_deep_helper(12)
+
+
+def _another_caller(authors: list[Author]) -> None:
+    _through_a_deep_helper(12)
+
+
+def test_widening_the_window_is_what_tells_you_two_paths_were_merged(
+    authors: list[Author],
+) -> None:
+    """The advice the documentation gives, run rather than asserted in prose.
+
+    An application stack deeper than the kept window puts two call paths in one
+    bucket, and the error that makes is a merge: one finding whose count spans
+    both. Nothing on the finding can say so -- ``stack_truncated`` is true of
+    every capture under a test runner, at any depth a suite would use, because
+    the frames beyond the window are the runner's own. What distinguishes a merge
+    is that it *stops being one* when the window widens, so the check is a second
+    measurement rather than a flag.
+
+    Below, twelve identical frames of recursion sit between two different callers
+    and the query. At a depth that reaches only the recursion, the two are one
+    finding of four; at a depth that reaches past it, they are two findings of
+    two.
+    """
+    with QueryCapture(using="default", stack_depth=10) as narrow:
+        _one_caller(authors)
+        _another_caller(authors)
+    with QueryCapture(using="default", stack_depth=40) as wide:
+        _one_caller(authors)
+        _another_caller(authors)
+
+    merged = find_n_plus_one(narrow)
+    split = find_n_plus_one(wide)
+
+    assert [finding.count for finding in merged] == [4]
+    assert [finding.count for finding in split] == [2, 2]
+    # And the flag says the same thing about both, which is why it cannot be the
+    # thing a reader consults.
+    assert merged[0].stack_truncated is True
+    assert all(finding.stack_truncated for finding in split)

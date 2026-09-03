@@ -33,11 +33,39 @@ class PlanNode:
     type would make this record quietly lossy on a server that is already
     shipping.
 
-    **Row counts are per loop, on both sides.** PostgreSQL divides a node's
-    actual row count by ``Actual Loops`` before printing it, and the estimate it
-    prints beside it is also per loop, so the two compare directly and
-    :attr:`estimate_error` needs no arithmetic to make them commensurate.
-    Multiply either by ``loops`` for the total.
+    **Row counts are per loop, and that is the one thing about this record that
+    changes meaning as a database grows.** PostgreSQL divides a node's actual row
+    count by ``Actual Loops`` before printing it, and does the same to
+    ``Rows Removed by Filter``. In a small world every node runs once, ``loops``
+    is 1, and the printed number is the whole truth. In a big one the same
+    statement is handed to three processes, or the same scan is run once per
+    outer row, and the printed number becomes a share -- with nothing in the plan
+    announcing the change except the loop count nobody was reading.
+
+    Measured, and the pair is checked in: the same
+    ``SELECT COUNT(*) ... WHERE md5(reference) < %s`` over 1,200,000 rows reports
+    ``Rows Removed by Filter: 1124098`` in one process and ``374699`` in three.
+    So :attr:`total_actual_rows` and :attr:`total_rows_removed_by_filter` are
+    here, and they are what a report and an assertion should read.
+
+    **The estimate is not totalled, and refusing that is the harder half of the
+    decision.** The two multiplications are not the same one:
+
+    - Under a ``Gather``, ``loops`` counts the processes that actually ran, while
+      the planner divided its estimate by ``parallel_workers`` plus the fraction
+      of a worker it credits the leader with -- 2.4 for two workers, against a
+      loop count of 3. Measured on the pair above: 400,000 estimated serially,
+      166,667 on the parallel node, and 400,000 / 166,667 is 2.4 exactly. The
+      divisor is not in the output, so no arithmetic here recovers it.
+    - Under a nested loop, ``loops`` is the number of *outer rows that arrived*,
+      which is a measurement. Multiplying a per-loop estimate by it produces a
+      number the planner never predicted -- measured on an inner node estimating
+      60 rows over 1,260 loops, the product is 75,600, which is exactly what the
+      join measured while the planner's own estimate for it was 400,020.
+
+    A ``total_estimated_rows`` would therefore be wrong under a ``Gather`` and
+    would agree with the measurement under a nested loop, which is worse: it
+    would read as perfect agreement on the plan the planner got most wrong.
     """
 
     node_type: str
@@ -81,10 +109,36 @@ class PlanNode:
     """``Actual Rows``: how many it produced per loop. ``None`` when the plan was not analyzed."""
 
     loops: float | None
-    """``Actual Loops``: how many times this node was executed. ``None`` without ``ANALYZE``."""
+    """``Actual Loops``: how many times this node was executed. ``None`` without ``ANALYZE``.
+
+    The divisor behind every other measurement on this record, and the field a
+    reader of a small database never has to think about because it is 1 there.
+    """
+
+    parallel_aware: bool
+    """``Parallel Aware``: whether this node is one process's share of a parallel scan.
+
+    **Why a loop count is not self-explanatory.** More than one loop has two
+    quite different causes, and this is the only field that tells them apart. A
+    parallel-aware node ran once in each participating process, so its ``loops``
+    is a count of processes and the work was divided; a node under a nested loop
+    ran once per outer row, so its ``loops`` is a measurement of the outer side
+    and the work was repeated. The totals are the same arithmetic either way --
+    see :attr:`total_actual_rows` -- but :attr:`estimate_error` is only
+    comparable in the second case, for the reason set out on it.
+
+    ``False`` for every node of a plan taken without ``ANALYZE`` as well, which
+    is correct rather than a default: parallelism is a property of the plan and
+    ``EXPLAIN`` prints ``Parallel Aware`` whether or not it measured anything.
+    """
 
     rows_removed_by_filter: float | None
-    """How many rows this node read and discarded, per loop, when it filtered."""
+    """How many rows this node read and discarded, per loop, when it filtered.
+
+    Per loop, and therefore the number that reads as 374,699 on a scan that
+    discarded 1,124,098 rows because three parallel workers each did a third of
+    it. :attr:`total_rows_removed_by_filter` is the one to assert on.
+    """
 
     sort_method: str | None
     """``quicksort``, ``external merge`` -- how a sort node sorted. ``None`` if it is not one."""
@@ -136,6 +190,7 @@ class PlanNode:
             estimated_rows=float(node["Plan Rows"]),
             actual_rows=_number(node.get("Actual Rows")),
             loops=_number(node.get("Actual Loops")),
+            parallel_aware=bool(node.get("Parallel Aware", False)),
             rows_removed_by_filter=_number(node.get("Rows Removed by Filter")),
             sort_method=_text(node.get("Sort Method")),
             sort_space_type=_text(node.get("Sort Space Type")),
@@ -206,6 +261,53 @@ class PlanNode:
         )
 
     @property
+    def total_actual_rows(self) -> float | None:
+        """Every row this node produced, across all of its executions.
+
+        :attr:`actual_rows` multiplied by :attr:`loops`, which is the number a
+        reader means when they say "how many rows did this read return" and the
+        number an assertion written against a one-loop plan was really making a
+        claim about. Where ``loops`` is 1 it is :attr:`actual_rows` unchanged, so
+        adopting it costs nothing on the small worlds where the two agree.
+
+        **It is a reconstruction and not a measurement, and the difference is
+        one row.** PostgreSQL divides the count by the loop count and rounds
+        before printing, so multiplying back can be out by up to half a loop in
+        either direction: measured on a three-process scan that really produced
+        75,902 rows, the node says 25,301 and this says 75,903. The residue is
+        bounded by ``loops / 2`` and it is stated here rather than hidden,
+        because the alternative -- an exact total -- is a number the server does
+        not print at all.
+
+        ``None`` without a measurement or without a loop count. A missing loop
+        count is not treated as 1: this record is public and a caller may have
+        built one from something that is not this parser, and turning a gap in
+        the input into a number is the move this package refuses everywhere else.
+        """
+        if self.actual_rows is None or self.loops is None:
+            return None
+        return self.actual_rows * self.loops
+
+    @property
+    def total_rows_removed_by_filter(self) -> float | None:
+        """Every row this node read and discarded, across all of its executions.
+
+        The same multiplication as :attr:`total_actual_rows`, with the same
+        rounding residue, over the number a report quotes when it says how much
+        of a table a read threw away. That number is the one that moves most
+        alarmingly when a world gets big enough to be scanned in parallel, and
+        it moves *downwards*: a scan discarding 1,124,098 rows in one process
+        reports 374,699 in three.
+
+        ``None`` when this node applied no filter. PostgreSQL emits
+        ``Rows Removed by Filter`` only where it applied one, so a zero here
+        would be a measurement it never made.
+        """
+        if self.rows_removed_by_filter is None or self.loops is None:
+            return None
+        return self.rows_removed_by_filter * self.loops
+
+    @property
     def estimate_error(self) -> float | None:
         """How many times out the planner's estimate turned out to be, at least 1.0.
 
@@ -222,6 +324,18 @@ class PlanNode:
         ``[:5]`` query against fifty rows, the scan under the limit reports an
         estimate of 50 against an actual of 5. A rule that flagged that would cry
         wolf on the first query anybody pointed it at.
+
+        **On a parallel-aware node it is inflated, and by a bounded amount.** The
+        two numbers are both per loop, but they were divided by different
+        denominators: the measurement by the processes that ran, the estimate by
+        ``parallel_workers`` plus the fraction of a worker the planner credits
+        the leader with. Measured, two workers means dividing the estimate by 2.4
+        and the measurement by 3, so a node the planner priced within 1% reports
+        a ratio of about 1.25. The inflation is at most that -- the two divisors
+        never differ by more than the leader's share -- so this stays the ratio
+        of the two numbers PostgreSQL printed, and :attr:`parallel_aware` is on
+        the record so a report can say which nodes it applies to. There is no
+        repair available: the divisor the planner used is not in the output.
 
         Direction is not encoded, because both numbers are on the record and a
         report prints them side by side. ``None`` when the plan was not analyzed:

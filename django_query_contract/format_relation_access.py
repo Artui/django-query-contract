@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from django_query_contract.group_by_relation import group_by_relation
 from django_query_contract.plan_capture import PlanCapture
+from django_query_contract.plan_node import PlanNode
 from django_query_contract.relation_access import RelationAccess
-from django_query_contract.utils import relative_to_cwd, shorten
+from django_query_contract.utils import loops_note, relative_to_cwd, row_count, shorten
 
 # Printed above the relations rather than left to the documentation, and this is
 # the most important string in the module. Everything below it is a table name, a
@@ -79,6 +80,13 @@ def _relation(access: RelationAccess, capture: PlanCapture, *, max_sql: int) -> 
 def _discarded(access: RelationAccess) -> list[str]:
     """The read that threw away most, named by an argmax and judged by nobody.
 
+    **Both numbers are the whole read**, not one loop of it, because a read
+    PostgreSQL split across three processes is still one read of this table and
+    it discarded everything the three of them discarded. The per-loop figures the
+    plan actually prints are named on the line below rather than dropped, so a
+    reader comparing this report against ``EXPLAIN`` output can see where the
+    total came from.
+
     Nothing is printed when no read here filtered: PostgreSQL emits
     ``Rows Removed by Filter`` only where it applied one, and a zero would be a
     measurement it never made rather than a table nothing was discarded from.
@@ -87,8 +95,26 @@ def _discarded(access: RelationAccess) -> list[str]:
     if worst is None:
         return []
     rows, node = worst
-    kept = "not measured" if node.actual_rows is None else f"{node.actual_rows:,.0f}"
-    return [f"       most one read discarded: {rows:,.0f} rows, keeping {kept}"]
+    kept = row_count(node.total_actual_rows)
+    return [
+        f"       most one read discarded: {rows:,.0f} rows, keeping {kept}",
+        *_arithmetic(node),
+    ]
+
+
+def _arithmetic(node: PlanNode) -> list[str]:
+    """Show the multiplication when the total above was one, and nothing when it was not.
+
+    Silent for a node that ran once, which is every node of every plan over a
+    database small enough not to be scanned in parallel -- so the ordinary report
+    is unchanged and this line appears exactly where the old number would have
+    started meaning something different.
+    """
+    note = loops_note(node.loops, parallel_aware=node.parallel_aware)
+    if note is None:
+        return []
+    per_loop = row_count(node.rows_removed_by_filter)
+    return [f"       across {note}; PostgreSQL states {per_loop} discarded per loop"]
 
 
 def _catalogue(access: RelationAccess, capture: PlanCapture, *, max_sql: int) -> list[str]:

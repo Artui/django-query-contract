@@ -118,6 +118,49 @@ def relative_to_cwd(text: str) -> str:
     return text
 
 
+def row_count(value: float | None) -> str:
+    """A row count as a reader wants it, or the fact that it was never measured.
+
+    Shared by both plan renderings for the reason ``shorten`` is: a number that
+    PostgreSQL did not measure has to read the same way in every block, or a
+    reader meets "not measured" in one paragraph and a bare dash in the next and
+    has to work out whether they mean the same thing.
+    """
+    return "not measured" if value is None else f"{value:,.0f}"
+
+
+def loops_note(loops: float | None, *, parallel_aware: bool) -> str | None:
+    """Name how many times a node ran and why, or ``None`` when it ran once.
+
+    Here rather than in either formatter because both of them print a per-loop
+    number beside a total, and a reader shown "3 loops (parallel workers)" in one
+    block and "run three times" in another would reasonably wonder whether the
+    two blocks were describing the same node.
+
+    **The parenthesis is the part that carries information.** A loop count above
+    one has two unrelated causes and the plan states which: a parallel-aware node
+    ran once in each participating process, so the work was *divided*; any other
+    node with loops ran once per row of the outer side of a join, so the work was
+    *repeated*. Both totalise the same way, and only one of them also puts the
+    estimate on a different scale from the measurement -- see
+    :attr:`~django_query_contract.PlanNode.estimate_error`.
+
+    Args:
+        loops: ``Actual Loops``. ``None`` on a plan taken without ``ANALYZE``,
+            where there is no count and therefore nothing to say.
+        parallel_aware: Whether PostgreSQL marked the node ``Parallel Aware``.
+
+    Returns:
+        A phrase like ``3 loops (parallel workers)``, or ``None`` when the node
+        ran once or was never measured -- which is the case a caller wants to
+        print nothing at all for, rather than "1 loop".
+    """
+    if loops is None or loops <= 1.0:
+        return None
+    cause = "parallel workers" if parallel_aware else "once per row of the outer side"
+    return f"{loops:,.0f} loops ({cause})"
+
+
 def shorten(text: str, limit: int) -> str:
     """Cut a statement to ``limit`` characters, saying that it was cut.
 

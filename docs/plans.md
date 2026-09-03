@@ -94,6 +94,87 @@ is what builds a database worth taking a plan over -- it owns the ordering,
 generate then load then index then `ANALYZE`, so the analyze-then-load trap
 cannot happen.
 
+## Every row count is per loop, and that changes what an assertion means
+
+`actual_rows`, `rows_removed_by_filter` and `estimated_rows` are what PostgreSQL
+printed, and PostgreSQL prints them **per loop**. Over a small database every
+node runs once, `loops` is 1, and the printed number is the whole truth. Over a
+big one it is a share, and nothing in the plan announces the change except a loop
+count nobody was reading.
+
+Two things cause it, and they are not the same thing:
+
+- a **parallel** node ran once in each participating process, so the work was
+  *divided*;
+- the inner side of a **nested loop** ran once per row of the outer side, so the
+  work was *repeated*.
+
+Measured on one statement over 1,200,000 rows, run twice with nothing changed but
+whether parallelism was allowed:
+
+| | one process | three processes |
+| --- | --- | --- |
+| `Rows Removed by Filter` | 1,124,098 | 374,699 |
+| `Actual Rows` | 75,902 | 25,301 |
+| `Actual Loops` | 1 | 3 |
+
+Both plans did the same work. An assertion written against the left-hand column
+is written against numbers the right-hand plan does not report, and a suite that
+grew its fixtures past the point where PostgreSQL reaches for a second process
+would see it change with no error and no warning.
+
+### So read the totals
+
+```python
+node.total_actual_rows  # actual_rows multiplied by loops
+node.total_rows_removed_by_filter  # rows_removed_by_filter multiplied by loops
+node.parallel_aware  # which of the two causes the loops were
+```
+
+Where `loops` is 1 these are the numbers they always were, so adopting them costs
+nothing on a small world. Where it is not, they are what a reader means. The
+report prints them, and shows its working:
+
+```text
+  testapp_order  1 read, 1 without an index
+       filtering ((reference)::text < %s::text)
+       most one read discarded: 1,124,097 rows, keeping 75,903
+       across 3 loops (parallel workers); PostgreSQL states 374,699 discarded per loop
+```
+
+**They are reconstructions, and the error is bounded by half a loop.** PostgreSQL
+divides by the loop count and rounds before printing, so multiplying back can be
+out by up to `loops / 2` -- the totals above are each one row off the truth. That
+is stated rather than hidden, because the alternative is a number the server does
+not print at all.
+
+### There is no total for the estimate, on purpose
+
+The measurements are divided by the loop count. The estimate is not, and the two
+multiplications are different ones:
+
+- Under a `Gather`, the planner divided its estimate by the number of workers
+  plus the fraction of a worker it credits the leader with -- 2.4 for two workers,
+  against a loop count of 3. Measured on the pair above: 400,000 estimated
+  serially against 166,667 on the parallel node, and 400,000 / 166,667 is exactly
+  2.4. That divisor is not in the output, so no arithmetic over the node recovers
+  it.
+- Under a nested loop, `loops` is the number of outer rows that *arrived*, which
+  is a measurement. Multiplying a per-loop estimate by it gives a number nobody
+  predicted: measured on an inner node estimating 60 rows over 1,260 loops, the
+  product is 75,600, which is exactly what the join produced -- while the
+  planner's own estimate for that join was 400,020.
+
+A `total_estimated_rows` would therefore be wrong under a `Gather`, and would
+agree with the measurement under a nested loop. The second is worse: it would
+read as perfect agreement on the plan the planner got most wrong.
+
+**One consequence is visible in the report.** `estimate_error` on a parallel-aware
+node divides an estimate scaled by 2.4 by a measurement scaled by 3, so it reads
+about 25% high even where the planner was right -- on the pair above, 6.6x against
+a real error of 5.3x. There is no honest repair, so the block says so under the
+node it applies to.
+
 ## What a finding is
 
 Two kinds, and there are two because only two can be stated without a threshold.
@@ -116,6 +197,40 @@ parents, joined through the parent rather than through the foreign key column.
 Across a join PostgreSQL has only `n_distinct` for the edge, so it hands every
 value of the join key the same average -- and an average is the one number that
 is wrong for both ends of a skewed distribution.
+
+#### Reproducing it needs the right query shape and enough parents
+
+The example above joins **through the parent**, and the wording matters. Filter
+the child's foreign key column directly and PostgreSQL consults that column's
+most-common-values list, which is a different mechanism with a different answer.
+Both are measured below, on a Zipf fan-out where parent *k* holds roughly 1/*k*
+of the rows:
+
+| Distinct parents | MCV entries | What the estimates do |
+| --- | --- | --- |
+| 50 | 50 | every parent priced individually, and right to within 10% |
+| 5,000 | 100 | the hundred commonest priced individually; every other parent shares one number |
+
+At 50 parents the list covers all of them, so the head *and* the tail are priced
+separately and no two executions share an estimate -- the finding is not merely
+hard to reproduce, it is **unreachable**, and correctly so, because the planner
+was not blind. At 5,000 it holds 100 entries, which is `default_statistics_target`,
+and every parent outside it is estimated at **402** rows against measured answers
+of 4,000, 800 and 80. That is one estimate and more than one truth: the finding.
+
+So two things decide whether a direct filter can produce this:
+
+- **the tail is where it lives.** The head of a skewed fan-out is in the MCV list
+  and is priced roughly right, which is the opposite of where a reader looks
+  first;
+- **there has to be a tail at all**, which means more distinct parents than the
+  statistics target -- 100 by default, and per-column through
+  `ALTER TABLE ... ALTER COLUMN ... SET STATISTICS`.
+
+Joining through the parent sidesteps both. The join condition is a column
+comparison, no MCV list applies to it, and every value of the join key gets the
+same average -- so head and tail both qualify at any parent count. That is why
+the measured example above is written that way, and it is worth copying.
 
 **One measurement cannot make this claim.** It cannot separate "the planner is
 wrong about this query" from "the planner is right on average and this row is

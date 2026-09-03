@@ -103,9 +103,20 @@ function, and the frames it drops could not tell two call paths apart anyway.
 
 An application whose own stack is deeper than the window can put two paths in
 one bucket. The error that makes is a **merge** -- two findings reported as one,
-with a count that spans both -- never a repetition that did not happen. Raise
-`stack_depth` (or the `query_contract_stack_depth` ini) to narrow the window,
-and read `stack_truncated` on a finding to know it was one.
+with a count that spans both -- never a repetition that did not happen.
+
+**To find out whether a finding is one, raise `stack_depth` and run it again.** A
+merge is the thing that stops being one when the window widens: twelve identical
+frames of recursion between two callers and a query produce one finding of four
+at a depth that reaches only the recursion, and two findings of two at a depth
+that reaches past it. The knob is `stack_depth` on the capture, or the
+`query_contract_stack_depth` ini for the plugin.
+
+**`stack_truncated` cannot answer it**, and this page said it could until 0.7.0.
+Under a test runner it is `True` on every capture at every depth a suite would
+use, because the frames beyond the window are pytest's own -- so it is a constant,
+and a constant distinguishes nothing. It says the window was full, not that the
+frames outside it were the ones that mattered.
 
 ## Legitimate repetition is a finding
 

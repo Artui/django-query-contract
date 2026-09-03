@@ -59,3 +59,38 @@ def test_the_readme_ceiling_table_matches_the_installed_django() -> None:
     assert f"| 0 | {connection.queries_limit + 1} | {connection.queries_limit} |" in readme
     assert f"| {connection.queries_limit - 10} | 100 | 10 |" in readme
     assert f"| {connection.queries_limit} | 5 | **0** |" in readme
+
+
+def test_the_plan_documents_quote_the_payloads_they_were_measured_from() -> None:
+    """Two documents print a table of plan numbers, and both are checked against the source.
+
+    The per-loop section exists because those numbers move: the same statement
+    reports one set serially and another in parallel, and the whole argument is
+    that a reader cannot tell from the plan alone. A table of them in prose is
+    exactly the kind of measured claim that rots silently, so it is compared
+    against the payloads it was read off -- which are themselves a real server's
+    output, checked in verbatim.
+    """
+    from django_query_contract import PlanNode
+    from tests.plan_payloads import PARALLEL_SCAN, SERIAL_SCAN
+
+    def scan(payload: list[dict[str, object]]) -> PlanNode:
+        (found,) = [
+            node
+            for node in PlanNode.from_explain(payload[0]["Plan"]).walk()
+            if node.node_type == "Seq Scan"
+        ]
+        return found
+
+    serial, parallel = scan(SERIAL_SCAN), scan(PARALLEL_SCAN)
+    plans = (_ROOT / "docs" / "plans.md").read_text()
+    readme = (_ROOT / "README.md").read_text()
+
+    assert (
+        f"| `Rows Removed by Filter` | {serial.rows_removed_by_filter:,.0f} "
+        f"| {parallel.rows_removed_by_filter:,.0f} |"
+    ) in plans
+    assert (f"| `Actual Rows` | {serial.actual_rows:,.0f} | {parallel.actual_rows:,.0f} |") in plans
+    assert f"| `Actual Loops` | {serial.loops:,.0f} | {parallel.loops:,.0f} |" in plans
+    assert f"`Rows Removed by Filter: {serial.rows_removed_by_filter:.0f}`" in readme
+    assert f"`{parallel.rows_removed_by_filter:.0f}`" in readme

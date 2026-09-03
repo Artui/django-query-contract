@@ -49,9 +49,18 @@ def format_query_growth(
     the growth is described exactly as it would be anywhere else in this
     package, and the reader gets the call site rather than only the arithmetic.
 
+    **The claim is required and has no default**, which is worth saying because
+    the obvious reading of "render this measurement" is that a measurement is
+    enough. It is not: one curve reads as a pass against
+    :attr:`~django_query_contract.Growth.LINEAR` and a failure against
+    :attr:`~django_query_contract.Growth.CONSTANT`, and the headline sentence has
+    to say which. Defaulting to either would put a claim nobody made into a
+    report, which is the whole failure mode this package is about.
+
     Args:
         measured: The curve.
-        growth: The claim to judge it against.
+        growth: The claim to judge it against. Positional, and required -- see
+            above.
         max_findings: How many N+1 findings to list from the failing world.
         max_sql: Where to cut a long statement.
 

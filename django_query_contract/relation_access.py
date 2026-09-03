@@ -157,6 +157,15 @@ class RelationAccess:
         naming it introduces no number of ours. Whether that many is too many is
         the judgement this class declines.
 
+        **The number is the whole read and not one loop of it**, which is
+        :attr:`~django_query_contract.PlanNode.total_rows_removed_by_filter`
+        rather than the count printed on the node. A read PostgreSQL split
+        across three processes is still one read of this table, and it discarded
+        everything the three of them discarded. Ranking on the printed number
+        instead would order two reads by how many workers the server happened to
+        start: measured on one statement over 1,200,000 rows, the parallel plan
+        prints 374,699 and the serial plan 1,124,098 for the same work.
+
         ``None`` when no read here filtered at all. PostgreSQL emits
         ``Rows Removed by Filter`` only where it applied one, so zero would be a
         measurement it never made.
@@ -165,7 +174,9 @@ class RelationAccess:
         # order -- the order the nodes were listed in, which is the order a
         # reader of EXPLAIN output already has in their head.
         scored = [
-            (rows, node) for node in self.nodes if (rows := node.rows_removed_by_filter) is not None
+            (rows, node)
+            for node in self.nodes
+            if (rows := node.total_rows_removed_by_filter) is not None
         ]
         if not scored:
             return None
