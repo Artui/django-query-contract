@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
+import django
 import pytest
 
-from django_query_contract import QueryCapture, find_n_plus_one, format_n_plus_one_summary
+from django_query_contract import (
+    NPlusOne,
+    QueryCapture,
+    QueryRecord,
+    StackFrame,
+    find_n_plus_one,
+    format_n_plus_one_summary,
+)
 from tests.testapp.models import Author, Book
 
 pytestmark = pytest.mark.django_db
@@ -113,3 +124,102 @@ def test_one_call_path_seen_in_two_blocks_is_listed_twice(authors: list[Author])
     assert summary.startswith("2 N+1 finding(s)")
     assert "in first" in summary
     assert "in second" in summary
+
+
+def _finding(*, filename: str, count: int, label: str) -> tuple[str, NPlusOne]:
+    """One finding with its call site placed in a named file."""
+    stack = (StackFrame(filename=filename, lineno=1, function="loop"),)
+    records = tuple(
+        QueryRecord(
+            index=index,
+            sql="SELECT 1",
+            fingerprint="SELECT %s",
+            alias="default",
+            vendor="postgresql",
+            many=False,
+            param_count=0,
+            stack=stack,
+            stack_truncated=False,
+            plan=None,
+        )
+        for index in range(count)
+    )
+    return label, NPlusOne(fingerprint="SELECT %s", stack=stack, records=records)
+
+
+def test_findings_in_your_own_code_come_first_however_small(tmp_path: Path) -> None:
+    """The finding the whole section exists for.
+
+    A dependency that loops legitimately -- a relay claiming a batch, a loader
+    reading one catalogue row per table -- outranks every defect in the project
+    when the only ordering is repetition count. Measured on a consumer's suite:
+    158 findings, and none of the twenty there was room to print were theirs.
+    """
+    mine = os.path.join(os.getcwd(), "shop", "views.py")
+    theirs = os.path.join(os.getcwd(), ".venv", "lib", "site-packages", "lib", "relay.py")
+
+    summary = format_n_plus_one_summary(
+        {
+            "t::a": [_finding(filename=theirs, count=40, label="t::a")[1]],
+            "t::b": [_finding(filename=mine, count=2, label="t::b")[1]],
+        }
+    )
+
+    assert "2 N+1 finding(s), most repeated first:" in summary
+    assert "1 in your own code:" in summary
+    assert "1 inside installed packages, which you cannot fix from here:" in summary
+    # Ordering, not filtering: the forty-times one is still reported in full.
+    assert "40 x  from " in summary
+    assert summary.index("shop/views.py") < summary.index("relay.py")
+
+
+def test_a_run_with_only_dependency_findings_is_not_given_a_heading() -> None:
+    """Two sections are worth naming; one is just a list."""
+    theirs = os.path.join(os.getcwd(), ".venv", "lib", "site-packages", "lib", "relay.py")
+
+    summary = format_n_plus_one_summary(
+        {"t::a": [_finding(filename=theirs, count=3, label="t::a")[1]]}
+    )
+
+    assert "in your own code" not in summary
+    assert "inside installed packages" not in summary
+    assert "3 x  from " in summary
+
+
+def test_a_findings_own_ordering_is_unchanged_inside_a_section() -> None:
+    """Worst first still holds; only the partition is new."""
+    mine = os.path.join(os.getcwd(), "shop", "views.py")
+    other = os.path.join(os.getcwd(), "shop", "reports.py")
+
+    summary = format_n_plus_one_summary(
+        {
+            "t::a": [_finding(filename=mine, count=3, label="t::a")[1]],
+            "t::b": [_finding(filename=other, count=9, label="t::b")[1]],
+        }
+    )
+
+    assert summary.index("shop/reports.py") < summary.index("shop/views.py")
+
+
+def test_a_finding_with_no_placeable_call_site_is_not_called_yours() -> None:
+    """A stack that is entirely Django's has no call site at all.
+
+    `None` is treated as not-the-project's, which is the safe direction: it
+    keeps an unplaceable finding out of the section a reader is being told to
+    act on, rather than putting a line they cannot find at the top of it.
+    """
+    django_only = os.path.join(os.path.dirname(django.__file__), "db", "models", "query.py")
+    mine = os.path.join(os.getcwd(), "shop", "views.py")
+
+    summary = format_n_plus_one_summary(
+        {
+            "t::a": [_finding(filename=django_only, count=40, label="t::a")[1]],
+            "t::b": [_finding(filename=mine, count=1, label="t::b")[1]],
+        }
+    )
+
+    assert "1 in your own code:" in summary
+    assert "1 inside installed packages, which you cannot fix from here:" in summary
+    # The project's one-repetition finding is printed above the heading that
+    # introduces the forty-repetition one nobody can place.
+    assert summary.index("shop/views.py") < summary.index("inside installed packages")
