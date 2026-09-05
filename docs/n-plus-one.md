@@ -198,6 +198,46 @@ prints every finding in the run, worst first, at the end:
 
 It changes no outcome: a run with the flag exits exactly as it would without it.
 
+#### Your own code first, and only in the listing
+
+The listing is sectioned by whether a finding's call site is in your own tree or
+inside an installed package:
+
+```
+158 N+1 finding(s), most repeated first:
+  3 in your own code:
+  2 x  from shop/views.py:31 in author_list
+       ...
+  155 inside installed packages, which you cannot fix from here:
+  16 x  from django_data_shape/apply_statistics_targets.py:81
+       ...
+```
+
+Ordering by repetition alone answers the wrong question here. A *finding* says
+this statement repeated from this path, and every statement is in scope for
+that. The run-wide listing says **what should I go and fix**, and under a raw
+repetition count any library that legitimately loops -- a relay claiming a
+batch, a loader reading one catalogue row per table -- outranks every defect in
+the project. Measured on a consumer's suite: 158 findings, and none of the
+twenty there was room to print were in their own code.
+
+**Nothing is filtered, merged or renamed**, and no finding is created or
+dropped. A repetition inside a dependency is a real one and is still reported in
+full, because a batched `bulk_create` is one shape run a hundred times from one
+line and is structurally identical to the defect -- which is exactly why this
+package reports it rather than exempting it. It is just not the half you can
+act on, so it does not get the first screen.
+
+The rule is the working directory minus installed packages: no project root
+setting, no package list, nothing to configure and so nothing to be wrong about.
+A finding whose call site cannot be placed -- a stack that is entirely Django's
+has none at all -- counts as not yours, which keeps a line you cannot find out
+of the section you are being told to act on.
+
+This stays firmly on the display side. Which frames matter is exactly the
+judgement that becomes a knob, and a knob in a detector's *identity* is how the
+four dead N+1 detectors came to cry wolf. It decides an order and nothing else.
+
 Findings are **not merged across tests**. One call site reached from two tests is
 two findings here, because a finding's identity is its whole call stack and two
 tests are two stacks. Merging them would need a second grouping rule -- "these

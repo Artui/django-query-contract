@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 
 from django_query_contract.format_n_plus_one import format_n_plus_one
 from django_query_contract.n_plus_one import NPlusOne
+from django_query_contract.utils import in_project_tree
 
 
 def format_n_plus_one_summary(
@@ -48,9 +49,42 @@ def format_n_plus_one_summary(
     # the mapping happened to be built in.
     flattened.sort(key=lambda item: (-item[1].count, item[0], item[1].first_index))
 
+    # Sectioned by whose code the call site is in, and *only* the display is
+    # sectioned: nothing is merged, dropped or renamed, and every finding is
+    # still here. A run-wide listing answers "what should I go and fix", which
+    # is not the question a finding answers, and ordering by repetition alone
+    # puts every library that legitimately loops above every defect in the
+    # project. Measured on a consumer: 158 findings, none of the ones there was
+    # room to print in their own code.
+    yours = [item for item in flattened if in_project_tree(item[1].call_site)]
+    theirs = [item for item in flattened if not in_project_tree(item[1].call_site)]
+
     lines = [f"{len(flattened)} N+1 finding(s), most repeated first:"]
-    for label, finding in flattened[:max_findings]:
-        lines.append(format_n_plus_one(finding, max_sql=max_sql, label=label))
-    if len(flattened) > max_findings:
-        lines.append(f"  and {len(flattened) - max_findings} more findings.")
+    if yours and theirs:
+        lines.append(f"  {len(yours)} in your own code:")
+    lines.extend(_section(yours, max_findings=max_findings, max_sql=max_sql))
+
+    if theirs:
+        if yours:
+            # Named rather than hidden. A repetition inside a dependency is a
+            # real one and worth seeing once -- a batched bulk_create is one
+            # shape run a hundred times from one line -- it is just not what the
+            # reader can act on, and the budget belongs to the half they can.
+            lines.append(
+                f"  {len(theirs)} inside installed packages, which you cannot fix from here:"
+            )
+        lines.extend(
+            _section(theirs, max_findings=max(max_findings - len(yours), 1), max_sql=max_sql)
+        )
     return "\n".join(lines)
+
+
+def _section(items: list[tuple[str, NPlusOne]], *, max_findings: int, max_sql: int) -> list[str]:
+    """One section's findings, with its own overflow line."""
+    lines = [
+        format_n_plus_one(finding, max_sql=max_sql, label=label)
+        for label, finding in items[:max_findings]
+    ]
+    if len(items) > max_findings:
+        lines.append(f"  and {len(items) - max_findings} more findings.")
+    return lines

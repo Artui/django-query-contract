@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`--n-plus-one` puts your own code first.** The run-wide listing is now
+  sectioned by whether a finding's call site is in the project's own tree or
+  inside an installed package.
+
+  Ordering by repetition alone answers the wrong question there. A *finding*
+  says this statement repeated from this path, and every statement is in scope
+  for that -- which is why the per-test diagnosis under a failing count
+  assertion is unfiltered and stays that way. The run-wide listing says *what
+  should I go and fix*, and inherits an ordering under which any library that
+  legitimately loops outranks every defect in the project. Measured on a
+  consumer's suite: **158 findings, and none of the twenty there was room to
+  print were in their own code** -- the top entries were a shaped-data loader's
+  per-column catalogue read and an outbox relay's claim loop, both correct.
+
+  **Nothing is filtered, merged or renamed**, and no finding is created or
+  dropped. A repetition inside a dependency is a real one, is still reported in
+  full, and is still not exempted -- which is the property that keeps this from
+  crying wolf. It just does not get the first screen.
+
+  The rule is the working directory minus installed packages: no project root
+  setting, no package list, no threshold. A call site that cannot be placed --
+  a stack that is entirely Django's has none -- counts as not the project's,
+  which keeps a line the reader cannot find out of the section they are being
+  told to act on.
+
+  This is deliberately a **display** rule and stays one. Which frames matter is
+  exactly the judgement that becomes a knob, and a knob in a detector's identity
+  is how the four dead N+1 detectors came to cry wolf.
+
 ## [0.8.0] — 2026-09-03
 
 ### Fixed
