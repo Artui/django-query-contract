@@ -465,6 +465,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The whole run, on request">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#your-own-code-first-and-only-in-the-listing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your own code first, and only in the listing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -740,6 +757,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The whole run, on request">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#your-own-code-first-and-only-in-the-listing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your own code first, and only in the listing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -938,6 +972,38 @@ worth knowing, because it means the fix is not a prefetch.</p>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>       queries #3, #4, #5, #6, #7, #8, #9, #10, ...
 </span></code></pre></div>
 <p>It changes no outcome: a run with the flag exits exactly as it would without it.</p>
+<h4 id="your-own-code-first-and-only-in-the-listing">Your own code first, and only in the listing<a class="headerlink" href="#your-own-code-first-and-only-in-the-listing" title="Permanent link">&para;</a></h4>
+<p>The listing is sectioned by whether a finding's call site is in your own tree or
+inside an installed package:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>158 N+1 finding(s), most repeated first:
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  3 in your own code:
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  2 x  from shop/views.py:31 in author_list
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>       ...
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  155 inside installed packages, which you cannot fix from here:
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  16 x  from django_data_shape/apply_statistics_targets.py:81
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>       ...
+</span></code></pre></div>
+<p>Ordering by repetition alone answers the wrong question here. A <em>finding</em> says
+this statement repeated from this path, and every statement is in scope for
+that. The run-wide listing says <strong>what should I go and fix</strong>, and under a raw
+repetition count any library that legitimately loops -- a relay claiming a
+batch, a loader reading one catalogue row per table -- outranks every defect in
+the project. Measured on a consumer's suite: 158 findings, and none of the
+twenty there was room to print were in their own code.</p>
+<p><strong>Nothing is filtered, merged or renamed</strong>, and no finding is created or
+dropped. A repetition inside a dependency is a real one and is still reported in
+full, because a batched <code>bulk_create</code> is one shape run a hundred times from one
+line and is structurally identical to the defect -- which is exactly why this
+package reports it rather than exempting it. It is just not the half you can
+act on, so it does not get the first screen.</p>
+<p>The rule is the working directory minus installed packages: no project root
+setting, no package list, nothing to configure and so nothing to be wrong about.
+A finding whose call site cannot be placed -- a stack that is entirely Django's
+has none at all -- counts as not yours, which keeps a line you cannot find out
+of the section you are being told to act on.</p>
+<p>This stays firmly on the display side. Which frames matter is exactly the
+judgement that becomes a knob, and a knob in a detector's <em>identity</em> is how the
+four dead N+1 detectors came to cry wolf. It decides an order and nothing else.</p>
 <p>Findings are <strong>not merged across tests</strong>. One call site reached from two tests is
 two findings here, because a finding's identity is its whole call stack and two
 tests are two stacks. Merging them would need a second grouping rule -- "these
@@ -947,13 +1013,13 @@ without. The listing orders instead.</p>
 <p><a class="autorefs autorefs-internal" title="find_n_plus_one" href="../reference/#django_query_contract.find_n_plus_one"><code>find_n_plus_one</code></a> takes any iterable of
 records, so it reads a capture, a slice of one, or the records of a single
 connection:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_query_contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">QueryCapture</span><span class="p">,</span> <span class="n">find_n_plus_one</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="k">with</span> <span class="n">QueryCapture</span><span class="p">(</span><span class="n">using</span><span class="o">=</span><span class="s2">"default"</span><span class="p">)</span> <span class="k">as</span> <span class="n">capture</span><span class="p">:</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">view</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">worst</span> <span class="o">=</span> <span class="n">find_n_plus_one</span><span class="p">(</span><span class="n">capture</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">worst</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">worst</span><span class="o">.</span><span class="n">call_site</span><span class="p">,</span> <span class="n">worst</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_query_contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">QueryCapture</span><span class="p">,</span> <span class="n">find_n_plus_one</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">with</span> <span class="n">QueryCapture</span><span class="p">(</span><span class="n">using</span><span class="o">=</span><span class="s2">"default"</span><span class="p">)</span> <span class="k">as</span> <span class="n">capture</span><span class="p">:</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">view</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">worst</span> <span class="o">=</span> <span class="n">find_n_plus_one</span><span class="p">(</span><span class="n">capture</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">worst</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">worst</span><span class="o">.</span><span class="n">call_site</span><span class="p">,</span> <span class="n">worst</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">)</span>
 </span></code></pre></div>
 <p><a class="autorefs autorefs-internal" title="format_n_plus_one" href="../reference/#django_query_contract.format_n_plus_one"><code>format_n_plus_one</code></a> renders one
 finding and
