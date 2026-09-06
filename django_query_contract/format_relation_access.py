@@ -6,7 +6,8 @@ from django_query_contract.group_by_relation import group_by_relation
 from django_query_contract.plan_capture import PlanCapture
 from django_query_contract.plan_node import PlanNode
 from django_query_contract.relation_access import RelationAccess
-from django_query_contract.utils import loops_note, relative_to_cwd, row_count, shorten
+from django_query_contract.relative_to_cwd import relative_to_cwd
+from django_query_contract.utils import loops_note, row_count, shorten
 
 # Printed above the relations rather than left to the documentation, and this is
 # the most important string in the module. Everything below it is a table name, a

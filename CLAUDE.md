@@ -81,13 +81,19 @@ nothing. Do not rename either into the other's register.
 
 `utils.py` holds what more than one of them must agree on: `DEFAULT_STACK_DEPTH`
 (read by both `QueryCapture` and the plugin's ini default, rather than the same
-literal in three places), `DEFAULT_FACTORS`, the `ScaleWorld` alias, and the
-three call-site helpers -- `innermost_frame_outside_django`, which is the one
-place the package decides which frame is the interesting one, plus
-`relative_to_cwd` and `shorten`, so two renderings of a call site cannot spell
-one path or one `max_sql` two ways. Extend it rather than forking a second
-copy: a record, a finding and an attribution disagreeing about where a statement
-came from is worse than any of them having no answer.
+literal in three places), `DEFAULT_FACTORS`, the `ScaleWorld` alias, `shorten`,
+and the two frame walks -- `innermost_frame_outside_django`, which is the one
+place the package decides which frame *asked*, and `innermost_frame_in_project`,
+which is the one place it decides which frame is *yours*. Extend it rather than
+forking a second copy: a record, a finding and an attribution disagreeing about
+where a statement came from is worse than any of them having no answer.
+
+**That rule now reaches consumers, which is why `in_project_tree` and
+`relative_to_cwd` are public and live in their own modules.** They were private
+in `utils.py`, so a consumer writing its own report reimplemented both -- and
+the definition of "our code" then existed in two places that could disagree
+about one finding from one capture. A rule the package sections its own output
+by is part of the interface whether or not it is exported.
 
 **The growth rules are exact integer comparisons, and that is the design.** A
 fitted curve would need three thresholds to become a verdict -- how near zero is

@@ -10,7 +10,8 @@ from django_query_contract.plan_finding import PlanFinding
 from django_query_contract.plan_node import PlanNode
 from django_query_contract.query_plan import QueryPlan
 from django_query_contract.query_record import QueryRecord
-from django_query_contract.utils import loops_note, relative_to_cwd, row_count, shorten
+from django_query_contract.relative_to_cwd import relative_to_cwd
+from django_query_contract.utils import loops_note, row_count, shorten
 
 
 def format_query_plans(

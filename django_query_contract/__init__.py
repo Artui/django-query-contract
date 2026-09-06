@@ -16,6 +16,7 @@ from django_query_contract.group_by_call_site import group_by_call_site
 from django_query_contract.group_by_relation import group_by_relation
 from django_query_contract.growth import Growth
 from django_query_contract.growth_point import GrowthPoint
+from django_query_contract.in_project_tree import in_project_tree
 from django_query_contract.log_ceiling import LogCeiling
 from django_query_contract.measure_query_growth import measure_query_growth
 from django_query_contract.n_plus_one import NPlusOne
@@ -31,6 +32,7 @@ from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarni
 from django_query_contract.query_plan import QueryPlan
 from django_query_contract.query_record import QueryRecord
 from django_query_contract.relation_access import RelationAccess
+from django_query_contract.relative_to_cwd import relative_to_cwd
 from django_query_contract.stack_frame import StackFrame
 from django_query_contract.version import __version__
 
@@ -66,6 +68,8 @@ __all__ = [
     "format_relation_access",
     "group_by_call_site",
     "group_by_relation",
+    "in_project_tree",
     "measure_query_growth",
     "normalise_sql",
+    "relative_to_cwd",
 ]

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from django_query_contract.n_plus_one import NPlusOne
-from django_query_contract.utils import relative_to_cwd, shorten
+from django_query_contract.relative_to_cwd import relative_to_cwd
+from django_query_contract.utils import shorten
 
 # How many query indices to name before eliding. Eight is enough to see that the
 # executions are consecutive, which is what a reader checks; a hundred of them
@@ -51,6 +52,19 @@ def format_n_plus_one(finding: NPlusOne, *, max_sql: int = 160, label: str = "")
         else "no frame outside Django (the capture's stack depth did not reach one)"
     )
     lines = [f"  {finding.count} x  from {where}"]
+    project_site = finding.project_call_site
+    if project_site is not None and project_site != site:
+        # Only when the two disagree, which is the case the call site alone
+        # cannot serve: a query issued under `transaction.atomic` as a decorator
+        # is asked for by `contextlib`, and a library that patches the ORM in
+        # place puts itself there. Both are true and neither is a line anybody
+        # edits, so the frame the reader owns is named beside it rather than
+        # instead of it -- what asked, and where to go.
+        #
+        # Not printed when they are equal, which is the ordinary case, because a
+        # report that said one thing twice on every finding would train a reader
+        # to skip the line on the findings where it differs.
+        lines.append(f"       reached from {relative_to_cwd(str(project_site))}")
     if label:
         lines.append(f"       in {label}")
     lines.append(f"       {shorten(finding.fingerprint, max_sql)}")

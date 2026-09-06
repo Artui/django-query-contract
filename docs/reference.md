@@ -60,6 +60,10 @@
 
 ::: django_query_contract.capture_stack
 
+::: django_query_contract.in_project_tree
+
+::: django_query_contract.relative_to_cwd
+
 ::: django_query_contract.format_capture_report
 
 ::: django_query_contract.format_n_plus_one

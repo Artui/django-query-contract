@@ -14,6 +14,7 @@ from typing import TypeAlias
 
 import django
 
+from django_query_contract.in_project_tree import in_project_tree
 from django_query_contract.stack_frame import StackFrame
 
 # Measured rather than guessed: six frames separate ``cursor.execute`` from the
@@ -72,43 +73,6 @@ DEFAULT_FACTORS = (1, 10)
 _DJANGO_ROOT = os.path.dirname(os.path.abspath(django.__file__)) + os.sep
 
 
-# Where installed dependencies live. A path component rather than a prefix,
-# because a virtualenv inside the project is the ordinary layout and the
-# directory is then *under* the working directory rather than outside it.
-_INSTALLED_MARKERS = (os.sep + "site-packages" + os.sep, os.sep + "dist-packages" + os.sep)
-
-
-def in_project_tree(frame: StackFrame | None) -> bool:
-    """Whether this frame is code the reader can edit, rather than a dependency.
-
-    **A display rule, and it must stay one.** Which frames matter is exactly the
-    judgement that becomes a knob, and a knob in a detector's identity is how
-    the four dead N+1 detectors came to cry wolf -- so no finding is created,
-    merged, dropped or renamed by this. It decides the order two findings are
-    printed in and nothing else.
-
-    The question it exists for is not the one a finding answers. A finding says
-    *this statement repeated from this path*, and every statement is in scope for
-    that. A run-wide listing says *what should I go and fix*, and inherits an
-    ordering -- raw repetition count -- under which any library that loops
-    outranks every defect in the project. Measured on a consumer's suite: 158
-    findings, and none of the ones it had room to print were in the application.
-
-    The rule is the working directory minus installed packages, and it is
-    deliberately that crude: no project root setting, no package name, nothing
-    to configure and so nothing to be wrong about. A frame with no filename we
-    can place is treated as **not** the project's, which is the safe direction
-    -- it keeps an unplaceable finding out of the section a reader is told to
-    act on.
-    """
-    if frame is None:
-        return False
-    path = os.path.abspath(frame.filename)
-    if any(marker in path for marker in _INSTALLED_MARKERS):
-        return False
-    return path.startswith(os.getcwd() + os.sep)
-
-
 def innermost_frame_outside_django(stack: tuple[StackFrame, ...]) -> StackFrame | None:
     """The deepest frame in ``stack`` that is not inside Django: the line that asked.
 
@@ -137,22 +101,25 @@ def innermost_frame_outside_django(stack: tuple[StackFrame, ...]) -> StackFrame 
     return None
 
 
-def relative_to_cwd(text: str) -> str:
-    """Shorten a rendered call site to a path relative to the working directory.
+def innermost_frame_in_project(stack: tuple[StackFrame, ...]) -> StackFrame | None:
+    """The deepest frame in ``stack`` that is the reader's own: the line to edit.
 
-    Only when it is under it: ``os.path.relpath`` will happily walk out of the
-    tree with a row of ``..`` segments, which is longer than the absolute path
-    and harder to read.
+    The companion to :func:`innermost_frame_outside_django`, and here beside it
+    for the same reason that one is here: a record and a finding answering
+    "where is this mine" differently would be worse than either having no
+    answer. Both walk from the innermost end, which is the half that is easy to
+    get backwards -- ``capture_stack`` keeps the innermost frames and orders them
+    **outermost-first**, so a walk from the wrong end lands on whatever wrapper
+    sits closest to the cursor on every finding at once.
 
-    Here for the same reason as the frame choice above. Two renderings name a
-    call site now -- a finding's block and an attribution's -- and a reader
-    shown one path abbreviated and the other absolute would reasonably wonder
-    whether they were the same file.
+    ``None`` when no frame is the reader's, which is honest: a stack truncated
+    below the caller, or a repetition genuinely internal to a dependency, has no
+    line in the project to point at and saying so beats naming one that is not.
     """
-    root = os.getcwd() + os.sep
-    if text.startswith(root):
-        return text[len(root) :]
-    return text
+    for frame in reversed(stack):
+        if in_project_tree(frame):
+            return frame
+    return None
 
 
 def row_count(value: float | None) -> str:
