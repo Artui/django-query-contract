@@ -973,15 +973,18 @@ worth knowing, because it means the fix is not a prefetch.</p>
 </span></code></pre></div>
 <p>It changes no outcome: a run with the flag exits exactly as it would without it.</p>
 <h4 id="your-own-code-first-and-only-in-the-listing">Your own code first, and only in the listing<a class="headerlink" href="#your-own-code-first-and-only-in-the-listing" title="Permanent link">&para;</a></h4>
-<p>The listing is sectioned by whether a finding's call site is in your own tree or
-inside an installed package:</p>
+<p>The listing is sectioned by whether a finding's call site is inside your working
+tree:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>158 N+1 finding(s), most repeated first:
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  3 in your own code:
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  2 x  from shop/views.py:31 in author_list
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>       ...
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  155 inside installed packages, which you cannot fix from here:
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  155 outside your working tree:
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  16 x  from django_data_shape/apply_statistics_targets.py:81
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>       ...
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  4 x  from contextlib.py:84 in inner
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>       reached from shop/services.py:52 in charge
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>       ...
 </span></code></pre></div>
 <p>Ordering by repetition alone answers the wrong question here. A <em>finding</em> says
 this statement repeated from this path, and every statement is in scope for
@@ -996,11 +999,30 @@ full, because a batched <code>bulk_create</code> is one shape run a hundred time
 line and is structurally identical to the defect -- which is exactly why this
 package reports it rather than exempting it. It is just not the half you can
 act on, so it does not get the first screen.</p>
-<p>The rule is the working directory minus installed packages: no project root
-setting, no package list, nothing to configure and so nothing to be wrong about.
-A finding whose call site cannot be placed -- a stack that is entirely Django's
-has none at all -- counts as not yours, which keeps a line you cannot find out
-of the section you are being told to act on.</p>
+<p>The rule is <a class="autorefs autorefs-internal" title="in_project_tree" href="../reference/#django_query_contract.in_project_tree"><code>in_project_tree</code></a>, and it is
+public precisely so that your own reports and this listing cannot disagree about
+one finding from one capture. It is the working directory minus installed
+packages: no project root setting, no package list, nothing to configure and so
+nothing to be wrong about. A finding whose call site cannot be placed -- a stack
+that is entirely Django's has none at all -- counts as not yours, which keeps a
+line you cannot find out of the section you are being told to act on.</p>
+<p><strong>A finding outside your tree can still be yours to fix</strong>, which is why the
+heading no longer claims otherwise. <code>transaction.atomic</code> used as a decorator
+issues its savepoints through <code>contextlib</code>, so a loop that opens a transaction
+per iteration is a real defect in your code whose <em>call site</em> is the standard
+library. Those findings name the frame they were reached from --
+<a class="autorefs autorefs-internal" title="NPlusOne
+
+
+  
+      dataclass
+  " href="../reference/#django_query_contract.NPlusOne"><code>project_call_site</code></a>, the innermost frame that
+is yours -- so the line to edit is on the screen even when the line that asked
+is not.</p>
+<p>The sectioning itself still keys on the call site, and deliberately: "any frame
+of yours anywhere in the stack" is every finding a test runner ever produces,
+since the test function is always yours. That rule would put all 158 back in one
+list and buy nothing.</p>
 <p>This stays firmly on the display side. Which frames matter is exactly the
 judgement that becomes a knob, and a knob in a detector's <em>identity</em> is how the
 four dead N+1 detectors came to cry wolf. It decides an order and nothing else.</p>

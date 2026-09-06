@@ -683,6 +683,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryRecord.project_call_site" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        project_call_site
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -771,6 +782,17 @@
     <span class="md-ellipsis">
       
         call_site
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.NPlusOne.project_call_site" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        project_call_site
       
     </span>
   </a>
@@ -2121,6 +2143,62 @@
     <span class="md-ellipsis">
       
         capture_stack
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.in_project_tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        in_project_tree
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="in_project_tree">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.in_project_tree.in_project_tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        in_project_tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.relative_to_cwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relative_to_cwd
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="relative_to_cwd">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.relative_to_cwd.relative_to_cwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relative_to_cwd
       
     </span>
   </a>
@@ -2673,6 +2751,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#django_query_contract.QueryRecord.project_call_site" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        project_call_site
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2761,6 +2850,17 @@
     <span class="md-ellipsis">
       
         call_site
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.NPlusOne.project_call_site" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        project_call_site
       
     </span>
   </a>
@@ -4111,6 +4211,62 @@
     <span class="md-ellipsis">
       
         capture_stack
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.in_project_tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        in_project_tree
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="in_project_tree">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.in_project_tree.in_project_tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        in_project_tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#django_query_contract.relative_to_cwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relative_to_cwd
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="relative_to_cwd">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#django_query_contract.relative_to_cwd.relative_to_cwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relative_to_cwd
       
     </span>
   </a>
@@ -5015,6 +5171,35 @@ never disagree about where they came from.</p>
 
 </div>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.QueryRecord.project_call_site" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">project_call_site</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.QueryRecord.project_call_site" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">project_call_site</span><span class="p">:</span> <span class="n">StackFrame</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The innermost frame that is the reader's own: the line to go and edit.</p>
+<p>The companion to :attr:<code>call_site</code>, and here for the reason that one
+names the helper it shares: an :class:<code>~django_query_contract.NPlusOne</code>
+answers this the same way through the same walk, so a finding and the
+records inside it cannot disagree about which frame is the project's.</p>
+<p><code>None</code> when no frame in the window is the reader's.</p>
+
+    </div>
+
+</div>
+
 
 
 
@@ -5302,6 +5487,46 @@ tunable is how a detector starts being wrong.</p>
 <p><code>None</code> when the stack reaches no such frame, which in practice means
 it was truncated below the caller. Reported rather than approximated,
 for the reason <code>QueryRecord.call_site</code> gives.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="django_query_contract.NPlusOne.project_call_site" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">project_call_site</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#django_query_contract.NPlusOne.project_call_site" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">project_call_site</span><span class="p">:</span> <span class="n">StackFrame</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The innermost frame that is the reader's own: the line to go and edit.</p>
+<p><code>call_site</code> answers <em>what asked for this query</em> and is the innermost
+frame outside Django, which is the right answer to that question and
+sometimes a useless address. A query issued under <code>transaction.atomic</code>
+used as a decorator reaches the database through <code>contextlib</code>; a
+library that monkeypatches the ORM puts itself there instead. Both are
+truthful, neither is a line anybody edits, and a savepoint loop reported
+against <code>contextlib.py</code> reads like a bug in the standard library.</p>
+<p>This is the other question -- <em>where do I go and look</em> -- and the two are
+the same frame whenever the innermost non-Django frame is already the
+reader's, which is the ordinary case.</p>
+<p><code>None</code> when no frame in the window is the reader's: a stack truncated
+below the caller, or a repetition genuinely internal to a dependency.
+Reported rather than approximated, for the reason <code>call_site</code> gives.</p>
+<p>A consumer writing its own report needed this and had to build it, which
+put the definition of "our code" in two places that could disagree about
+one finding from one capture.</p>
 
     </div>
 
@@ -9671,6 +9896,154 @@ so truncation is reported rather than absorbed.</p>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="django_query_contract.in_project_tree" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">in_project_tree</span>
+
+
+<a href="#django_query_contract.in_project_tree" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Whether a captured frame is code the reader can edit.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.in_project_tree.in_project_tree" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">in_project_tree</span>
+
+
+<a href="#django_query_contract.in_project_tree.in_project_tree" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">in_project_tree</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">StackFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether this frame is code the reader can edit, rather than a dependency.</p>
+<p><strong>A display rule, and it must stay one.</strong> Which frames matter is exactly the
+judgement that becomes a knob, and a knob in a detector's identity is how
+the four dead N+1 detectors came to cry wolf -- so no finding is created,
+merged, dropped or renamed by this. It decides the order two findings are
+printed in and nothing else.</p>
+<p>The question it exists for is not the one a finding answers. A finding says
+<em>this statement repeated from this path</em>, and every statement is in scope for
+that. A run-wide listing says <em>what should I go and fix</em>, and inherits an
+ordering -- raw repetition count -- under which any library that loops
+outranks every defect in the project. Measured on a consumer's suite: 158
+findings, and none of the ones it had room to print were in the application.</p>
+<p>The rule is the working directory minus installed packages, and it is
+deliberately that crude: no project root setting, no package name, nothing
+to configure and so nothing to be wrong about. A frame with no filename we
+can place is treated as <strong>not</strong> the project's, which is the safe direction
+-- it keeps an unplaceable finding out of the section a reader is told to
+act on.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="django_query_contract.relative_to_cwd" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">relative_to_cwd</span>
+
+
+<a href="#django_query_contract.relative_to_cwd" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Render a call site against the working directory.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="django_query_contract.relative_to_cwd.relative_to_cwd" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">relative_to_cwd</span>
+
+
+<a href="#django_query_contract.relative_to_cwd.relative_to_cwd" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">relative_to_cwd</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Shorten a rendered call site to a path relative to the working directory.</p>
+<p>Only when it is under it: <code>os.path.relpath</code> will happily walk out of the
+tree with a row of <code>..</code> segments, which is longer than the absolute path
+and harder to read.</p>
+<p>Here for the same reason as the frame choice above. Two renderings name a
+call site now -- a finding's block and an attribution's -- and a reader
+shown one path abbreviated and the other absolute would reasonably wonder
+whether they were the same file.</p>
 
 
     </div>
