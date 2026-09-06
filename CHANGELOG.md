@@ -35,6 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   frame in the stack passes under either. There is now one with two at different
   depths, which is the only kind that can hold it.
 
+### Changed
+
+- **The `django-data-shape` dev floor is `>=0.21.0`**, and the lock moved with
+  it. Nothing here needs a call the old floor could not resolve -- it is a dev
+  dependency and makes no claim to a consumer -- but the lock had been resolving
+  **0.13.0**, eight releases behind, so the plan assertions were being measured
+  against a build of the shaped world nobody had looked at in a while. A
+  first-party sibling is the one bump the dependency bot never proposes, which
+  is what lets a lock drift that far without anything going red.
+
 ### Fixed
 
 - **The run-wide listing filed a defect of your own under a heading saying you
