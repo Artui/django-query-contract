@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`in_project_tree` and `relative_to_cwd` are public.** 0.9.0 introduced the
+  rule "the working directory minus installed packages" to section the run-wide
+  `--n-plus-one` listing, and kept it private -- so a consumer writing its own
+  report reimplemented both, and the definition of "our code" came to exist in
+  two places that can disagree about one finding from one capture. `utils.py`
+  already carried the rule that a record, a finding and an attribution must not
+  disagree about where a statement came from; a consumer is one more reader of
+  the same answer, and a rule the package sections its own output by is part of
+  the interface whether or not it is exported.
+
+- **`NPlusOne.project_call_site` and `QueryRecord.project_call_site`**: the
+  innermost frame that is the reader's own, where `call_site` is the innermost
+  frame outside *Django*. The two answer different questions -- *what asked for
+  this query* and *where do I go and look* -- and are the same frame in the
+  ordinary case. They diverge exactly where the existing answer was useless: a
+  query issued under `transaction.atomic` used as a decorator is asked for by
+  `contextlib`, and a library that monkeypatches the ORM in place puts itself
+  there.
+
+  The walk is shared with `call_site` rather than written twice, and it goes
+  from the innermost end. That direction is the whole trap:
+  `capture_stack` keeps the innermost frames and orders them **outermost-first**,
+  so both directions produce plausible output, and every test with one project
+  frame in the stack passes under either. There is now one with two at different
+  depths, which is the only kind that can hold it.
+
+### Fixed
+
+- **The run-wide listing filed a defect of your own under a heading saying you
+  could not fix it.** A finding whose call site is outside the working tree was
+  printed under `N inside installed packages, which you cannot fix from here`,
+  and both halves of that were wrong for the same case: `contextlib` is the
+  standard library rather than anything the reader installed, and a loop that
+  opens a transaction per iteration is theirs to fix. The heading is now
+  `N outside your working tree`, which claims only what the rule checks.
+
+  Findings there also name the frame they were reached from when one exists and
+  differs from the call site, so the line to edit is on the screen even when the
+  line that asked is not. Only when they differ: a report that said one thing
+  twice on every finding would train a reader to skip the line on the findings
+  where it matters.
+
+  **The sectioning itself still keys on the call site**, and that is deliberate
+  rather than unfinished. "Any frame of yours anywhere in the stack" is every
+  finding a test runner ever produces, because the test function is always
+  yours -- it would put all 158 of the measured consumer's findings back into
+  one list and buy nothing.
+
 ## [0.9.0] — 2026-09-05
 
 ### Changed

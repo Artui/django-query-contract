@@ -200,16 +200,19 @@ It changes no outcome: a run with the flag exits exactly as it would without it.
 
 #### Your own code first, and only in the listing
 
-The listing is sectioned by whether a finding's call site is in your own tree or
-inside an installed package:
+The listing is sectioned by whether a finding's call site is inside your working
+tree:
 
 ```
 158 N+1 finding(s), most repeated first:
   3 in your own code:
   2 x  from shop/views.py:31 in author_list
        ...
-  155 inside installed packages, which you cannot fix from here:
+  155 outside your working tree:
   16 x  from django_data_shape/apply_statistics_targets.py:81
+       ...
+  4 x  from contextlib.py:84 in inner
+       reached from shop/services.py:52 in charge
        ...
 ```
 
@@ -228,11 +231,27 @@ line and is structurally identical to the defect -- which is exactly why this
 package reports it rather than exempting it. It is just not the half you can
 act on, so it does not get the first screen.
 
-The rule is the working directory minus installed packages: no project root
-setting, no package list, nothing to configure and so nothing to be wrong about.
-A finding whose call site cannot be placed -- a stack that is entirely Django's
-has none at all -- counts as not yours, which keeps a line you cannot find out
-of the section you are being told to act on.
+The rule is [`in_project_tree`][django_query_contract.in_project_tree], and it is
+public precisely so that your own reports and this listing cannot disagree about
+one finding from one capture. It is the working directory minus installed
+packages: no project root setting, no package list, nothing to configure and so
+nothing to be wrong about. A finding whose call site cannot be placed -- a stack
+that is entirely Django's has none at all -- counts as not yours, which keeps a
+line you cannot find out of the section you are being told to act on.
+
+**A finding outside your tree can still be yours to fix**, which is why the
+heading no longer claims otherwise. `transaction.atomic` used as a decorator
+issues its savepoints through `contextlib`, so a loop that opens a transaction
+per iteration is a real defect in your code whose *call site* is the standard
+library. Those findings name the frame they were reached from --
+[`project_call_site`][django_query_contract.NPlusOne], the innermost frame that
+is yours -- so the line to edit is on the screen even when the line that asked
+is not.
+
+The sectioning itself still keys on the call site, and deliberately: "any frame
+of yours anywhere in the stack" is every finding a test runner ever produces,
+since the test function is always yours. That rule would put all 158 back in one
+list and buy nothing.
 
 This stays firmly on the display side. Which frames matter is exactly the
 judgement that becomes a knob, and a knob in a detector's *identity* is how the

@@ -6,7 +6,10 @@ from dataclasses import dataclass, field
 
 from django_query_contract.query_plan import QueryPlan
 from django_query_contract.stack_frame import StackFrame
-from django_query_contract.utils import innermost_frame_outside_django
+from django_query_contract.utils import (
+    innermost_frame_in_project,
+    innermost_frame_outside_django,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,3 +115,16 @@ class QueryRecord:
         never disagree about where they came from.
         """
         return innermost_frame_outside_django(self.stack)
+
+    @property
+    def project_call_site(self) -> StackFrame | None:
+        """The innermost frame that is the reader's own: the line to go and edit.
+
+        The companion to :attr:`call_site`, and here for the reason that one
+        names the helper it shares: an :class:`~django_query_contract.NPlusOne`
+        answers this the same way through the same walk, so a finding and the
+        records inside it cannot disagree about which frame is the project's.
+
+        ``None`` when no frame in the window is the reader's.
+        """
+        return innermost_frame_in_project(self.stack)

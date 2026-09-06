@@ -167,7 +167,7 @@ def test_findings_in_your_own_code_come_first_however_small(tmp_path: Path) -> N
 
     assert "2 N+1 finding(s), most repeated first:" in summary
     assert "1 in your own code:" in summary
-    assert "1 inside installed packages, which you cannot fix from here:" in summary
+    assert "1 outside your working tree:" in summary
     # Ordering, not filtering: the forty-times one is still reported in full.
     assert "40 x  from " in summary
     assert summary.index("shop/views.py") < summary.index("relay.py")
@@ -182,7 +182,7 @@ def test_a_run_with_only_dependency_findings_is_not_given_a_heading() -> None:
     )
 
     assert "in your own code" not in summary
-    assert "inside installed packages" not in summary
+    assert "outside your working tree" not in summary
     assert "3 x  from " in summary
 
 
@@ -219,7 +219,7 @@ def test_a_finding_with_no_placeable_call_site_is_not_called_yours() -> None:
     )
 
     assert "1 in your own code:" in summary
-    assert "1 inside installed packages, which you cannot fix from here:" in summary
+    assert "1 outside your working tree:" in summary
     # The project's one-repetition finding is printed above the heading that
     # introduces the forty-repetition one nobody can place.
-    assert summary.index("shop/views.py") < summary.index("inside installed packages")
+    assert summary.index("shop/views.py") < summary.index("outside your working tree")

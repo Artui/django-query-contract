@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from django_query_contract.attribution import Attribution
-from django_query_contract.utils import relative_to_cwd, shorten
+from django_query_contract.relative_to_cwd import relative_to_cwd
+from django_query_contract.utils import shorten
 
 # Why this differs from the sentence ``format_n_plus_one`` prints in the same
 # position. A finding can only ever hold records that had a stack -- the

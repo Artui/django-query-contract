@@ -6,7 +6,10 @@ from dataclasses import dataclass
 
 from django_query_contract.query_record import QueryRecord
 from django_query_contract.stack_frame import StackFrame
-from django_query_contract.utils import innermost_frame_outside_django
+from django_query_contract.utils import (
+    innermost_frame_in_project,
+    innermost_frame_outside_django,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +107,32 @@ class NPlusOne:
         for the reason ``QueryRecord.call_site`` gives.
         """
         return innermost_frame_outside_django(self.stack)
+
+    @property
+    def project_call_site(self) -> StackFrame | None:
+        """The innermost frame that is the reader's own: the line to go and edit.
+
+        ``call_site`` answers *what asked for this query* and is the innermost
+        frame outside Django, which is the right answer to that question and
+        sometimes a useless address. A query issued under ``transaction.atomic``
+        used as a decorator reaches the database through ``contextlib``; a
+        library that monkeypatches the ORM puts itself there instead. Both are
+        truthful, neither is a line anybody edits, and a savepoint loop reported
+        against ``contextlib.py`` reads like a bug in the standard library.
+
+        This is the other question -- *where do I go and look* -- and the two are
+        the same frame whenever the innermost non-Django frame is already the
+        reader's, which is the ordinary case.
+
+        ``None`` when no frame in the window is the reader's: a stack truncated
+        below the caller, or a repetition genuinely internal to a dependency.
+        Reported rather than approximated, for the reason ``call_site`` gives.
+
+        A consumer writing its own report needed this and had to build it, which
+        put the definition of "our code" in two places that could disagree about
+        one finding from one capture.
+        """
+        return innermost_frame_in_project(self.stack)
 
     @property
     def aliases(self) -> tuple[str, ...]:

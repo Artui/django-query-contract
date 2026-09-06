@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 from django_query_contract.format_n_plus_one import format_n_plus_one
+from django_query_contract.in_project_tree import in_project_tree
 from django_query_contract.n_plus_one import NPlusOne
-from django_query_contract.utils import in_project_tree
 
 
 def format_n_plus_one_summary(
@@ -66,13 +66,21 @@ def format_n_plus_one_summary(
 
     if theirs:
         if yours:
-            # Named rather than hidden. A repetition inside a dependency is a
+            # Named rather than hidden. A repetition outside the tree is a
             # real one and worth seeing once -- a batched bulk_create is one
-            # shape run a hundred times from one line -- it is just not what the
-            # reader can act on, and the budget belongs to the half they can.
-            lines.append(
-                f"  {len(theirs)} inside installed packages, which you cannot fix from here:"
-            )
+            # shape run a hundred times from one line -- it is just not usually
+            # what the reader acts on, and the budget belongs to the half that
+            # is.
+            #
+            # "outside your working tree" rather than "inside installed
+            # packages", which was untrue twice over. The standard library is
+            # neither Django nor anything the reader installed, and a query
+            # issued under `transaction.atomic` as a decorator arrives through
+            # `contextlib` -- so a savepoint loop written by the reader was
+            # filed here under a heading telling them they could not fix it.
+            # Each finding now names the frame it was reached from, which is
+            # where that loop actually is.
+            lines.append(f"  {len(theirs)} outside your working tree:")
         lines.extend(
             _section(theirs, max_findings=max(max_findings - len(yours), 1), max_sql=max_sql)
         )
