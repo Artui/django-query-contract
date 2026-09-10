@@ -12,7 +12,7 @@ every plan is parsed from a payload, so both are covered by passing a vendor or
 a payload rather than by running the suite on the backend being refused. What
 that cannot cover is whether ``EXPLAIN`` actually works against a real server,
 which is what ``QUERY_CONTRACT_TEST_DATABASE=postgres`` is for: it points the
-default connection at PostgreSQL and lets ``tests/test_plan_capture_postgres.py``
+default connection at PostgreSQL and lets ``tests/capture/test_plan_capture_postgres.py``
 run for real. That job carries no coverage gate; this one does.
 """
 

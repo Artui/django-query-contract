@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The package is grouped into five subpackages, and the public API is
+  untouched.** Every module has moved out of the package root into `types/`,
+  `capture/`, `source_location/`, `analysis/` or `reporting/`; the root now
+  holds `__init__.py`, `version.py`, `utils.py` and `plugin.py` and nothing
+  else. `__all__` is byte-for-byte the same list in the same order, every symbol
+  is imported from `django_query_contract` exactly as before, and no signature,
+  name or behaviour changed. A consumer reaching past the top-level package for
+  a module path -- `django_query_contract.query_record` rather than
+  `django_query_contract.QueryRecord` -- has to add the subpackage; nothing else
+  moves.
+
+  The layout is now a test rather than a paragraph. Six structural rules were in
+  force and every one of them was obeyed, because every one of them governed a
+  *file*: one symbol per module, a `snake_case` name, top-level imports,
+  annotations everywhere. None of them said anything about a directory, so the
+  package grew to **38 modules in one flat root** with no rule broken and
+  nothing to notice. `tests/test_package_layout.py` asserts the root allowlist
+  and asserts that no name is used both at the root and inside a subpackage.
+
 ## [0.10.0] — 2026-09-06
 
 ### Added
