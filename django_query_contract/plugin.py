@@ -30,14 +30,14 @@ from django.conf import settings
 from django.db import connections
 from pluggy import Result
 
-from django_query_contract.find_n_plus_one import find_n_plus_one
-from django_query_contract.format_capture_report import format_capture_report
-from django_query_contract.format_n_plus_one_summary import format_n_plus_one_summary
-from django_query_contract.format_query_plans import format_query_plans
-from django_query_contract.n_plus_one import NPlusOne
-from django_query_contract.plan_capture import PlanCapture
-from django_query_contract.query_capture import QueryCapture
-from django_query_contract.query_log_ceiling_warning import QueryLogCeilingWarning
+from django_query_contract.analysis.find_n_plus_one import find_n_plus_one
+from django_query_contract.capture.plan_capture import PlanCapture
+from django_query_contract.capture.query_capture import QueryCapture
+from django_query_contract.capture.query_log_ceiling_warning import QueryLogCeilingWarning
+from django_query_contract.reporting.format_capture_report import format_capture_report
+from django_query_contract.reporting.format_n_plus_one_summary import format_n_plus_one_summary
+from django_query_contract.reporting.format_query_plans import format_query_plans
+from django_query_contract.types.n_plus_one import NPlusOne
 from django_query_contract.utils import DEFAULT_STACK_DEPTH
 
 _CAPTURE_KEY = pytest.StashKey[QueryCapture]()

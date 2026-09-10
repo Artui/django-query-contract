@@ -12,7 +12,7 @@ named above each.
 **A test double standing in for a wire format agrees with whatever the double
 says**, which is how a parser stays green against a shape no server produces. Two
 things keep these honest. They were not typed: they are the server's own JSON,
-copied out. And ``tests/test_plan_capture_postgres.py`` asserts against a *live*
+copied out. And ``tests/capture/test_plan_capture_postgres.py`` asserts against a *live*
 plan that every field the parser fills in is one a real server still writes, so a
 key renamed upstream fails there rather than agreeing with itself here.
 
@@ -368,7 +368,7 @@ def tail_join() -> list[dict[str, Any]]:
     visible: a second real capture would differ in buffer counts and costs as
     well, and this pair exists to show that **one** number moved while the
     estimate did not. The live pair, differing in everything, is asserted in
-    ``tests/test_plan_capture_postgres.py``.
+    ``tests/capture/test_plan_capture_postgres.py``.
 
     A function rather than a constant because the payloads here are mutable and a
     module-level copy would be shared between the tests that read it.

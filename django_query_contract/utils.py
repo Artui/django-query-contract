@@ -14,8 +14,8 @@ from typing import TypeAlias
 
 import django
 
-from django_query_contract.in_project_tree import in_project_tree
-from django_query_contract.stack_frame import StackFrame
+from django_query_contract.source_location.in_project_tree import in_project_tree
+from django_query_contract.types.stack_frame import StackFrame
 
 # Measured rather than guessed: six frames separate ``cursor.execute`` from the
 # line that iterated a queryset, so twenty-five leaves nineteen for whatever

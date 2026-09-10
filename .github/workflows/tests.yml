@@ -246,7 +246,7 @@ jobs:
       - name: Assert the plan tests actually ran
         run: |
           set -euo pipefail
-          uv run --no-sync pytest tests/test_plan_capture_postgres.py \
+          uv run --no-sync pytest tests/capture/test_plan_capture_postgres.py \
             --cov-fail-under=0 -q --no-header | tee result.txt
           if grep -q "skipped" result.txt; then
             echo "The plan tests skipped, so this job proved nothing about PostgreSQL."

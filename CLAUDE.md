@@ -61,6 +61,43 @@ make docs-build    # mkdocs build --strict
 - `__init__.py` is the only re-export point, and holds no logic.
 - Every annotated module starts with `from __future__ import annotations`. Ruff's
   `required-imports` enforces this rather than leaving it to memory.
+- **The package root is a table of contents, not a drawer.** It holds
+  `__init__.py`, `version.py`, `utils.py` and `plugin.py`, and nothing else.
+  Everything the package *does* lives in a subpackage:
+
+  | Subpackage | Concern |
+  | --- | --- |
+  | `types/` | The value shapes, and only those: a dataclass or an enum, its invariants, and arithmetic over its own fields. |
+  | `capture/` | Producing a capture. Everything riding on `connection.execute_wrapper`, plus the refusal and the warning it raises. |
+  | `source_location/` | Where a statement came from and how that address is written down. |
+  | `analysis/` | Reading a capture back: `find_`, `group_by_`, `measure_` and the one `assert_`. |
+  | `reporting/` | Rendering any of it as text. Nothing here decides anything. |
+
+  Four rules govern that table. **A subpackage is named for a concern, not a
+  kind of thing** -- `helpers/`, `core/`, `common/` name nothing and become a
+  flat root one level down. **Three modules on one concern earn a directory**;
+  below three, fold them into the nearest concern rather than opening a
+  directory for two. **`types/` is the one standing subpackage** and takes every
+  value carrier. And **a subpackage `__init__.py` carries a docstring and no
+  imports** -- the rule above says the package `__init__.py` is the only
+  re-export point, and here that also avoids a cycle, because
+  `types/growth_point.py` reads a `QueryCapture` while `capture/query_capture.py`
+  reads three `types/` modules.
+
+  `plugin.py` is the one behaviour module at the root, for the reason in the
+  first rule: pytest finds hooks by name in a module. `utils.py` is at the root
+  because more than one subpackage must agree on what it holds.
+
+  **This is a gate, not a convention.** `tests/test_package_layout.py` asserts
+  the root allowlist and asserts that no name appears both at the root and
+  inside a subpackage. It exists because the six rules above are all about
+  *files*, every one of them was obeyed, and the package still reached
+  **38 modules in one flat root** with nothing broken. A structural rule that
+  only exists as prose is obeyed exactly as far as somebody remembers it.
+
+  **Adding a name to the root allowlist is a structural decision and reads like
+  one**; adding a module to a subpackage is not, and reads like nothing. Keep
+  that asymmetry: it is the whole mechanism.
 
 ## Public API naming
 
@@ -138,7 +175,7 @@ It is frozen at `1.0`.
   moment a frame rule reaches an identity it is a knob, and a knob in an
   identity is how the four dead detectors came to cry wolf. The distinction is
   stated in `Attribution`, in `group_by_call_site`, and in
-  `docs/attribution.md`; a test in `test_group_by_call_site.py` runs one capture
+  `docs/attribution.md`; a test in `tests/analysis/test_group_by_call_site.py` runs one capture
   through both readings and pins that they disagree.
   **The identity is really the innermost `stack_depth` frames**, which is the one
   place it can be wrong. Under pytest a query from a test function is 38 frames
@@ -174,7 +211,11 @@ It is frozen at `1.0`.
 ## Adding a feature
 
 Write the test first, watch it fail, then implement. A new public symbol gets its
-own module, a re-export in `__init__.py`, and a docs entry.
+own module **inside the subpackage whose concern it belongs to**, a re-export in
+the package's `__init__.py`, a docs entry, and a test under the mirroring
+directory in `tests/`. The root is not an option: `test_package_layout.py`
+rejects it, and the fix is to name the concern rather than to widen the
+allowlist.
 
 ## Tests
 
@@ -204,7 +245,7 @@ own module, a re-export in `__init__.py`, and a docs entry.
   stays shut through teardown.
 - **Run the suite against PostgreSQL too when anything touches plan capture.**
   `QUERY_CONTRACT_TEST_DATABASE=postgres PGHOST=... uv run --no-sync pytest`.
-  `tests/test_plan_capture_postgres.py` skips itself everywhere else, so a green
+  `tests/capture/test_plan_capture_postgres.py` skips itself everywhere else, so a green
   default run proves nothing about it -- and the default `other` alias stays
   SQLite on that run on purpose, which is what drives the "one of these
   connections cannot produce a plan" refusal through a real registry.
@@ -216,7 +257,7 @@ own module, a re-export in `__init__.py`, and a docs entry.
   resolution and reproduced immediately at the floor.
 - **A test that asserts a query count must assert the count, never a duration.**
 - The ceiling is falsified at the real limit once, in
-  `test_query_capture.py::test_the_ceiling_is_real`, and at a shrunken limit
+  `tests/capture/test_query_capture.py::test_the_ceiling_is_real`, and at a shrunken limit
   everywhere else through the `tiny_query_log` fixture. Keep that split: the
   expensive test is what makes the cheap ones honest.
 

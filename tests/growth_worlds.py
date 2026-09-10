@@ -29,7 +29,7 @@ from types import SimpleNamespace
 from django.db import transaction
 
 from django_query_contract import QueryCapture
-from django_query_contract.growth_point import GrowthPoint
+from django_query_contract.types.growth_point import GrowthPoint
 from tests.testapp.models import Author, Book
 
 
