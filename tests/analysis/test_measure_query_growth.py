@@ -17,7 +17,7 @@ from tests.growth_worlds import (
     row_by_row_world,
     sizeless_world,
 )
-from tests.testapp.models import Author
+from tests.testapp.models import Author, Customer
 
 pytestmark = pytest.mark.django_db
 
@@ -96,25 +96,50 @@ def test_the_worlds_own_statements_are_not_in_the_counts() -> None:
     assert from_outside[0] < from_outside[1]
 
 
-def test_a_warm_up_runs_once_inside_the_first_world_and_is_not_counted() -> None:
+def test_a_warm_up_runs_once_inside_every_world_and_is_not_counted() -> None:
     """The one flake a growth assertion has, and the argument that answers it.
 
     A block whose first run fills a per-process cache emits an extra statement
     at whichever factor ran first, so the same test passes or fails on whether
-    an earlier test happened to fill it. The warm-up runs inside the first world
-    -- it may need rows to exist -- before the capture opens, so what it costs
-    lands in no measurement.
+    an earlier test happened to fill it. The warm-up runs inside each world --
+    it may need rows to exist -- before that world's capture opens, so what it
+    costs lands in no measurement. Three factors rather than two, because the
+    claim is "every world", and two would also be satisfied by a warm-up that
+    ran in the first world and the last.
     """
     seen: list[int] = []
 
     def warm_up() -> None:
         seen.append(Author.objects.count())
 
-    measured = measure_query_growth(author_world, count_authors, factors=(1, 2), warm_up=warm_up)
+    measured = measure_query_growth(author_world, count_authors, factors=(1, 2, 5), warm_up=warm_up)
 
-    assert len(seen) == 1
-    assert seen[0] == 2
-    assert measured.counts == (1, 1)
+    assert seen == [2, 4, 10]
+    assert measured.counts == (1, 1, 1)
+
+
+def test_a_warm_up_that_writes_a_row_is_not_undone_for_the_next_world() -> None:
+    """A world torn down by a rollback takes the warm-up's row with it.
+
+    ``author_world`` ends in a rollback, as ``django_data_shape.scaled_world``
+    does. A block whose first call *writes* -- a session row on the first
+    request after login, here a ``get_or_create`` -- has its warm-up undone with
+    the first world, so a warm-up run only there leaves every later world to pay
+    the write inside its capture, and a flat block reads as growth: ``(2, 5)``,
+    the lookup plus the savepoint, insert and release a miss costs. Run in every
+    world, the warm-up leaves each measurement the run after exactly one
+    unmeasured run in that world, and the counts match.
+    """
+
+    def first_call_writes() -> None:
+        Customer.objects.get_or_create(name="seen")
+        list(Author.objects.all())
+
+    measured = measure_query_growth(
+        author_world, first_call_writes, warm_up=first_call_writes, factors=(1, 10)
+    )
+
+    assert measured.counts == (2, 2)
 
 
 def test_the_factors_run_in_the_order_they_were_given() -> None:

@@ -74,9 +74,10 @@ def assert_query_growth(
         factors: The sizes to measure, strictly ascending, at least two.
         using: Which connections to capture. Every configured one by default.
         stack_depth: Frames kept per statement.
-        warm_up: Run once inside the first world before the first measurement
-            and not captured, for a block whose first run fills a per-process
-            cache. ``warm_up=block`` is the usual form.
+        warm_up: Run once inside every world, before its capture opens, and
+            never captured -- for a block whose first call costs more than the
+            rest: a per-process cache it fills, or a row it writes that the
+            world's teardown undoes. ``warm_up=block`` is the usual form.
 
     Returns:
         The measurement, so a passing test can go on to read the curve or the

@@ -74,7 +74,23 @@ def measure_query_growth(
     settings read -- emits one statement more at the factor that ran first, and
     a suite where an earlier test happened to fill that cache passes while a
     suite that runs this test alone fails. That is the ``warm_up`` argument, and
-    the usual value for it is ``block`` itself.
+    the usual value for it is ``block`` itself. Its second cause is the warm-up's
+    own: one whose effect is database state rather than a cache is undone by the
+    world's teardown, which is why it runs in every world.
+
+    **The warm-up runs in every world, because a first call's extra cost is not
+    always a cache.** A session row written on the first request after login is
+    *database state*, and a world torn down by a rollback, as
+    ``django_data_shape.scaled_world`` is, undoes a warm-up's row along with its
+    own. Warmed in the first world only, the first point would be a warm run and
+    every later point a cold one paying that write inside its capture, and a
+    flat block would read as growth. So the warm-up runs after each world is
+    entered and before that world's capture opens, counted in none of them, and
+    every point is the same measurement: the run that follows exactly one
+    unmeasured run in the same world. The points then differ in the size of the
+    world and in nothing else, which is the claim a comparison between them
+    makes. A per-process cache simply stays warm from one world to the next. The
+    cost is one more run of the warm-up per world, uncounted.
 
     Args:
         world: How to make the world be a given size:
@@ -96,9 +112,11 @@ def measure_query_growth(
             a growth run captures the block once per factor, so the largest
             world sets the cost and a block that is genuinely ``O(N)`` may
             capture thousands of statements.
-        warm_up: Run once inside the first world, before the first measurement,
-            and not captured. For a block whose first run fills a per-process
-            cache. ``warm_up=block`` is the usual form.
+        warm_up: Run once inside every world, after entering it and before its
+            capture opens, and never captured. For a block whose first call
+            costs more than the rest: a per-process cache it fills, or a row it
+            writes that the world's teardown undoes. ``warm_up=block`` is the
+            usual form.
 
     Returns:
         The curve, one :class:`~django_query_contract.GrowthPoint` per factor.
@@ -109,15 +127,14 @@ def measure_query_growth(
     """
     checked = _checked_factors(factors)
     points: list[GrowthPoint] = []
-    # Consumed by the first world rather than tested against a loop index, so
-    # the branch is "is there still a warm-up owed" and not "which iteration is
-    # this" -- one condition, and it stays right if the loop ever changes shape.
-    owed_warm_up = warm_up
     for factor in checked:
         with world(factor) as rows:
-            if owed_warm_up is not None:
-                owed_warm_up()
-                owed_warm_up = None
+            # Inside the world, so it can need the rows; before the capture, so
+            # it is counted nowhere; and in *every* world rather than the first,
+            # because a world undone by a rollback undoes a warm-up whose effect
+            # is a row along with it. The docstring has the whole argument.
+            if warm_up is not None:
+                warm_up()
             capture = QueryCapture(using=using, stack_depth=stack_depth)
             with capture:
                 block()
