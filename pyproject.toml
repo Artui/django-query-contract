@@ -96,7 +96,7 @@ dev = [
     # cannot drift silently -- it had been resolving an eight-release-old build
     # of the world these plan assertions are measured against, because a
     # first-party sibling is the one bump the dependency bot never proposes.
-    "django-data-shape[pytest]>=0.21.0",
+    "django-data-shape[pytest]>=0.22.0",
 ]
 docs = [
     "mkdocs>=1.6.0",
