@@ -428,15 +428,15 @@ wheels = [
 
 [[package]]
 name = "django-data-shape"
-version = "0.21.0"
+version = "0.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django", version = "5.2.17", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "django", version = "6.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/44/9e9c4b538416d94e63b82108c4ea7d32d8fce0a3b9b443535b07faff832d/django_data_shape-0.21.0.tar.gz", hash = "sha256:a543d96e1cf183f55f6546de5d6faa6b1a80bfa1e61193970f3cd501680a29db", size = 449775, upload-time = "2026-09-06T11:44:50.04Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/84/f2f71516c526a9c68861c671f22c4a1ea0e79c70b75adacd04ecef059077/django_data_shape-0.22.0.tar.gz", hash = "sha256:91cd4ecba4da35785f4ca90caff6f76a2dfa54a9315e7c938af7377e84756b98", size = 537477, upload-time = "2026-10-07T20:10:56.251Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/93/af9f81deb262237116ef6a6c1c21b7ac2012c4b7de240a56402f501ed540/django_data_shape-0.21.0-py3-none-any.whl", hash = "sha256:551bb61b2a0baff5aeb88882d4e3c691afd2fe6e2d98f30852eee992b7b810f9", size = 195601, upload-time = "2026-09-06T11:44:48.348Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/49/73a954e97e1338c344e6d80ee030ba291263f3ea7bc1c6c58c872e8b0d94/django_data_shape-0.22.0-py3-none-any.whl", hash = "sha256:add5d6cb528c569acc1b28b2c2a9af68fd1a172863a465c425d1fd78162cc77a", size = 231317, upload-time = "2026-10-07T20:10:54.658Z" },
 ]
 
 [package.optional-dependencies]
@@ -479,7 +479,7 @@ requires-dist = [{ name = "django", specifier = ">=4.2" }]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "django-data-shape", extras = ["pytest"], specifier = ">=0.21.0" },
+    { name = "django-data-shape", extras = ["pytest"], specifier = ">=0.22.0" },
     { name = "django-stubs", specifier = ">=5.1.0" },
     { name = "flake8-tidy-imports", specifier = ">=4.12.0" },
     { name = "pre-commit", specifier = ">=4.0.0" },

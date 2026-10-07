@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-10-07
+
 ### Changed
 
 - **The package is grouped into five subpackages, and the public API is
@@ -703,7 +705,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stacks, no parameter counts and no ceiling, because a count taken from a
   rotated deque cannot report what it dropped.
 
-[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/Artui/django-query-contract/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/Artui/django-query-contract/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Artui/django-query-contract/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Artui/django-query-contract/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Artui/django-query-contract/compare/v0.7.0...v0.8.0
