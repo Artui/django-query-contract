@@ -214,8 +214,20 @@ def test_the_dashboard_does_not_grow(world):
     assert_query_growth(world, render, warm_up=render)
 ```
 
-It runs once inside the first world, before the first capture opens, so what it
-costs lands in no measurement.
+It runs once inside **every** world, after the world is entered and before that
+world's capture opens, so what it costs lands in no measurement.
+
+Every world rather than only the first, because **a first call's extra cost is
+not always a cache**. A session row written on the first request after login is
+database state, and a world torn down by a rollback, as
+`django_data_shape.scaled_world` is, undoes a warm-up's row along with its own.
+Warmed in the first world only, the first point would be a warm run and every
+later point a cold one paying that write inside its capture -- a flat block
+reading as growth. Run in every world, each point is the same measurement: the
+run that follows exactly one unmeasured run in the same world. The points differ
+in the size of the world and nothing else, which is the claim comparing them
+makes. A per-process cache simply stays warm from one world to the next. The
+cost is one extra, uncounted run of the warm-up per world.
 
 ## It is still not a count assertion
 

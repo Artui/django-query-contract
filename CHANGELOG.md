@@ -28,6 +28,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nothing to notice. `tests/test_package_layout.py` asserts the root allowlist
   and asserts that no name is used both at the root and inside a subpackage.
 
+### Fixed
+
+- **Capturing a query kept every caller's locals alive until the cyclic
+  garbage collector ran.** `capture_stack` held its own frame in a local and
+  never let go of it, which is a reference cycle, and a frame that outlives its
+  return keeps the whole chain of frames that called it. So every frame between
+  the query and the test, and every local in them, waited for the collector
+  rather than dying on return. `StackFrame` holds plain strings precisely so
+  that a capture keeps no ORM call's locals alive, and this one variable undid
+  that.
+
+  It surfaced as a failure in an unrelated test: a half-read server-side cursor
+  in a management command was finalized during a *later* test, sent a `CLOSE`
+  for a cursor that had died with the earlier test's rollback, and the later
+  test's transaction failed with `InFailedSqlTransaction`. Because the plugin
+  captures by default, installing the package was enough to move finalization
+  across a suite. The walk now drops both of its frame references on every
+  exit, and a test pins with the collector disabled that a caller's local is
+  freed the moment the caller returns.
+
+- **A warm-up that wrote a row warmed only the first world, so a flat block
+  could read as growth.** `warm_up` ran once, inside the first world. A world
+  torn down by a rollback -- `django_data_shape.scaled_world` is one -- undoes
+  a warm-up whose effect is a row along with everything else, so every later
+  world paid that first-call write inside its own capture. Measured by a
+  consumer: 30 statements in the first world and 32 in the second, from a
+  session written on the first request after login, against a block that does
+  not grow.
+
+  `warm_up` now runs inside **every** world, after the world is entered and
+  before its capture opens, and is still counted in none of them. Every point
+  is then the same measurement -- the run that follows exactly one unmeasured
+  run in the same world -- so the points differ in world size and nothing else,
+  which is the claim comparing them makes. A per-process cache, the case the
+  warm-up was written for, simply stays warm across worlds. There is no new
+  parameter. The cost is one extra, uncounted run of the warm-up per world.
+
 ## [0.10.0] — 2026-09-06
 
 ### Added

@@ -123,7 +123,10 @@ def test_there_is_no_way_to_assert_a_fixed_count_here() -> None:
 
 
 def test_a_warm_up_reaches_the_measurement_underneath() -> None:
-    """The flake fix has to be reachable from the assertion, not only the measurement."""
+    """The flake fix has to be reachable from the assertion, not only the measurement.
+
+    Once in each world, inside it, as the measurement runs it.
+    """
     seen: list[int] = []
 
     assert_query_growth(
@@ -133,7 +136,7 @@ def test_a_warm_up_reaches_the_measurement_underneath() -> None:
         warm_up=lambda: seen.append(Author.objects.count()),
     )
 
-    assert seen == [2]
+    assert seen == [2, 4]
 
 
 def test_the_assertion_and_the_measurement_default_to_the_same_factors() -> None:
