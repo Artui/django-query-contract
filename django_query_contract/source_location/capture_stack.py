@@ -53,21 +53,46 @@ def capture_stack(depth: int) -> tuple[tuple[StackFrame, ...], bool]:
     collected: list[StackFrame] = []
     truncated = False
     current = frame.f_back
-    while current is not None:
-        code = current.f_code
-        filename = code.co_filename
-        if not filename.startswith(_PACKAGE_ROOT):
-            if len(collected) == depth:
-                truncated = True
-                break
-            collected.append(
-                StackFrame(
-                    filename=filename,
-                    lineno=current.f_lineno,
-                    function=code.co_name,
+    # **Both frame references are dropped by hand, on every exit.** ``frame`` is
+    # this function's own frame held in its own locals: a reference cycle, the
+    # one the ``inspect`` documentation warns about. Reference counting cannot
+    # free a cycle, so the frame would outlive this call -- and a frame that
+    # outlives its return keeps its ``f_back`` link, which keeps the caller's
+    # frame, which keeps *its* caller's, so every frame between here and the
+    # test and every local in them would wait for the cyclic collector. That is
+    # exactly what ``StackFrame`` holds plain strings to avoid, and through this
+    # one variable the walk would have undone it. Nothing fails at once: a
+    # half-read server-side cursor in a caller is finalized whenever the
+    # collector next runs, which can be during a later test, closing a cursor
+    # that died with the earlier test's rollback and failing the later test's
+    # transaction. Installing the package would then change finalization timing
+    # across a suite that never asked it anything.
+    #
+    # ``frame`` is the load-bearing half, and
+    # ``test_a_capture_frees_its_callers_locals_without_the_cycle_collector``
+    # fails on both exits without it. ``current`` only ever points outward, so
+    # once the cycle is gone it dies with this frame at return and no test can
+    # tell it was deleted; it goes too so the rule reads "no frame reference
+    # outlives the walk" -- the ``break`` at the depth limit leaves it on a live
+    # frame -- rather than a rule about which reference happens to matter.
+    try:
+        while current is not None:
+            code = current.f_code
+            filename = code.co_filename
+            if not filename.startswith(_PACKAGE_ROOT):
+                if len(collected) == depth:
+                    truncated = True
+                    break
+                collected.append(
+                    StackFrame(
+                        filename=filename,
+                        lineno=current.f_lineno,
+                        function=code.co_name,
+                    )
                 )
-            )
-        current = current.f_back
+            current = current.f_back
+    finally:
+        del frame, current
 
     collected.reverse()
     return tuple(collected), truncated

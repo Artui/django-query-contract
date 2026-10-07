@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import gc
 import inspect
 import os
+import weakref
+
+import pytest
 
 import django_query_contract
-from django_query_contract import StackFrame, capture_stack
+from django_query_contract import QueryCapture, StackFrame, capture_stack
+from tests.testapp.models import Author
 
 _PACKAGE_ROOT = os.path.dirname(os.path.abspath(django_query_contract.__file__)) + os.sep
 
@@ -64,3 +69,59 @@ def test_an_interpreter_without_frames_degrades_to_no_stack(monkeypatch) -> None
     """
     monkeypatch.setattr(inspect, "currentframe", lambda: None)
     assert capture_stack(10) == ((), False)
+
+
+class _Witness:
+    """A local whose lifetime a weak reference can watch; ``object()`` takes none."""
+
+
+def _query_with_a_witness_in_a_local(depth: int) -> tuple[weakref.ref[_Witness], bool]:
+    witness = _Witness()
+    with QueryCapture(stack_depth=depth) as capture:
+        Author.objects.count()
+    (record,) = capture.records
+    return weakref.ref(witness), record.stack_truncated
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("depth", "truncated"),
+    [
+        pytest.param(10_000, False, id="walk-runs-off-the-top"),
+        pytest.param(1, True, id="walk-breaks-at-depth"),
+    ],
+)
+def test_a_capture_frees_its_callers_locals_without_the_cycle_collector(
+    depth: int, truncated: bool
+) -> None:
+    """A caller's locals die when the caller returns, not when the cyclic GC next runs.
+
+    The walk binds its own frame and the frame it is stepping through. Left
+    bound, the first is a reference cycle -- the frame holds itself through its
+    own locals -- and a frame that outlives its return keeps its ``f_back``
+    chain, so every caller's locals survive until the collector happens to run.
+    A consumer's half-read server-side cursor was finalized that way during a
+    *later* test, closing a cursor that had died with the earlier rollback and
+    failing that test's transaction.
+
+    The collector is disabled across the call so only reference counting can
+    free the witness, and the assertion runs before it is re-enabled. Both exits
+    of the walk are covered: running off the top of the stack, and the ``break``
+    at the depth limit, which leaves the stepping variable bound to a live frame.
+    ``truncated`` pins which of the two each case actually took.
+
+    The query is a ``count()`` rather than an iterated queryset on purpose. An
+    iterated queryset runs its SQL inside a generator, and on Python 3.10 a
+    generator drops its frame's ``f_back`` when it yields -- so the chain broke
+    there, the caller's frame was never kept, and this test passed against the
+    leaking walk on the oldest supported interpreter. ``count()`` reaches the
+    cursor through plain calls on every version.
+    """
+    gc.collect()
+    gc.disable()
+    try:
+        witness, was_truncated = _query_with_a_witness_in_a_local(depth)
+        assert was_truncated is truncated
+        assert witness() is None
+    finally:
+        gc.enable()
