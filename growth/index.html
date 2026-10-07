@@ -933,8 +933,19 @@ to fill that cache and fails when run alone.</p>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">assert_query_growth</span><span class="p">(</span><span class="n">world</span><span class="p">,</span> <span class="n">render</span><span class="p">,</span> <span class="n">warm_up</span><span class="o">=</span><span class="n">render</span><span class="p">)</span>
 </span></code></pre></div>
-<p>It runs once inside the first world, before the first capture opens, so what it
-costs lands in no measurement.</p>
+<p>It runs once inside <strong>every</strong> world, after the world is entered and before that
+world's capture opens, so what it costs lands in no measurement.</p>
+<p>Every world rather than only the first, because <strong>a first call's extra cost is
+not always a cache</strong>. A session row written on the first request after login is
+database state, and a world torn down by a rollback, as
+<code>django_data_shape.scaled_world</code> is, undoes a warm-up's row along with its own.
+Warmed in the first world only, the first point would be a warm run and every
+later point a cold one paying that write inside its capture -- a flat block
+reading as growth. Run in every world, each point is the same measurement: the
+run that follows exactly one unmeasured run in the same world. The points differ
+in the size of the world and nothing else, which is the claim comparing them
+makes. A per-process cache simply stays warm from one world to the next. The
+cost is one extra, uncounted run of the warm-up per world.</p>
 <h2 id="it-is-still-not-a-count-assertion">It is still not a count assertion<a class="headerlink" href="#it-is-still-not-a-count-assertion" title="Permanent link">&para;</a></h2>
 <p><code>django_assert_num_queries</code> is the count assertion, and this package
 <a href="https://github.com/Artui/django-query-contract#it-ships-no-count-assertion-on-purpose">ships no second one</a>.
