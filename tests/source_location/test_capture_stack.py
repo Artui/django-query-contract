@@ -111,11 +111,13 @@ def test_a_capture_frees_its_callers_locals_without_the_cycle_collector(
     ``truncated`` pins which of the two each case actually took.
 
     The query is a ``count()`` rather than an iterated queryset on purpose. An
-    iterated queryset runs its SQL inside a generator, and on Python 3.10 a
-    generator drops its frame's ``f_back`` when it yields -- so the chain broke
-    there, the caller's frame was never kept, and this test passed against the
-    leaking walk on the oldest supported interpreter. ``count()`` reaches the
-    cursor through plain calls on every version.
+    iterated queryset runs its SQL inside a generator, and on Python 3.10 and
+    3.11 a generator's frame lets go of its caller whenever the generator stops
+    running -- so the chain broke there, the caller's frame was never kept, and
+    this test passed against the leaking walk on both. From 3.12 a generator
+    that runs to completion is linked back to its caller, which is why the
+    iterated form fails only from there. ``count()`` reaches the cursor through
+    plain calls on every version.
     """
     gc.collect()
     gc.disable()

@@ -74,9 +74,7 @@ def measure_query_growth(
     settings read -- emits one statement more at the factor that ran first, and
     a suite where an earlier test happened to fill that cache passes while a
     suite that runs this test alone fails. That is the ``warm_up`` argument, and
-    the usual value for it is ``block`` itself. Its second cause is the warm-up's
-    own: one whose effect is database state rather than a cache is undone by the
-    world's teardown, which is why it runs in every world.
+    the usual value for it is ``block`` itself.
 
     **The warm-up runs in every world, because a first call's extra cost is not
     always a cache.** A session row written on the first request after login is
@@ -90,7 +88,8 @@ def measure_query_growth(
     unmeasured run in the same world. The points then differ in the size of the
     world and in nothing else, which is the claim a comparison between them
     makes. A per-process cache simply stays warm from one world to the next. The
-    cost is one more run of the warm-up per world, uncounted.
+    cost is one more run of the warm-up per world, uncounted -- the largest
+    world included, so with ``warm_up=block`` that world runs the block twice.
 
     Args:
         world: How to make the world be a given size:
