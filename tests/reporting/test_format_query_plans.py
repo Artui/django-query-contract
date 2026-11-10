@@ -1,11 +1,3 @@
-"""The plan report: findings first, then numbers nobody is allowed to judge.
-
-The captures here are assembled from a real server's payloads rather than taken
-from one, for the reason ``test_find_plan_defects.py`` sets out. What is being
-checked is the wording and the ordering, and both are decisions this package
-argues for at length -- so they get a test that fails when they change silently.
-"""
-
 from __future__ import annotations
 
 from django_query_contract import (
@@ -41,12 +33,7 @@ def _record(index: int, plan: QueryPlan | None, *, sql: str = _SQL, line: int = 
 
 
 def _capture(records: list[QueryRecord], *, unanalyzed: tuple[str, ...] = ()) -> PlanCapture:
-    """A closed capture holding these records.
-
-    Assembled rather than run: taking these plans needs a PostgreSQL server, and
-    this file is about what the renderer says rather than about where the plans
-    came from.
-    """
+    """A closed capture holding these records."""
     capture = PlanCapture()
     capture._records = list(records)
     capture._unanalyzed = unanalyzed
@@ -212,7 +199,6 @@ def test_a_relation_with_no_statistics_is_named_before_anything_else() -> None:
     lines = report.splitlines()
     assert "never gathered statistics for testapp_order" in lines[1]
     assert "Every plan below is a guess" in lines[2]
-    # Above the numbers, because it can invalidate all of them.
     assert lines.index([line for line in lines if "furthest out" in line][0]) > 2
 
 
@@ -247,12 +233,7 @@ def test_the_relations_block_is_capped_like_the_others() -> None:
 
 
 def test_a_block_of_nothing_but_writes_has_plans_to_count_and_no_relations_to_name() -> None:
-    """Every statement refused: there is a report, and the relations block is not in it.
-
-    A refusal carries no plan tree, so nothing in it names a table. Printing an
-    empty relations heading here would say "these plans read no relations",
-    which is true of the plans and false of the block.
-    """
+    """Every statement refused: there is a report, and the relations block is not in it."""
     report = format_query_plans(
         _capture([_record(0, QueryPlan.refused("a write was not explained."))])
     )
@@ -262,12 +243,7 @@ def test_a_block_of_nothing_but_writes_has_plans_to_count_and_no_relations_to_na
 
 
 def test_the_estimate_block_says_when_its_two_numbers_are_per_loop() -> None:
-    """The worst node here ran 299 times, so neither printed number is the whole story.
-
-    Without the second line a reader sees "expected 20 rows, 2 arrived" about the
-    inner side of a join that really produced 715 rows and discarded 17,342, and
-    has no way to tell that the two counts describe one execution of 299.
-    """
+    """The worst node here ran 299 times, so neither printed number is the whole story."""
     report = format_query_plans(_capture([_record(0, _measured(NESTED_LOOP_FILTERED_INNER))]))
 
     assert "10.0x  #0  Bitmap Heap Scan on testapp_order: expected 20 rows, 2 arrived" in report
@@ -276,14 +252,7 @@ def test_the_estimate_block_says_when_its_two_numbers_are_per_loop() -> None:
 
 
 def test_a_parallel_node_says_its_factor_reads_high_and_why() -> None:
-    """The one place a number in this report is systematically wrong, said out loud.
-
-    The estimate on a parallel-aware node was divided by the workers plus a
-    fraction of the leader; the measurement beside it was divided by the
-    processes that ran. The two divisors differ, so the factor is inflated by
-    exactly their ratio: the planner was 5.3 times out on the serial twin of this
-    statement, and the block below reads 6.6x.
-    """
+    """The one place a number in this report is systematically wrong, said out loud."""
     report = format_query_plans(_capture([_record(0, _measured(PARALLEL_SCAN))]))
 
     assert "3 loops (parallel workers)" in report
