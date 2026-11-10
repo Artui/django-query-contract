@@ -1,5 +1,3 @@
-"""Running one block against several sizes of world, and counting only the block."""
-
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -44,12 +42,7 @@ def test_the_size_of_each_world_is_reported_beside_its_count() -> None:
 
 
 def test_a_world_that_yields_nothing_still_measures() -> None:
-    """The five-line ``@contextmanager`` a project will actually write.
-
-    Nothing obliges an implementation of the seam to have counted its rows, so
-    a plain ``yield`` has to be accepted. The size is reported as unknown rather
-    than the harness refusing to measure over it.
-    """
+    """The five-line ``@contextmanager`` a project will actually write."""
     measured = measure_query_growth(sizeless_world, count_authors, factors=(1, 2))
 
     assert measured.counts == (1, 1)
@@ -57,13 +50,7 @@ def test_a_world_that_yields_nothing_still_measures() -> None:
 
 
 def test_a_world_that_yields_something_other_than_a_count_reports_no_size() -> None:
-    """Tolerated, and reported as unknown rather than printed as a repr.
-
-    Yielding the build's result object instead of its row count is the shape
-    this actually takes. The size is a diagnostic beside a count, so it is not
-    worth refusing a measurement over, and it is not worth putting an object's
-    repr in a table of numbers either.
-    """
+    """Tolerated, and reported as unknown rather than printed as a repr."""
     measured = measure_query_growth(misreporting_world, count_authors, factors=(1, 2))
 
     assert measured.counts == (1, 1)
@@ -71,24 +58,13 @@ def test_a_world_that_yields_something_other_than_a_count_reports_no_size() -> N
 
 
 def test_the_worlds_own_statements_are_not_in_the_counts() -> None:
-    """The mistake this function exists to make unavailable, both halves of it.
-
-    ``row_by_row_world`` inserts one row at a time, so the loader's own
-    statement count rises with the factor -- which is what an ordinary Django
-    backend does, ``COPY`` being invisible to ``execute_wrapper`` and available
-    only on PostgreSQL. The first half asserts the harness reports a flat curve
-    for a flat block anyway. The second half reproduces the mistake, capturing
-    around the build instead of inside it, and shows the curve it invents: the
-    same flat block read as growing, off statements the block never ran.
-    """
+    """The mistake this function exists to make unavailable, both halves of it."""
     measured = measure_query_growth(row_by_row_world, count_authors, factors=(1, 4))
 
     assert measured.counts == (1, 1)
 
     from_outside = []
     for factor in (1, 4):
-        # The capture is entered first and therefore wraps the build. That
-        # ordering is the mistake, written out on purpose.
         with QueryCapture(using="default") as capture, row_by_row_world(factor):
             count_authors()
         from_outside.append(len(capture))
@@ -97,16 +73,7 @@ def test_the_worlds_own_statements_are_not_in_the_counts() -> None:
 
 
 def test_a_warm_up_runs_once_inside_every_world_and_is_not_counted() -> None:
-    """The one flake a growth assertion has, and the argument that answers it.
-
-    A block whose first run fills a per-process cache emits an extra statement
-    at whichever factor ran first, so the same test passes or fails on whether
-    an earlier test happened to fill it. The warm-up runs inside each world --
-    it may need rows to exist -- before that world's capture opens, so what it
-    costs lands in no measurement. Three factors rather than two, because the
-    claim is "every world", and two would also be satisfied by a warm-up that
-    ran in the first world and the last.
-    """
+    """The one flake a growth assertion has, and the argument that answers it."""
     seen: list[int] = []
 
     def warm_up() -> None:
@@ -119,17 +86,7 @@ def test_a_warm_up_runs_once_inside_every_world_and_is_not_counted() -> None:
 
 
 def test_a_warm_up_that_writes_a_row_is_not_undone_for_the_next_world() -> None:
-    """A world torn down by a rollback takes the warm-up's row with it.
-
-    ``author_world`` ends in a rollback, as ``django_data_shape.scaled_world``
-    does. A block whose first call *writes* -- a session row on the first
-    request after login, here a ``get_or_create`` -- has its warm-up undone with
-    the first world, so a warm-up run only there leaves every later world to pay
-    the write inside its capture, and a flat block reads as growth: ``(2, 5)``,
-    the lookup plus the savepoint, insert and release a miss costs. Run in every
-    world, the warm-up leaves each measurement the run after exactly one
-    unmeasured run in that world, and the counts match.
-    """
+    """A world torn down by a rollback takes the warm-up's row with it."""
 
     def first_call_writes() -> None:
         Customer.objects.get_or_create(name="seen")
@@ -171,23 +128,13 @@ def test_the_capture_can_be_narrowed_to_one_connection() -> None:
 
 
 def test_one_factor_is_refused_because_it_would_be_a_count_assertion() -> None:
-    """The structural guard on the decision that this ships no count assertion.
-
-    With a single world there is no change to claim anything about, so the only
-    assertion left to make is about a fixed number -- which is
-    ``django_assert_num_queries``, and re-implementing it is exactly what this
-    package refuses to do.
-    """
+    """The structural guard on the decision that this ships no count assertion."""
     with pytest.raises(ValueError, match="at least two scale factors"):
         measure_query_growth(author_world, count_authors, factors=(1,))
 
 
 def test_a_descending_factor_list_is_refused_rather_than_sorted() -> None:
-    """Sorting would move a statement between measurements without saying so.
-
-    The order given is the order that runs, and the first run is the one that
-    pays for whatever a per-process cache populates.
-    """
+    """Sorting would move a statement between measurements without saying so."""
     with pytest.raises(ValueError, match="strictly ascending"):
         measure_query_growth(author_world, count_authors, factors=(10, 1))
 

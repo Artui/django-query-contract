@@ -1,5 +1,3 @@
-"""Reading a capture's plans back as the tables they touched."""
-
 from __future__ import annotations
 
 from django_query_contract import (
@@ -46,13 +44,7 @@ def test_every_relation_a_plan_read_gets_a_group() -> None:
 
 
 def test_groups_are_ordered_by_reads_and_then_by_where_the_first_one_appeared() -> None:
-    """The same total order attribution uses, and for the same reason.
-
-    Ordering by rows discarded would be a soft verdict -- the report would be
-    ranking relations by how badly they need an index, which is exactly the
-    judgement this package declines to make. A count of measurements ranks
-    nothing.
-    """
+    """The same total order attribution uses, and for the same reason."""
     records = [
         _record(0, _measured(WHALE_JOIN)),
         _record(1, _measured(UNINDEXED_SCAN)),
@@ -69,15 +61,7 @@ def test_groups_are_ordered_by_reads_and_then_by_where_the_first_one_appeared() 
 
 
 def test_the_table_that_discarded_most_is_not_moved_to_the_front() -> None:
-    """The order a reader would find most useful, refused on purpose.
-
-    Ranking tables by how many rows they threw away is ranking them by how badly
-    they want an index, which is the judgement this package declines to make --
-    and a sort key is a quiet way of making it anyway. So the two orders are
-    pulled apart here: ``testapp_order`` discards five times what
-    ``testapp_author`` does and still comes last, because it was read once and
-    the others twice.
-    """
+    """The order a reader would find most useful, refused on purpose."""
     records = [
         _record(0, _measured(UNINDEXED_SCAN)),
         _record(1, _measured(WHALE_JOIN)),
@@ -100,14 +84,7 @@ def test_the_table_that_discarded_most_is_not_moved_to_the_front() -> None:
 
 
 def test_two_relations_one_statement_read_come_out_in_the_order_the_plan_listed_them() -> None:
-    """Where this ordering differs from attribution's, and it is not a tie left open.
-
-    An attribution's first statement is unique to it, so ``count`` and that
-    index are a total order. A statement reads *several* relations, so two
-    groups can share a first statement and both keys tie. Plan order settles it
-    -- parents before children, the order ``EXPLAIN`` printed -- which is
-    deterministic and is the order a reader of the plan already has.
-    """
+    """Where this ordering differs from attribution's, and it is not a tie left open."""
     accesses = group_by_relation([_record(0, _measured(WHALE_JOIN))])
 
     assert [access.first_index for access in accesses] == [0, 0]
@@ -140,13 +117,7 @@ def test_a_refused_statement_read_no_relation_anybody_can_name() -> None:
 
 
 def test_a_plan_taken_without_analyze_still_says_which_tables_it_would_read() -> None:
-    """Unlike a defect, an access needs no measurement: the plan names the table.
-
-    ``find_plan_defects`` skips an unanalyzed plan because neither defect is
-    decidable without an actual row count. This is a grouping and not a
-    detector, so it reports what the plan says and lets the report note that
-    nothing under it was measured.
-    """
+    """Unlike a defect, an access needs no measurement: the plan names the table."""
     (access,) = group_by_relation([_record(0, QueryPlan.from_explain(BITMAP_AND, analyzed=False))])
 
     assert access.relation == "testapp_order"

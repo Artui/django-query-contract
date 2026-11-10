@@ -1,15 +1,3 @@
-"""Attribution, against real captures over a real connection.
-
-Every capture here is produced by running the code that produces it, for the
-reason ``test_find_n_plus_one.py`` gives: a grouping tested against a
-hand-assembled record list agrees with whatever its author believed a stack
-looks like, and the shape of a real stack is part of the claim being made.
-
-The load-bearing test in this file is the one that runs the same capture through
-both readings at once. Attribution merges call paths a finding keeps apart, on
-purpose, and nothing but a test can hold the two apart as the code moves.
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -50,13 +38,7 @@ def test_one_line_is_one_attribution(authors: list[Author]) -> None:
 
 
 def test_a_statement_that_ran_once_is_attributed_too(authors: list[Author]) -> None:
-    """The gap this milestone closes, stated as a test.
-
-    A finding needs a repetition, so before attribution existed a capture named
-    a call site only where something had repeated. One query from one line is
-    not a defect and never will be a finding -- and "where did this come from"
-    still has an answer.
-    """
+    """The gap this milestone closes, stated as a test."""
     with QueryCapture(using="default") as capture:
         list(Author.objects.all())
 
@@ -70,21 +52,7 @@ def test_a_statement_that_ran_once_is_attributed_too(authors: list[Author]) -> N
 def test_two_callers_of_one_helper_merge_here_and_split_as_findings(
     authors: list[Author],
 ) -> None:
-    """The whole display-versus-identity split, in one capture.
-
-    Both loops emit their query from the same line inside ``_books``. As
-    *findings* that is two defects with two fixes, and the identity is the whole
-    stack precisely so a report never points at the helper's line, which is the
-    one line that is fine. As *attribution* the honest answer is that line: it
-    is where the statements were emitted, and both call paths really did emit
-    them there.
-
-    So the merge this makes is deliberate, and it is only safe because an
-    attribution claims nothing about defects. If this ever starts returning two
-    groups, attribution has quietly grown a rule about which frames matter -- and
-    if ``find_n_plus_one`` ever starts returning one, the identity has quietly
-    become the call site.
-    """
+    """The whole display-versus-identity split, in one capture."""
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             _books(author)
@@ -105,13 +73,7 @@ def test_two_callers_of_one_helper_merge_here_and_split_as_findings(
 
 
 def test_every_statement_lands_in_exactly_one_group(authors: list[Author]) -> None:
-    """The partition is total, which is what lets a report's counts add up.
-
-    A grouping that dropped what it could not place would be the silently
-    incomplete measurement this package exists to complain about -- and it would
-    be silent here in particular, because the dropped statements are the ones a
-    reader has no other way to see.
-    """
+    """The partition is total, which is what lets a report's counts add up."""
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             list(author.books.all())
@@ -137,13 +99,7 @@ def test_one_line_that_ran_two_shapes_keeps_both(authors: list[Author]) -> None:
 
 
 def test_records_with_no_stack_are_grouped_under_no_call_site() -> None:
-    """A capture rebuilt from a ``CaptureQueriesContext`` records no frames.
-
-    The detector skips these, because bucketing them would manufacture a finding
-    out of a gap in the input. Attribution keeps them, because grouping them
-    under "no call site" manufactures nothing -- it says exactly what is known,
-    which is that nothing is.
-    """
+    """A capture rebuilt from a ``CaptureQueriesContext`` records no frames."""
     with CaptureQueriesContext(connection) as context:
         for _ in range(3):
             list(Author.objects.filter(pk=1))
@@ -168,13 +124,7 @@ def test_a_window_that_never_left_django_has_no_call_site(authors: list[Author])
 def test_addressed_and_unaddressed_statements_are_separate_groups(
     authors: list[Author],
 ) -> None:
-    """Both kinds in one input, because a reader can hold both at once.
-
-    Any iterable of records is accepted, so a caller comparing a capture with
-    one rebuilt from the fixture's ``CaptureQueriesContext`` can attribute the
-    two together -- and the half that has stacks keeps its call sites rather
-    than being dragged down to the half that has none.
-    """
+    """Both kinds in one input, because a reader can hold both at once."""
     with CaptureQueriesContext(connection) as context:
         list(Author.objects.filter(pk=1))
     stackless = QueryCapture.from_capture_context(context)
@@ -204,11 +154,7 @@ def test_attributions_are_ordered_busiest_first(authors: list[Author]) -> None:
 def test_lines_of_equal_size_are_ordered_by_where_they_started(
     authors: list[Author],
 ) -> None:
-    """No two groups share a first statement, so the order is total.
-
-    Without this the two below would be ordered by however the buckets happened
-    to be built, and a report would reshuffle between two runs over one capture.
-    """
+    """No two groups share a first statement, so the order is total."""
     with QueryCapture(using="default") as capture:
         for _ in range(2):
             list(Book.objects.filter(pk=1))
@@ -221,15 +167,7 @@ def test_lines_of_equal_size_are_ordered_by_where_they_started(
 def test_the_order_does_not_depend_on_the_order_records_arrive(
     authors: list[Author],
 ) -> None:
-    """The tie-break has to be the tie-break, not a coincidence of bucket order.
-
-    The test above cannot tell the two apart. Buckets are built in first-seen
-    order and ``list.sort`` is stable, so with records arriving in capture order
-    a sort on the count alone lands equal-sized groups in ``first_index`` order
-    anyway -- and would keep doing so if the tie-break were deleted. Any
-    iterable of records is accepted, so handing them over out of order separates
-    what the code promises from what the dict happened to do.
-    """
+    """The tie-break has to be the tie-break, not a coincidence of bucket order."""
     with QueryCapture(using="default") as capture:
         for _ in range(2):
             list(Book.objects.filter(pk=1))
