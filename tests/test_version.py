@@ -1,5 +1,3 @@
-"""The version is a string and the package exports it."""
-
 from __future__ import annotations
 
 import django_query_contract

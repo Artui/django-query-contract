@@ -1,5 +1,3 @@
-"""Suite-wide fixtures."""
-
 from __future__ import annotations
 
 from collections import deque
@@ -18,32 +16,7 @@ pytest_plugins = ["pytester"]
 
 
 def pytest_addoption(parser: pytest.Parser, pluginmanager: pytest.PytestPluginManager) -> None:
-    """Register the plugin's options without registering its hooks.
-
-    ``addopts`` carries ``-p no:django_query_contract``, for the reason written
-    there: an entry-point plugin is imported before pytest-cov starts measuring,
-    so leaving it on makes the coverage gate report 0% for lines that ran. The
-    cost is that the session's own config then knows nothing about
-    ``--no-query-contract`` or ``query_contract``, and a hook driven against the live
-    item raises ``ValueError: no option named '--no-query-contract'`` -- a failure
-    that says nothing about the option and everything about which plugins are
-    loaded.
-
-    Declaring the options here separates the two halves of what a plugin is.
-    pluggy finds hooks by name in a module's namespace, and the only hook name
-    in this one is the one below, so the package's options exist for this
-    session while its ``pytest_runtest_call`` and ``pytest_runtest_makereport``
-    stay out of it -- which is exactly the arrangement ``addopts`` is asking for,
-    stated where a contributor will read it.
-
-    The guard is for the contributor who runs ``pytest`` without ``addopts``, or
-    who enables the plugin explicitly: registering the same option twice raises
-    at startup, which is a worse first experience than the one this file exists
-    to prevent. It tests for the plugin **module** rather than for a plugin
-    name, because the name depends on how it was loaded -- ``django_query_contract``
-    from the entry point, ``django_query_contract.plugin`` from ``-p`` -- and the
-    module object is the same either way.
-    """
+    """Register the plugin's options without registering its hooks."""
     if any(loaded is plugin for loaded in pluginmanager.get_plugins()):
         return
     plugin.pytest_addoption(parser)
@@ -116,11 +89,6 @@ def pretend_postgres():
             "NAME": "django-query-contract-has-no-server-here",
         },
     }
-    # ``ConnectionHandler.settings`` is a cached_property over a dict it also
-    # keeps on ``_settings``, and nothing in ``override_settings`` invalidates
-    # either -- so both have to be dropped for the new alias to be visible.
-    # Dropped again afterwards, along with the connection object itself, so no
-    # later test finds an alias its settings do not declare.
     with override_settings(DATABASES=databases):
         _reset_connection_settings()
         try:

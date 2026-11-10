@@ -1,19 +1,3 @@
-"""The package root is a table of contents, not a drawer.
-
-The other structural rules in ``CLAUDE.md`` all govern a *file* -- one exported
-symbol, a ``snake_case`` name, top-level imports -- and a package can obey every
-one of them while putting all thirty-eight of its modules in one directory,
-which is what this one did. A rule that only exists as prose is obeyed exactly
-as far as somebody remembers it, so it is a test instead.
-
-Two assertions, because the flat root has two ways back. The first is the
-allowlist: a new module lands at the root because that is where the last one
-was, and nothing objects. The second is the collision: once a name is free to
-appear at the root *and* inside a subpackage, the same concern grows a copy in
-both -- ``django-domain-events`` grew ``catalogue`` and ``outbox_health`` twice
-each that way -- and the two drift without ever disagreeing loudly.
-"""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -54,8 +38,6 @@ def _subpackages() -> dict[str, set[str]]:
 
 
 def test_the_package_being_measured_is_the_one_in_this_repository() -> None:
-    # Both tests below discover their own inputs, and a test that discovers its
-    # own inputs passes by finding nothing. This is what makes them honest.
     assert (_PACKAGE.parent / "pyproject.toml").exists()
     assert len(_subpackages()) >= 5
 

@@ -1,11 +1,3 @@
-"""The pytest face, observed from outside a real run.
-
-A report section and a warning only exist in the run that produced them, so
-these drive pytest inside pytest. Subprocess rather than in-process: Django's
-settings are configured once per interpreter, and an inner run sharing this
-one's would be measuring a process that had already been set up.
-"""
-
 from __future__ import annotations
 
 import os
@@ -56,9 +48,6 @@ def isolated_pytester(
     gate is stricter without it.
     """
     monkeypatch.delenv("DJANGO_SETTINGS_MODULE", raising=False)
-    # By prefix rather than by name: the set of these has changed across
-    # pytest-cov releases, and a fix for a floor job must not itself be pinned
-    # to a version. COVERAGE_PROCESS_START is coverage's own equivalent hook.
     for name in [key for key in os.environ if key.startswith("COV_CORE_")]:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.delenv("COVERAGE_PROCESS_START", raising=False)
@@ -118,11 +107,7 @@ _A_LOOP = """
 
 
 def test_a_failed_count_assertion_gains_a_diagnosis(django_pytester: pytest.Pytester) -> None:
-    """The whole seam: their assertion fails, our paragraph appears underneath it.
-
-    Nothing in the inner test knows this package exists. That is the point --
-    the assertion a reader already writes is the one that gets better.
-    """
+    """The whole seam: their assertion fails, our paragraph appears underneath it."""
     django_pytester.makepyfile(_TWO_QUERIES_ONE_EXPECTED)
     result = django_pytester.runpytest_subprocess()
 
@@ -142,14 +127,7 @@ def test_a_failed_count_assertion_gains_a_diagnosis(django_pytester: pytest.Pyte
 def test_a_failure_with_no_n_plus_one_still_names_the_lines(
     django_pytester: pytest.Pytester,
 ) -> None:
-    """Two statements from two lines: no call path repeated, so no finding at all.
-
-    This is the case the section exists for and the one it had nothing to say
-    about until call-site attribution existed -- a count assertion that failed
-    with no loop behind it printed a number of unexplained statements and not
-    one line of code. Driven through the real plugin rather than the formatter,
-    because what is being claimed is that the lines reach a reader.
-    """
+    """Two statements from two lines: no call path repeated, so no finding at all."""
     django_pytester.makepyfile(_TWO_LINES_ONE_EXPECTED)
     result = django_pytester.runpytest_subprocess()
 
@@ -220,11 +198,7 @@ def test_the_ini_turns_capture_off_for_a_project(django_pytester: pytest.Pyteste
 
 
 def test_the_stack_depth_ini_reaches_the_capture(django_pytester: pytest.Pytester) -> None:
-    """Depth one keeps only the innermost frame, which is inside Django.
-
-    An indirect assertion, and the only one available from outside: the ini is
-    observable purely through what the call site becomes.
-    """
+    """Depth one keeps only the innermost frame, which is inside Django."""
     django_pytester.makeini(
         "[pytest]\nDJANGO_SETTINGS_MODULE = inner_settings\nquery_contract_stack_depth = 1\n"
     )
@@ -251,16 +225,7 @@ def test_the_stack_depth_ini_reaches_the_capture(django_pytester: pytest.Pyteste
 def test_a_block_above_the_ceiling_warns_even_when_it_passes(
     django_pytester: pytest.Pytester,
 ) -> None:
-    """The case the warning exists for: a green test whose count was never real.
-
-    ``django_assert_max_num_queries(1)`` passes over five statements, because the
-    log it counts through was already full. A report section would not be shown
-    for a passing test; a warning is.
-    """
-    # The log is filled in a fixture, not in the test body: capture opens
-    # between setup and the call, so a limit changed inside the test would be
-    # read after the ceiling had already been measured. Filling it during setup
-    # is also what a real suite does -- an earlier assertion in the same test.
+    """The case the warning exists for: a green test whose count was never real."""
     django_pytester.makeconftest(
         """
         from collections import deque
@@ -293,11 +258,7 @@ def test_a_block_above_the_ceiling_warns_even_when_it_passes(
     )
     result = django_pytester.runpytest_subprocess()
 
-    # Only the outcome is pinned, not the warning count: Django emits one of its
-    # own from ``connection.queries`` when the log is full, and whether it does
-    # is a detail of a version we support six of.
     result.assert_outcomes(passed=1)
-    # One pattern, because the whole warning is one line in the summary.
     result.stdout.fnmatch_lines(
         ["*QueryLogCeilingWarning: *5 statements ran on connection 'default'*reports 0 *"]
     )
@@ -306,24 +267,7 @@ def test_a_block_above_the_ceiling_warns_even_when_it_passes(
 def test_one_test_filling_the_log_does_not_make_the_next_one_warn(
     django_pytester: pytest.Pytester,
 ) -> None:
-    """The leak this package closes, and the whole of what closing it changes.
-
-    Django empties ``queries_log`` in ``TransactionTestCase._pre_setup``, which
-    pytest-django runs -- for a test that asked for the database. The second test
-    below does not: it reaches an already-open connection through
-    ``django_db_blocker``, which is what a suite with a session-scoped world does
-    all the time. Without the reset hook it inherits the five entries the first
-    test left, and this package tells it that its own single statement is
-    invisible.
-
-    Both halves are pinned. The guilty test still warns, because a block that
-    outruns the log on its own is exactly what the warning is for; the one after
-    it does not.
-
-    The limit is shrunk once for the session rather than per test, deliberately.
-    A fixture that rebuilt the deque each time would be doing the hook's job and
-    this test would pass with the hook removed.
-    """
+    """The leak this package closes, and the whole of what closing it changes."""
     django_pytester.makeconftest(
         """
         from collections import deque
@@ -363,18 +307,7 @@ def test_one_test_filling_the_log_does_not_make_the_next_one_warn(
 
 
 def test_the_inner_runs_collect_no_coverage(django_pytester: pytest.Pytester) -> None:
-    """The fix above, asserted rather than assumed.
-
-    pytest-cov instruments a subprocess through a ``.pth`` hook keyed on this
-    environment, and the data it would write here is statement-only where the
-    parent's is branch data -- an unusable combination that surfaced only at the
-    declared dependency floor, in a job that runs once per pull request and long
-    after the edit that caused it. Checking the environment from inside an inner
-    run turns that into a failure in the file that owns the decision.
-
-    By prefix, not by name, for the same reason the fixture clears it that way:
-    the set of these variables has changed across pytest-cov releases.
-    """
+    """The fix above, asserted rather than assumed."""
     django_pytester.makepyfile(
         """
         import os
@@ -406,12 +339,7 @@ def test_a_suite_without_django_settings_is_left_alone(
 
 
 def test_the_flag_lists_what_the_run_found(django_pytester: pytest.Pytester) -> None:
-    """The listing, and the fact that asking for it changes no outcome.
-
-    Opt-in for the reason four earlier detectors are dead: an N+1 printed under
-    every passing test is crying wolf, and a list somebody asked for cannot cry
-    anything. The test below passes, and passes with the flag too.
-    """
+    """The listing, and the fact that asking for it changes no outcome."""
     django_pytester.makepyfile(_A_LOOP)
     result = django_pytester.runpytest_subprocess("--n-plus-one")
 
@@ -468,12 +396,7 @@ _A_PLAN_TEST = """
 def test_a_plan_test_on_sqlite_skips_with_the_reason_rather_than_passing(
     django_pytester: pytest.Pytester,
 ) -> None:
-    """The whole "never pass vacuously" claim, in a real run rather than in prose.
-
-    The inner project is SQLite, which has no planner, so a test asking for plans
-    cannot mean anything. It could pass with an empty capture and nobody would
-    know; it does not. It skips, and the skip names the backend.
-    """
+    """The whole "never pass vacuously" claim, in a real run rather than in prose."""
     django_pytester.makepyfile(_A_PLAN_TEST)
     result = django_pytester.runpytest_subprocess("-rs")
 
