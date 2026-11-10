@@ -1,13 +1,3 @@
-"""The plan reader: two defects, both decided without a threshold.
-
-The records here are assembled rather than captured, and that is a deliberate
-split rather than a shortcut. A plan can only come from PostgreSQL, and this
-suite's gate runs on SQLite; the payloads underneath these records are a real
-server's own output, and ``tests/capture/test_plan_capture_postgres.py`` runs the same
-detector over a live shaped database so the assembly cannot quietly disagree
-with the thing it stands in for.
-"""
-
 from __future__ import annotations
 
 from django_query_contract import (
@@ -48,12 +38,7 @@ def _measured(payload: list[dict[str, object]]) -> QueryPlan:
 
 
 def test_one_estimate_and_two_truths_is_a_finding() -> None:
-    """The defect the shaped-database dependency exists for.
-
-    Two executions of one statement shape, both priced at 20 rows, one producing
-    20,323 and the other 6. There is no threshold in that sentence: the grouping
-    is an equality and the finding is an inequality.
-    """
+    """The defect the shaped-database dependency exists for."""
     records = [_record(0, _measured(WHALE_JOIN)), _record(1, _measured(tail_join()), line=11)]
 
     (finding,) = [
@@ -76,11 +61,7 @@ def test_one_estimate_and_one_truth_is_not() -> None:
 
 
 def test_a_single_execution_is_never_blindness() -> None:
-    """One measurement cannot separate "the planner is wrong" from "this row is unusual".
-
-    The same rule as the growth assertion, which refuses to make a claim from one
-    world. Two executions are what turn an estimate into a claim about a shape.
-    """
+    """One measurement cannot separate "the planner is wrong" from "this row is unusual"."""
     records = [_record(0, _measured(WHALE_JOIN))]
 
     assert find_plan_defects(records) == ()
@@ -108,11 +89,7 @@ def test_two_executions_the_planner_priced_differently_are_not_blindness() -> No
 
 
 def test_three_executions_produce_a_finding_for_the_pair_that_shared_an_estimate() -> None:
-    """Grouping on the estimate rather than on the fingerprint alone.
-
-    Requiring the whole group to agree would lose the pair that did, for no gain
-    -- and the pair that did is the finding.
-    """
+    """Grouping on the estimate rather than on the fingerprint alone."""
     apart = QueryPlan.from_explain(
         [{"Plan": {"Node Type": "Nested Loop", "Plan Rows": 900, "Actual Rows": 900}}],
         analyzed=True,
@@ -130,12 +107,7 @@ def test_three_executions_produce_a_finding_for_the_pair_that_shared_an_estimate
 
 
 def test_blindness_is_keyed_on_the_statement_and_not_on_the_call_stack() -> None:
-    """The opposite choice from the N+1 identity, and the same rule behind both.
-
-    A finding is keyed on what the accused can see. The planner is handed SQL and
-    never hears about the stack, so two lines emitting one shape are one blind
-    spot -- where two lines running one loop are two defects with two fixes.
-    """
+    """The opposite choice from the N+1 identity, and the same rule behind both."""
     records = [
         _record(0, _measured(WHALE_JOIN), line=10),
         _record(1, _measured(tail_join()), line=4000),
@@ -198,11 +170,7 @@ def test_a_refused_statement_contributes_nothing() -> None:
 
 
 def test_a_plan_taken_without_analyze_yields_no_finding_at_all() -> None:
-    """Not even a spill: every key a spill is read from arrives with ANALYZE.
-
-    Reported by the renderer rather than passed over in silence, because a plan
-    with nothing to check against is exactly the shape a vacuous pass would take.
-    """
+    """Not even a spill: every key a spill is read from arrives with ANALYZE."""
     planned = QueryPlan.from_explain(
         [{"Plan": {"Node Type": "Sort", "Plan Rows": 400000, "Sort Space Type": "Disk"}}],
         analyzed=False,

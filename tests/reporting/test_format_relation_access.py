@@ -1,11 +1,3 @@
-"""The relation report: the evidence for an index, and no recommendation.
-
-This is the milestone that asked whether index advice could be made a claim this
-package is willing to state, and concluded it could not. What is checked here is
-therefore as much the *wording* as the numbers: the report has to hand a reader
-everything a decision needs while saying plainly that it is not making one.
-"""
-
 from __future__ import annotations
 
 from django_query_contract import (
@@ -57,11 +49,7 @@ def test_a_capture_with_no_plans_says_nothing() -> None:
 
 
 def test_the_report_declines_the_advice_in_the_text_a_reader_will_read() -> None:
-    """The declination is not a docstring: it is printed where the numbers are.
-
-    A reader looking at "99,999 rows discarded" will supply the missing verdict
-    themselves unless the report says out loud that it is withholding one.
-    """
+    """The declination is not a docstring: it is printed where the numbers are."""
     report = format_relation_access(_capture([_record(0, _measured(UNINDEXED_SCAN))]))
 
     assert "No index is recommended" in report
@@ -79,13 +67,7 @@ def test_a_table_read_without_an_index_is_named_with_what_the_server_counted() -
 
 
 def test_the_report_never_prints_a_bound_value() -> None:
-    """The rule the whole package states, checked at the one place it would break.
-
-    ``EXPLAIN`` renders the predicate with the value in it, so a report printing
-    the filter verbatim would put customer data into CI output on every failing
-    test. The redaction happens at parse time; this is the assertion that the
-    redaction is what reaches the page.
-    """
+    """The rule the whole package states, checked at the one place it would break."""
     report = format_relation_access(_capture([_record(0, _measured(UNINDEXED_SCAN))]))
 
     assert "601980.6826913885" not in report
@@ -99,12 +81,7 @@ def test_a_table_read_through_indexes_names_them_and_counts_no_unindexed_read() 
 
 
 def test_the_indexes_postgres_already_has_are_printed_as_postgres_writes_them() -> None:
-    """The only ``CREATE INDEX`` statements this package will ever print.
-
-    The milestone imagined emitting the ones that should exist. What it can
-    state instead is the ones that do, in the server's own words, so a reader
-    comparing them against the filter above can see what is not covered.
-    """
+    """The only ``CREATE INDEX`` statements this package will ever print."""
     report = format_relation_access(
         _capture(
             [_record(0, _measured(UNINDEXED_SCAN))],
@@ -154,8 +131,6 @@ def test_a_read_nothing_filtered_names_no_condition_and_no_discarded_rows() -> N
     report = format_relation_access(_capture([_record(0, _measured(WHALE_JOIN))]))
 
     assert "testapp_book" in report
-    # The bitmap heap scan filtered nothing, so there is nothing to report about
-    # what it threw away -- and zero would be a measurement it never made.
     assert "discarded" not in report.split("testapp_book")[1].split("testapp_author")[0]
 
 
@@ -177,12 +152,7 @@ def test_a_statement_with_no_call_site_is_reported_rather_than_approximated() ->
 
 
 def test_a_read_split_across_workers_reports_the_whole_read_and_shows_the_arithmetic() -> None:
-    """The number a reader acts on is the total, and the printed one is named beside it.
-
-    Without the second line the two payloads below -- one statement, one process
-    against three -- would produce reports that disagree by a factor of three
-    with nothing in either of them explaining why.
-    """
+    """The number a reader acts on is the total, and the printed one is named beside it."""
     report = format_relation_access(_capture([_record(0, _measured(PARALLEL_SCAN))]))
 
     assert "most one read discarded: 1,124,097 rows, keeping 75,903" in report

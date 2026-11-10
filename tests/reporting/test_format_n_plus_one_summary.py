@@ -1,5 +1,3 @@
-"""The end-of-run listing: every finding from every block, worst first."""
-
 from __future__ import annotations
 
 import os
@@ -66,12 +64,7 @@ def test_the_worst_finding_leads_whichever_block_it_came_from(
 
 
 def test_equal_findings_are_ordered_by_block_name(authors: list[Author]) -> None:
-    """The middle sort key, and the reason it is not decoration.
-
-    Two blocks can produce findings of the same size that began at the same
-    index in their own captures. Without the label between them the order would
-    be whatever order the mapping happened to be built in.
-    """
+    """The middle sort key, and the reason it is not decoration."""
     with QueryCapture(using="default") as capture:
         for _ in range(2):
             list(Author.objects.filter(pk=1))
@@ -108,13 +101,7 @@ def test_a_long_statement_is_cut(authors: list[Author]) -> None:
 
 
 def test_one_call_path_seen_in_two_blocks_is_listed_twice(authors: list[Author]) -> None:
-    """Not merged, on purpose.
-
-    A finding's identity is its whole call stack, and two blocks are two stacks.
-    Merging them would need a second grouping rule -- "these are the same one
-    really" -- which is exactly the judgement this package is built without. The
-    listing orders instead of merging.
-    """
+    """Not merged, on purpose."""
     with QueryCapture(using="default") as capture:
         for _ in range(2):
             list(Author.objects.filter(pk=1))
@@ -148,13 +135,7 @@ def _finding(*, filename: str, count: int, label: str) -> tuple[str, NPlusOne]:
 
 
 def test_findings_in_your_own_code_come_first_however_small(tmp_path: Path) -> None:
-    """The finding the whole section exists for.
-
-    A dependency that loops legitimately -- a relay claiming a batch, a loader
-    reading one catalogue row per table -- outranks every defect in the project
-    when the only ordering is repetition count. Measured on a consumer's suite:
-    158 findings, and none of the twenty there was room to print were theirs.
-    """
+    """The finding the whole section exists for."""
     mine = os.path.join(os.getcwd(), "shop", "views.py")
     theirs = os.path.join(os.getcwd(), ".venv", "lib", "site-packages", "lib", "relay.py")
 
@@ -168,7 +149,6 @@ def test_findings_in_your_own_code_come_first_however_small(tmp_path: Path) -> N
     assert "2 N+1 finding(s), most repeated first:" in summary
     assert "1 in your own code:" in summary
     assert "1 outside your working tree:" in summary
-    # Ordering, not filtering: the forty-times one is still reported in full.
     assert "40 x  from " in summary
     assert summary.index("shop/views.py") < summary.index("relay.py")
 
@@ -202,12 +182,7 @@ def test_a_findings_own_ordering_is_unchanged_inside_a_section() -> None:
 
 
 def test_a_finding_with_no_placeable_call_site_is_not_called_yours() -> None:
-    """A stack that is entirely Django's has no call site at all.
-
-    `None` is treated as not-the-project's, which is the safe direction: it
-    keeps an unplaceable finding out of the section a reader is being told to
-    act on, rather than putting a line they cannot find at the top of it.
-    """
+    """A stack that is entirely Django's has no call site at all."""
     django_only = os.path.join(os.path.dirname(django.__file__), "db", "models", "query.py")
     mine = os.path.join(os.getcwd(), "shop", "views.py")
 
@@ -220,6 +195,4 @@ def test_a_finding_with_no_placeable_call_site_is_not_called_yours() -> None:
 
     assert "1 in your own code:" in summary
     assert "1 outside your working tree:" in summary
-    # The project's one-repetition finding is printed above the heading that
-    # introduces the forty-repetition one nobody can place.
     assert summary.index("shop/views.py") < summary.index("outside your working tree")

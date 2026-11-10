@@ -1,10 +1,3 @@
-"""How a call site reads, from real captures.
-
-The block a reader acts on when nothing repeated. It is deliberately the same
-shape as a finding's block -- count, then the line, then the statement -- so a
-reader who has learned to read one has learned to read both.
-"""
-
 from __future__ import annotations
 
 import os
@@ -31,11 +24,7 @@ def authors() -> list[Author]:
 
 
 def test_the_call_site_comes_before_the_sql(authors: list[Author]) -> None:
-    """A count with no address is the output people turn off.
-
-    Same order as a finding's block, and for the same reason: the line somebody
-    edits is the only part anybody acts on, so it goes above the statement.
-    """
+    """A count with no address is the output people turn off."""
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             list(author.books.all())
@@ -50,11 +39,7 @@ def test_the_call_site_comes_before_the_sql(authors: list[Author]) -> None:
 def test_a_line_that_ran_several_shapes_is_counted_not_quoted(
     authors: list[Author],
 ) -> None:
-    """One statement under one address is recognisable; five would bury the address.
-
-    The count is what decides whether to go and look, which is the question a
-    listing of call sites is being read to answer.
-    """
+    """One statement under one address is recognisable; five would bury the address."""
     with QueryCapture(using="default") as capture:
         for model in (Author, Book):
             list(model.objects.filter(pk=1))
@@ -100,14 +85,7 @@ def test_a_call_site_outside_it_keeps_its_absolute_path(
 def test_an_unaddressed_group_names_both_ways_it_could_have_happened(
     authors: list[Author],
 ) -> None:
-    """A finding can only be missing a call site one way; this can be missing it two.
-
-    The detector never sees a stackless record, so a finding without a call site
-    was always a window that did not reach far enough, and its block says so.
-    Attribution groups every record it is handed, so the same group can hold
-    statements that never had a stack at all. Naming one cause would be wrong
-    half the time.
-    """
+    """A finding can only be missing a call site one way; this can be missing it two."""
     with QueryCapture(using="default", stack_depth=1) as capture:
         list(Author.objects.filter(pk=1))
 
@@ -129,12 +107,7 @@ def test_only_the_busiest_lines_are_named(authors: list[Author]) -> None:
 
 
 def test_nothing_to_attribute_renders_nothing(authors: list[Author]) -> None:
-    """Empty rather than a sentence, so a caller prints a heading only over a body.
-
-    The two headings this can appear under both come from a caller that knows
-    why it is printing, and neither wants an apology from the formatter when
-    there is nothing to print.
-    """
+    """Empty rather than a sentence, so a caller prints a heading only over a body."""
     assert format_attributions(()) == ""
 
 

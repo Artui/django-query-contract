@@ -1,5 +1,3 @@
-"""The paragraph a growth failure prints, and the table underneath it."""
-
 from __future__ import annotations
 
 import pytest
@@ -66,11 +64,7 @@ def test_a_linear_failure_names_the_count_that_would_have_held() -> None:
 
 
 def test_the_failing_world_is_described_by_the_report_every_face_uses() -> None:
-    """The N+1 under a growth failure reads exactly as it does under a count failure.
-
-    Two renderings of one finding is two chances to describe it differently, and
-    a reader has no way to tell which of them is the package's actual opinion.
-    """
+    """The N+1 under a growth failure reads exactly as it does under a count failure."""
     measured = QueryGrowth(points=(point(1, 3), point(10, 21)))
 
     report = format_query_growth(measured, Growth.CONSTANT)
@@ -80,10 +74,7 @@ def test_the_failing_world_is_described_by_the_report_every_face_uses() -> None:
 
 
 def test_a_failing_world_that_ran_nothing_gets_no_empty_heading() -> None:
-    """A constant claim reaches this when the count went down to zero.
-
-    A heading over nothing reads as a report that lost its body.
-    """
+    """A constant claim reaches this when the count went down to zero."""
     measured = QueryGrowth(points=(point(1, 3), point(10, 0)))
 
     report = format_query_growth(measured, Growth.CONSTANT)
@@ -93,11 +84,7 @@ def test_a_failing_world_that_ran_nothing_gets_no_empty_heading() -> None:
 
 
 def test_a_curve_that_held_is_rendered_too() -> None:
-    """A growth measurement is worth printing when it passes.
-
-    A formatter with words only for failure would leave the CI-report face to
-    invent a second vocabulary for the same curve.
-    """
+    """A growth measurement is worth printing when it passes."""
     measured = QueryGrowth(points=(point(1, 4, rows=4), point(10, 4, rows=40)))
 
     report = format_query_growth(measured, Growth.CONSTANT)
@@ -110,13 +97,7 @@ def test_a_curve_that_held_is_rendered_too() -> None:
 
 
 def test_every_rendering_says_the_counts_are_of_the_block_alone() -> None:
-    """The provenance line, on a holding curve as well as a failing one.
-
-    It answers the question a growing count raises -- "am I measuring my code or
-    the fixture that built the data?" -- in the place the numbers are, because a
-    reader who does not already know the harness owns the capture will not go
-    and read a docs page to find out.
-    """
+    """The provenance line, on a holding curve as well as a failing one."""
     failing = format_query_growth(QueryGrowth(points=(point(1, 3), point(10, 21))), Growth.CONSTANT)
     holding = format_query_growth(QueryGrowth(points=(point(1, 4), point(10, 4))), Growth.CONSTANT)
 

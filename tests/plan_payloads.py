@@ -1,25 +1,3 @@
-"""Real ``EXPLAIN (ANALYZE, BUFFERS, TIMING OFF, FORMAT JSON)`` output, kept verbatim.
-
-Every payload here came off PostgreSQL 16.3 and is checked in exactly as the
-server wrote it, keys this package ignores included. Most were taken against a
-database built by ``django-data-shape`` -- 20,000 parents and 400,000 children on
-a Zipf fan-out, loaded and analyzed. The ones that carry more than one loop per
-node needed a table big enough for PostgreSQL to reach for several processes, and
-that world is not big enough, so they were taken against 1,200,000 rows over
-20,000 parents under the same column names; the statement and any settings are
-named above each.
-
-**A test double standing in for a wire format agrees with whatever the double
-says**, which is how a parser stays green against a shape no server produces. Two
-things keep these honest. They were not typed: they are the server's own JSON,
-copied out. And ``tests/capture/test_plan_capture_postgres.py`` asserts against a *live*
-plan that every field the parser fills in is one a real server still writes, so a
-key renamed upstream fails there rather than agreeing with itself here.
-
-Regenerate by running the statement named above each payload under a server with
-those options, and copying the result.
-"""
-
 from __future__ import annotations
 
 from copy import deepcopy
@@ -362,17 +340,7 @@ under ``SET work_mem = '64kB'``."""
 
 
 def tail_join() -> list[dict[str, Any]]:
-    """``WHALE_JOIN`` with the row counts a tail parent actually produced.
-
-    Derived rather than captured, and derived in code so the difference is
-    visible: a second real capture would differ in buffer counts and costs as
-    well, and this pair exists to show that **one** number moved while the
-    estimate did not. The live pair, differing in everything, is asserted in
-    ``tests/capture/test_plan_capture_postgres.py``.
-
-    A function rather than a constant because the payloads here are mutable and a
-    module-level copy would be shared between the tests that read it.
-    """
+    """``WHALE_JOIN`` with the row counts a tail parent actually produced."""
     payload = deepcopy(WHALE_JOIN)
     payload[0]["Plan"]["Actual Rows"] = 6
     payload[0]["Plan"]["Plans"][1]["Actual Rows"] = 6

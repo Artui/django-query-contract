@@ -1,5 +1,3 @@
-"""The stack walk: what it keeps, what it drops, and what it admits to dropping."""
-
 from __future__ import annotations
 
 import gc
@@ -27,11 +25,7 @@ def test_the_innermost_frame_is_the_caller() -> None:
 
 
 def test_the_capture_machinery_is_not_in_its_own_output() -> None:
-    """Nothing from this package appears between a caller and its query.
-
-    Without this the innermost frames of every record would be the wrapper and
-    the walk itself, and ``call_site`` would name this library on every query.
-    """
+    """Nothing from this package appears between a caller and its query."""
     frames, _ = capture_stack(50)
     assert not any(frame.filename.startswith(_PACKAGE_ROOT) for frame in frames)
 
@@ -49,24 +43,14 @@ def _three() -> tuple[tuple[StackFrame, ...], bool]:
 
 
 def test_truncation_keeps_the_innermost_frames_and_says_so() -> None:
-    """Depth cuts from the outside, because the information is on the inside.
-
-    Between a cursor execution and the line that asked for it sit Django's own
-    frames and then the caller. Trimming from the other end would drop exactly
-    the frame worth reporting.
-    """
+    """Depth cuts from the outside, because the information is on the inside."""
     frames, truncated = _one()
     assert truncated
     assert [frame.function for frame in frames] == ["_two", "_three"]
 
 
 def test_an_interpreter_without_frames_degrades_to_no_stack(monkeypatch) -> None:
-    """Frame introspection is optional in Python, and its absence is not an error here.
-
-    Every other face of the capture still works with an empty stack; a suite
-    that only wanted a query count should not fail because the interpreter
-    declines to hand out frames.
-    """
+    """Frame introspection is optional in Python, and its absence is not an error here."""
     monkeypatch.setattr(inspect, "currentframe", lambda: None)
     assert capture_stack(10) == ((), False)
 
@@ -94,31 +78,7 @@ def _query_with_a_witness_in_a_local(depth: int) -> tuple[weakref.ref[_Witness],
 def test_a_capture_frees_its_callers_locals_without_the_cycle_collector(
     depth: int, truncated: bool
 ) -> None:
-    """A caller's locals die when the caller returns, not when the cyclic GC next runs.
-
-    The walk binds its own frame and the frame it is stepping through. Left
-    bound, the first is a reference cycle -- the frame holds itself through its
-    own locals -- and a frame that outlives its return keeps its ``f_back``
-    chain, so every caller's locals survive until the collector happens to run.
-    A consumer's half-read server-side cursor was finalized that way during a
-    *later* test, closing a cursor that had died with the earlier rollback and
-    failing that test's transaction.
-
-    The collector is disabled across the call so only reference counting can
-    free the witness, and the assertion runs before it is re-enabled. Both exits
-    of the walk are covered: running off the top of the stack, and the ``break``
-    at the depth limit, which leaves the stepping variable bound to a live frame.
-    ``truncated`` pins which of the two each case actually took.
-
-    The query is a ``count()`` rather than an iterated queryset on purpose. An
-    iterated queryset runs its SQL inside a generator, and on Python 3.10 and
-    3.11 a generator's frame lets go of its caller whenever the generator stops
-    running -- so the chain broke there, the caller's frame was never kept, and
-    this test passed against the leaking walk on both. From 3.12 a generator
-    that runs to completion is linked back to its caller, which is why the
-    iterated form fails only from there. ``count()`` reaches the cursor through
-    plain calls on every version.
-    """
+    """A caller's locals die when the caller returns, not when the cyclic GC next runs."""
     gc.collect()
     gc.disable()
     try:

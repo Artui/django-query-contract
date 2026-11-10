@@ -1,17 +1,3 @@
-"""Plan capture: what it refuses, what it explains, and what it leaves alone.
-
-Two kinds of test here and the split is the point. The **refusal** is decided
-from a connection's ``vendor`` string, so both answers are reachable from a suite
-running on SQLite -- which is what keeps this repository's coverage gate on the
-portable matrix rather than on a backend most Django projects do not run.
-
-The **explaining** is driven through a stub connection whose cursor records the
-statements it was handed and hands back a real server's own JSON. That proves
-what this package sends and what it does with the answer. It cannot prove that
-PostgreSQL accepts it, and does not try to: ``test_plan_capture_postgres.py``
-runs the same entry points against a server.
-"""
-
 from __future__ import annotations
 
 from typing import Any
@@ -25,13 +11,7 @@ _SELECT = "SELECT id FROM testapp_book WHERE author_id = %s"
 
 
 class QueryCanceled(Exception):
-    """psycopg 3's cancellation error, by name only.
-
-    The package imports neither psycopg nor psycopg2 -- it issues ``EXPLAIN``
-    through whatever driver the connection already has -- so it recognises a
-    cancellation by class name, and this module stays driver-free to match.
-    Declaring the real class here would test an import that does not exist.
-    """
+    """psycopg 3's cancellation error, by name only."""
 
 
 class QueryCanceledError(Exception):
@@ -46,8 +26,7 @@ class _Cursor:
     ):
         self.statements: list[tuple[str, Any]] = []
         self.closed = False
-        # Rows exactly as a driver hands them back: one list per statement. An
-        # EXPLAIN answers with a single row holding the whole JSON document.
+        # Rows exactly as a driver hands them back: one list per statement.
         self._rows = rows if rows is not None else [[(WHALE_JOIN,)]]
         self._fails = fails
 
@@ -91,16 +70,7 @@ class _Connection:
         self.connection: _Driver | None = _Driver(self.cursor_object)
 
     def get_autocommit(self) -> bool:
-        """Django's second transaction question, and the double used to lack it.
-
-        A real connection answers "did Django open a transaction"
-        (``in_atomic_block``) and "is this connection in one at all"
-        (``get_autocommit``) separately, and they disagree under manual
-        transaction management. This double answered only the first, so every
-        test here agreed with a savepoint guard that read only the first --
-        which is how a connection outside Django's own atomic block came to have
-        a failed EXPLAIN abort the caller's transaction.
-        """
+        """Django's second transaction question, and the double used to lack it."""
         return self.autocommit
 
 
@@ -115,19 +85,12 @@ def test_a_connection_that_is_not_postgres_is_refused_by_name() -> None:
     refusal = capture.refusal()
 
     assert refusal is not None
-    # Which alias it names depends on which connection is not PostgreSQL, and
-    # that differs between this suite's SQLite run and its PostgreSQL one. What
-    # has to hold either way is that it names one, and says what it is.
     assert "is sqlite" in refusal
     assert "worse than no assertion" in refusal
 
 
 def test_entering_a_capture_that_cannot_produce_a_plan_raises_before_anything_runs() -> None:
-    """It raises rather than degrading, and that is the whole class.
-
-    An empty plan capture is indistinguishable from a healthy one, so a caller
-    asserting over it would pass because the backend could not check.
-    """
+    """It raises rather than degrading, and that is the whole class."""
     with pytest.raises(PlansUnsupported) as raised, PlanCapture():
         pass
 
@@ -173,12 +136,7 @@ def test_a_read_statement_is_explained_with_analyze_buffers_and_no_timing() -> N
 
 
 def test_a_statement_with_no_parameters_is_sent_with_none_rather_than_an_empty_tuple() -> None:
-    """The same split Django's own cursor wrapper makes, for the same reason.
-
-    Under client-side binding an empty parameter sequence makes a literal ``%`` in
-    the statement an interpolation, so "no parameters" and "an empty tuple of
-    parameters" are different requests.
-    """
+    """The same split Django's own cursor wrapper makes, for the same reason."""
     capture = PlanCapture()
     connection = _Connection()
 
@@ -204,11 +162,7 @@ def test_the_explain_is_wrapped_in_a_savepoint_inside_a_transaction() -> None:
 
 
 def test_outside_a_transaction_there_is_no_savepoint_because_there_can_be_none() -> None:
-    """PostgreSQL refuses SAVEPOINT outside a transaction block outright.
-
-    Verified against a real server rather than assumed, and outside one there is
-    nothing to protect: a failed statement in autocommit poisons only itself.
-    """
+    """PostgreSQL refuses SAVEPOINT outside a transaction block outright."""
     capture = PlanCapture()
     connection = _Connection(in_atomic_block=False)
 
@@ -236,12 +190,7 @@ def test_a_failing_explain_inside_a_transaction_rolls_back_to_the_savepoint() ->
 
 
 def test_a_failing_explain_reports_the_error_class_and_never_its_message() -> None:
-    """A driver error can quote a bound value, and this package retains none.
-
-    The retention rule does not get an exception on an error path: the statement
-    is on the record beside the refusal, and the class name is what a reader
-    needs to tell "the server said no" from "the statement was not a SELECT".
-    """
+    """A driver error can quote a bound value, and this package retains none."""
     capture = PlanCapture()
     connection = _Connection(_Cursor(fails=RuntimeError("value 'hunter2' is out of range")))
 
@@ -253,15 +202,7 @@ def test_a_failing_explain_reports_the_error_class_and_never_its_message() -> No
 
 
 def test_a_cancelled_explain_says_what_to_do_about_it() -> None:
-    """The one failure with a remedy, so it is the one that gets named.
-
-    Every other refusal here can only say which exception class arrived, because
-    a driver message can quote a bound value. A cancellation is different: the
-    cause is almost always ``statement_timeout``, the reason is that
-    ``EXPLAIN (ANALYZE)`` runs the statement a second time, and both remedies are
-    the caller's to apply. None of that is read off the error text, so none of
-    it can leak a value.
-    """
+    """The one failure with a remedy, so it is the one that gets named."""
     cursor = _Cursor(fails=QueryCanceled("canceling statement due to statement timeout"))
 
     plan = PlanCapture()._explain(_Connection(cursor), "SELECT 1", None)
@@ -270,7 +211,6 @@ def test_a_cancelled_explain_says_what_to_do_about_it() -> None:
     assert "QueryCanceled" in plan.refusal
     assert "statement_timeout" in plan.refusal
     assert "analyze=False" in plan.refusal
-    # The driver's own words stay out of it, cancellation or not.
     assert "canceling statement" not in plan.refusal
 
 
@@ -333,12 +273,7 @@ def test_a_write_is_not_explained_because_explain_analyze_would_perform_it() -> 
 
 
 def test_a_statement_beginning_with_with_is_not_explained_either() -> None:
-    """A data-modifying CTE has to be written ``WITH ... INSERT``, so it is not a SELECT.
-
-    That is the whole reason the rule is "begins with SELECT" rather than "does
-    not begin with INSERT": the dangerous statement does not announce itself in
-    its first word.
-    """
+    """A data-modifying CTE has to be written ``WITH ..."""
     capture = PlanCapture()
     connection = _Connection()
 

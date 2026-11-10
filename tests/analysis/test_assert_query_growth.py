@@ -1,5 +1,3 @@
-"""The assertion itself: a query count that keeps its shape as the data grows."""
-
 from __future__ import annotations
 
 import inspect
@@ -40,11 +38,7 @@ def test_an_n_plus_one_fails_the_constant_claim() -> None:
 
 
 def test_the_failure_names_the_count_at_every_factor() -> None:
-    """Without both numbers a reader cannot tell ``O(N)`` from noise.
-
-    "The count grew" is the same sentence for a hundredfold N+1 and for one
-    extra statement from a cache that filled on the first run.
-    """
+    """Without both numbers a reader cannot tell ``O(N)`` from noise."""
     with pytest.raises(AssertionError) as raised:
         assert_query_growth(author_world, books_per_author, factors=(1, 10))
 
@@ -86,13 +80,7 @@ def test_a_linear_claim_still_refuses_growth_faster_than_the_data() -> None:
 
 
 def test_the_failure_says_the_counts_are_of_the_block_alone() -> None:
-    """Documented where the user is looking, not only on a docs page.
-
-    The one mistake the harness exists to prevent is measuring the world's
-    loader instead of the block, and a reader looking at a growing count has no
-    way to tell these numbers from the ones that mistake produces unless the
-    numbers say what they are.
-    """
+    """Documented where the user is looking, not only on a docs page."""
     with pytest.raises(AssertionError) as raised:
         assert_query_growth(author_world, books_per_author, factors=(1, 10))
 
@@ -108,13 +96,7 @@ def test_it_raises_a_plain_assertion_error() -> None:
 
 
 def test_there_is_no_way_to_assert_a_fixed_count_here() -> None:
-    """The decision that this package ships no second count assertion, as a guard.
-
-    ``django_assert_num_queries`` is the count assertion. A parameter naming a
-    number of queries would make this one too, so the signature is checked
-    rather than trusted -- and the same rule is what makes fewer than two
-    factors an error.
-    """
+    """The decision that this package ships no second count assertion, as a guard."""
     signature = inspect.signature(assert_query_growth)
 
     assert not {"num", "count", "queries", "num_queries"} & set(signature.parameters)
@@ -123,10 +105,7 @@ def test_there_is_no_way_to_assert_a_fixed_count_here() -> None:
 
 
 def test_a_warm_up_reaches_the_measurement_underneath() -> None:
-    """The flake fix has to be reachable from the assertion, not only the measurement.
-
-    Once in each world, inside it, as the measurement runs it.
-    """
+    """The flake fix has to be reachable from the assertion, not only the measurement."""
     seen: list[int] = []
 
     assert_query_growth(
@@ -140,11 +119,7 @@ def test_a_warm_up_reaches_the_measurement_underneath() -> None:
 
 
 def test_the_assertion_and_the_measurement_default_to_the_same_factors() -> None:
-    """Two defaults for one thing is how they come to disagree, silently.
-
-    Both would be valid factor lists, so nothing would fail -- the assertion
-    would simply be measuring a curve the docs describe differently.
-    """
+    """Two defaults for one thing is how they come to disagree, silently."""
     asserted = inspect.signature(assert_query_growth).parameters["factors"].default
     measured = inspect.signature(measure_query_growth).parameters["factors"].default
 

@@ -1,11 +1,3 @@
-"""The paragraph a reader gets underneath a failed query-count assertion.
-
-Every capture here is a real one over a real connection, rather than a record
-list assembled by hand. A formatter tested against a hand-built capture agrees
-with whatever the test author believed the capture looked like, and the shape of
-the thing it formats is exactly what is worth checking.
-"""
-
 from __future__ import annotations
 
 import os
@@ -34,23 +26,14 @@ def authors() -> list[Author]:
 
 
 def test_a_capture_with_nothing_in_it_says_nothing() -> None:
-    """No statements and no ceiling crossed means no section at all.
-
-    A failure unrelated to the database should not acquire a paragraph about
-    the database.
-    """
+    """No statements and no ceiling crossed means no section at all."""
     with QueryCapture(using="default") as capture:
         pass
     assert format_capture_report(capture) == ""
 
 
 def test_an_n_plus_one_is_named_with_its_call_site(authors: list[Author]) -> None:
-    """The whole section, on the defect it exists to describe.
-
-    The counts add up: four statements captured, three of them the finding, one
-    left over. A report that lists the interesting queries and stays quiet about
-    the rest invites a reader to assume the rest were fine.
-    """
+    """The whole section, on the defect it exists to describe."""
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             list(author.books.all())
@@ -65,11 +48,7 @@ def test_an_n_plus_one_is_named_with_its_call_site(authors: list[Author]) -> Non
 
 
 def test_a_failure_with_no_n_plus_one_says_that_too(authors: list[Author]) -> None:
-    """Useful under a failed count assertion: the extra query is not a loop.
-
-    A reader who has just been told they ran one query too many needs to know
-    whether the fix is a prefetch or something else, and "no N+1" answers it.
-    """
+    """Useful under a failed count assertion: the extra query is not a loop."""
     with QueryCapture(using="default") as capture:
         list(Author.objects.all())
         list(Book.objects.all())
@@ -82,13 +61,7 @@ def test_a_failure_with_no_n_plus_one_says_that_too(authors: list[Author]) -> No
 def test_statements_that_are_not_an_n_plus_one_still_name_their_lines(
     authors: list[Author],
 ) -> None:
-    """The hole this section had until call-site attribution existed.
-
-    A finding needs a repetition, so a capture named a call site only where one
-    rendered. That left the case this section exists for -- a count assertion
-    that failed with no N+1 in the capture at all -- printing a number of
-    unexplained statements and not one line of code to go and look at.
-    """
+    """The hole this section had until call-site attribution existed."""
     with QueryCapture(using="default") as capture:
         list(Author.objects.all())
         list(Book.objects.all())
@@ -102,12 +75,7 @@ def test_statements_that_are_not_an_n_plus_one_still_name_their_lines(
 def test_the_statements_a_finding_explains_are_not_attributed_twice(
     authors: list[Author],
 ) -> None:
-    """The finding named their call site three lines higher up.
-
-    Repeating them under the attribution would double the count a reader adds
-    up, and the counts adding up is the property this whole section is built
-    around.
-    """
+    """The finding named their call site three lines higher up."""
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             list(author.books.all())
@@ -132,11 +100,7 @@ def test_only_the_busiest_lines_are_attributed(authors: list[Author]) -> None:
 def test_a_statement_whose_window_never_left_django_is_attributed_to_nothing(
     authors: list[Author],
 ) -> None:
-    """Counted and addressed as unaddressable, rather than quietly dropped.
-
-    Depth one keeps the innermost frame, which is Django's own. The statement
-    still happened and still has to appear in a total this reader is adding up.
-    """
+    """Counted and addressed as unaddressable, rather than quietly dropped."""
     with QueryCapture(using="default", stack_depth=1) as capture:
         list(Author.objects.filter(pk=1))
 
@@ -199,14 +163,7 @@ def test_a_long_statement_is_cut_and_says_so(authors: list[Author]) -> None:
 
 
 def test_a_capture_without_stacks_says_it_could_not_look() -> None:
-    """Reconstructed from a ``CaptureQueriesContext``, which records no frames.
-
-    Two identical statements and not a word about an N+1, because there is no
-    evidence either way: the identity is half call stack and this input has
-    none. Grouping them anyway would manufacture a finding out of a gap, and
-    saying "no N+1" would be a clean bill of health nobody earned. So it counts
-    them and says why they were left out.
-    """
+    """Reconstructed from a ``CaptureQueriesContext``, which records no frames."""
     with CaptureQueriesContext(connection) as context:
         for _ in range(2):
             list(Author.objects.filter(pk=1))
@@ -246,9 +203,6 @@ def test_a_ceiling_with_no_statements_is_still_reported() -> None:
     capture = QueryCapture(using="default")
     with capture:
         pass
-    # Reaching past the public surface once, to hold the two halves of the
-    # report independent: the ceiling block must not require records, because a
-    # future reader of this capture may build one that has none.
     capture._ceilings = (_Ceiling(),)
     report = format_capture_report(capture)
     assert report.startswith("Query log ceiling exceeded")
@@ -287,13 +241,7 @@ def test_statements_are_counted_per_connection(authors: list[Author]) -> None:
 
 
 def test_a_plan_capture_gains_a_block_about_what_the_planner_did() -> None:
-    """One report function answers "what did this block do" whichever capture is held.
-
-    Assembled rather than captured, unlike everything above it: a plan can only
-    come from PostgreSQL and this suite's gate runs on SQLite. What is being
-    checked here is only that the two reports compose -- the plan block's own
-    wording is ``test_format_query_plans.py``'s business.
-    """
+    """One report function answers "what did this block do" whichever capture is held."""
     from django_query_contract import PlanCapture, QueryPlan, QueryRecord
     from tests.plan_payloads import SPILLED_SORT
 

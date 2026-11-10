@@ -1,9 +1,3 @@
-"""How one finding reads, from real captures.
-
-The block a reader acts on. Both reports in the package render a finding through
-this one function, so what is pinned here is what both of them print.
-"""
-
 from __future__ import annotations
 
 import os
@@ -35,11 +29,7 @@ def _one(capture: QueryCapture) -> str:
 
 
 def test_the_call_site_comes_before_the_sql(authors: list[Author]) -> None:
-    """A count with no address is the output people turn off.
-
-    The line somebody edits goes on the first line of the block, above the
-    statement, because it is the only part of a finding anybody acts on.
-    """
+    """A count with no address is the output people turn off."""
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             list(author.books.all())
@@ -106,12 +96,7 @@ def test_a_call_site_outside_it_keeps_its_absolute_path(
 
 
 def test_a_path_that_never_left_django_says_so_and_says_why(authors: list[Author]) -> None:
-    """Depth one keeps the innermost frame, which is Django's own.
-
-    The refusal names its cause. Without the second half a reader would be told
-    a query arrived from nowhere, when what happened is that the window they
-    configured did not reach far enough.
-    """
+    """Depth one keeps the innermost frame, which is Django's own."""
     with QueryCapture(using="default", stack_depth=1) as capture:
         for _ in range(2):
             list(Author.objects.filter(pk=1))
@@ -124,14 +109,7 @@ def test_a_path_that_never_left_django_says_so_and_says_why(authors: list[Author
 def test_an_ordinary_finding_carries_no_caveat_about_its_window(
     authors: list[Author],
 ) -> None:
-    """``stack_truncated`` is true of every capture under a test runner.
-
-    A query from a test function is 38 frames deep and 30 of them are pytest's
-    and pluggy's own preamble, identical for every test in the session, so at
-    any workable depth the flag is set and discriminates nothing. Printing it
-    per finding would put a caveat on every line of every report -- which is how
-    a caveat stops being read.
-    """
+    """``stack_truncated`` is true of every capture under a test runner."""
     with QueryCapture(using="default") as capture:
         for _ in range(2):
             list(Author.objects.filter(pk=1))

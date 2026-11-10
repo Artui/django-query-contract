@@ -1,5 +1,3 @@
-"""One relation, every plan node that read it, and what that says and does not say."""
-
 from __future__ import annotations
 
 from copy import deepcopy
@@ -37,12 +35,7 @@ def _access(*payloads: list[dict[str, object]]) -> RelationAccess:
 
 
 def test_the_count_is_reads_and_not_statements() -> None:
-    """A plan that reads one table twice contributes two reads to it.
-
-    Records and nodes are parallel, so a self-join puts the same record in twice.
-    Counting statements instead would make the report disagree with itself: the
-    reads listed under a relation would outnumber the number beside its name.
-    """
+    """A plan that reads one table twice contributes two reads to it."""
     access = _access(UNINDEXED_SCAN, BITMAP_AND)
 
     assert access.count == 2
@@ -124,16 +117,7 @@ def _scan(payload: list[dict[str, object]]) -> PlanNode:
 
 
 def test_the_read_that_discarded_most_is_ranked_on_the_whole_read_not_one_worker() -> None:
-    """A parallel read is one read of a table, and it discarded everything it discarded.
-
-    The parallel node below states 374,699 discarded per loop and really threw
-    away 1,124,097 across its three; the serial node beside it is the same
-    payload with its count lowered to 500,000, so that the two orders disagree.
-    Derived rather than captured, and derived here rather than in the payload
-    file so the one changed number is visible: a fixture where the printed order
-    and the total order agree would pass whichever this ranked on, which is
-    exactly the fixture that would have hidden the defect.
-    """
+    """A parallel read is one read of a table, and it discarded everything it discarded."""
     smaller = deepcopy(SERIAL_SCAN)
     smaller[0]["Plan"]["Plans"][0]["Rows Removed by Filter"] = 500_000
     parallel, serial = _scan(PARALLEL_SCAN), _scan(smaller)
@@ -145,7 +129,6 @@ def test_the_read_that_discarded_most_is_ranked_on_the_whole_read_not_one_worker
 
     worst = access.most_rows_discarded
 
-    # Ranked on the printed number, the serial read is the larger of the two.
     assert serial.rows_removed_by_filter == 500000.0 > parallel.rows_removed_by_filter
     assert worst is not None
     rows, node = worst

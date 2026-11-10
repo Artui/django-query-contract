@@ -1,5 +1,3 @@
-"""One plan defect, and the evidence it carries."""
-
 from __future__ import annotations
 
 from django_query_contract import (
@@ -95,12 +93,7 @@ def test_a_record_with_no_frame_outside_django_reports_that_rather_than_guessing
 
 
 def test_a_finding_a_caller_built_from_an_unmeasured_node_says_so() -> None:
-    """``actual_rows`` reports what the nodes hold rather than asserting how it was built.
-
-    ``find_plan_defects`` only makes findings out of measured plans, so this
-    cannot arrive from inside the package -- but ``PlanFinding`` is public and
-    narrowing the type here would be this record making a claim about its author.
-    """
+    """``actual_rows`` reports what the nodes hold rather than asserting how it was built."""
     record = _record(0, WHALE_JOIN, line=10)
     node = PlanNode.from_explain({"Node Type": "Sort", "Plan Rows": 10})
 
