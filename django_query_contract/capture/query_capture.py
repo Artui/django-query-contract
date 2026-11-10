@@ -1,5 +1,3 @@
-"""The capture engine: every execution, with its fingerprint and its call site."""
-
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
@@ -17,27 +15,7 @@ from django_query_contract.utils import DEFAULT_STACK_DEPTH
 
 
 class QueryCapture:
-    """Record every statement executed inside a block, on one or more connections.
-
-    Capture rides on ``connection.execute_wrapper()``, which is Django's
-    documented hook and is what makes this compose rather than compete.
-    ``django_assert_num_queries`` counts through ``CaptureQueriesContext``, which
-    works by flipping ``force_debug_cursor`` and reading ``queries_log``; a
-    wrapper is a separate list on the connection and touches neither. So this
-    nests inside or around that assertion without changing what it sees --
-    a fact about the two mechanisms rather than a hope about them.
-
-    It also counts every execution, where ``queries_log`` is a bounded deque.
-    See ``LogCeiling`` for what that costs the other path and how this reports it.
-
-    ```python
-    with QueryCapture() as capture:
-        list(Author.objects.all())
-
-    for fingerprint, records in capture.by_fingerprint().items():
-        print(len(records), fingerprint, records[0].call_site)
-    ```
-    """
+    """Record every statement executed inside a block, on one or more connections."""
 
     def __init__(
         self,
@@ -45,17 +23,7 @@ class QueryCapture:
         using: str | Iterable[str] | None = None,
         stack_depth: int = DEFAULT_STACK_DEPTH,
     ) -> None:
-        """
-        Args:
-            using: A connection alias, several aliases, or ``None`` for every
-                configured one. Every alias by default because the assertion
-                this diagnoses takes a ``using=`` of its own, and a diagnosis
-                that covered only ``default`` would go quiet on exactly the
-                multi-database test that most needs it.
-            stack_depth: How many frames to keep per query. Lower it if a suite
-                feels the cost; the walk is the only part of capture that is not
-                a handful of string operations.
-        """
+        """``using``: a connection alias, several aliases, or ``None`` for every configured one."""
         if using is None:
             self._using: tuple[str, ...] | None = None
         elif isinstance(using, str):
@@ -69,9 +37,7 @@ class QueryCapture:
         self._wrappers = ExitStack()
 
     def __enter__(self) -> QueryCapture:
-        # Reset rather than accumulate, so re-entering one instance measures one
-        # block. A capture that silently summed two blocks would be the same
-        # class of quiet wrongness this package exists to expose.
+        # Reset rather than accumulate, so re-entering one instance measures one block.
         self._records = []
         self._ceilings = ()
         aliases = self._aliases()
@@ -97,51 +63,20 @@ class QueryCapture:
         )
 
     def _aliases(self) -> tuple[str, ...]:
-        """The connections this capture covers: the ones named, or every configured one.
-
-        Here rather than inline in ``__enter__`` because
-        :class:`~django_query_contract.PlanCapture` has to answer "which
-        connections would you capture" *before* entering, to decide whether it
-        can capture at all. Two copies of that resolution would be two chances
-        for a refusal to be checked against a different set of connections from
-        the one that then gets wrapped.
-        """
+        """The connections this capture covers: the ones named, or every configured one."""
         return self._using if self._using is not None else tuple(connections)
 
     def _plan_for(self, connection: Any, sql: str, params: Any, many: bool) -> QueryPlan | None:
-        """The plan for a statement about to run, or ``None`` when nobody asked for one.
-
-        The seam the plan face hangs on, and it is here rather than in a wrapper
-        of its own because there is exactly one moment when a statement and its
-        parameters are both in hand, and this is it. This package retains no
-        parameters, so a plan cannot be taken later from a record -- which was
-        written into :class:`~django_query_contract.QueryRecord` before the plan
-        face existed.
-
-        Returns ``None`` here, on every ordinary capture. Overridden by
-        :class:`~django_query_contract.PlanCapture`, which is the only
-        implementation and is expected to stay so: a hook with two subclasses
-        would be an extension point, and this is a seam between two of this
-        package's own faces.
-        """
+        """The plan for a statement about to run, or ``None`` when nobody asked for one."""
         return None
 
     def _record(self, execute: Any, sql: Any, params: Any, many: bool, context: Any) -> Any:
-        """The ``execute_wrapper`` callable itself.
-
-        Recording happens before the statement runs and the result is returned
-        untouched, so a query that raises is still counted. A failing statement
-        is a statement that was executed, and a diagnosis that dropped it would
-        under-report the block that most needs explaining.
-        """
+        """The ``execute_wrapper`` callable itself."""
         connection = context["connection"]
         stack, truncated = capture_stack(self._stack_depth)
         try:
             param_count = None if params is None else len(params)
         except TypeError:
-            # Django accepts an iterator of parameters and handles the same
-            # TypeError in its own debug logging. Sizing it here would consume
-            # it and the query would run with nothing bound.
             param_count = None
         self._records.append(
             QueryRecord(
@@ -175,12 +110,7 @@ class QueryCapture:
         return tuple(ceiling for ceiling in self._ceilings if ceiling.exceeded)
 
     def by_fingerprint(self) -> dict[str, tuple[QueryRecord, ...]]:
-        """Group the records by fingerprint, in the order each was first seen.
-
-        The grouping every face of this capture starts from. A group of more
-        than one is a repeated statement; whether it is an N+1 also depends on
-        the call stack, which the records carry.
-        """
+        """Group the records by fingerprint, in the order each was first seen."""
         grouped: dict[str, list[QueryRecord]] = {}
         for record in self._records:
             grouped.setdefault(record.fingerprint, []).append(record)
@@ -197,27 +127,7 @@ class QueryCapture:
 
     @classmethod
     def from_capture_context(cls, context: Any) -> QueryCapture:
-        """Build a capture from a ``django.test.utils.CaptureQueriesContext``.
-
-        This is the object ``django_assert_num_queries`` yields, so a caller
-        already holding one can be served without rewriting the test. What comes
-        back is honestly degraded, and the gaps are the argument for capturing
-        separately rather than a limitation to work around:
-
-        - **No call stacks.** That context records ``{"sql", "time"}`` per query
-          and nothing else, so there is no frame to recover. ``call_site`` is
-          ``None`` on every record.
-        - **No ceiling.** ``ceilings`` is empty, because a count taken from a
-          rotated deque cannot report how much it lost -- the dropped entries
-          are gone, and their number with them. This is the one thing that
-          cannot be reconstructed after the fact at any price.
-        - **No parameter counts**, and ``many`` is ``False`` throughout: the SQL
-          of an ``executemany`` arrives there already rewritten to
-          ``"N times: ..."``.
-
-        Args:
-            context: Anything with ``captured_queries`` and ``connection``.
-        """
+        """Build a capture from a ``django.test.utils.CaptureQueriesContext``."""
         capture = cls()
         connection = context.connection
         capture._records = [

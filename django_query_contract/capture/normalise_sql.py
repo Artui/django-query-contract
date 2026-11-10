@@ -1,5 +1,3 @@
-"""Reduce a statement to the shape it shares with its repeats."""
-
 from __future__ import annotations
 
 import re
@@ -43,48 +41,12 @@ _WHITESPACE = re.compile(r"\s+")
 _PLACEHOLDER = "%s"
 
 
-# Measured on an ORM query of average length: the five passes below cost about
-# 5.9 microseconds, which was more than the call-stack walk and the single
-# largest part of capture. A cache is the obvious answer precisely because of
-# what this package is for -- a suite that repeats a statement is the case it
-# exists to find, so the hit rate is highest exactly where the cost is. Bounded
-# rather than unbounded because a wide ``IN`` list produces one distinct
-# statement per width, and an unbounded cache would grow with the data.
 @lru_cache(maxsize=2048)
 def normalise_sql(sql: str) -> str:
-    """Return the fingerprint of ``sql``: the part that repeats across executions.
-
-    Two executions with the same fingerprint ran the same statement with
-    different data. Paired with the call stack, that is the definition of an
-    N+1 -- which is why this is a small list of named, reversible-in-the-head
-    rules rather than a hash. Every one of them can be pointed at, argued with
-    and tested, and the record keeps the original SQL beside the fingerprint so
-    a report never has to be believed on the strength of the normaliser alone.
-
-    A real SQL parser was considered and does not fit, for three independent
-    reasons. The SQL that reaches ``execute_wrapper`` carries Django's ``%s``
-    placeholders -- the backend's own paramstyle is applied below the wrapper --
-    and ``%s`` is a syntax error to a PostgreSQL grammar, so a parser cannot
-    read the input at all without the parameters being substituted back in,
-    which is the opposite of what a fingerprint is for. It would also be
-    PostgreSQL-only in a package whose count and growth assertions are meant to
-    work on any backend. And it costs roughly fifteen times a regex pass, per
-    query, in a suite that may run hundreds of thousands.
-
-    Args:
-        sql: The statement as handed to ``cursor.execute``.
-
-    Returns:
-        The normalised statement, with whitespace collapsed.
-    """
-    # String literals go first so that a statement which merely *mentions* a
-    # savepoint inside quotes is reduced to a placeholder before the savepoint
-    # rule can reach into it and leave an unbalanced quote behind.
+    """Return the fingerprint of ``sql``: the part that repeats across executions."""
     normalised = _STRING_LITERAL.sub(_PLACEHOLDER, sql)
     normalised = _SAVEPOINT.sub(r"\1<savepoint>", normalised)
     normalised = _NUMERIC_LITERAL.sub(_PLACEHOLDER, normalised)
-    # Runs first, groups second: the group rule matches ``(%s)`` items, which is
-    # what a multi-column run becomes once the run rule has collapsed it.
     normalised = _PLACEHOLDER_RUN.sub("(%s)", normalised)
     normalised = _PLACEHOLDER_GROUPS.sub("(%s)", normalised)
     return _WHITESPACE.sub(" ", normalised).strip()
