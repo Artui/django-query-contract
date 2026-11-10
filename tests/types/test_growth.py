@@ -1,10 +1,3 @@
-"""The two growth claims, and the exact arithmetic behind each.
-
-Every rule here is integer arithmetic on counted integers, which is the whole
-reason a growth assertion in this package is not flaky. So the tests are about
-boundaries: the pair that just holds, and the pair one statement past it.
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -20,21 +13,12 @@ def test_constant_permits_an_unchanged_count() -> None:
 
 
 def test_constant_refuses_a_single_extra_statement() -> None:
-    """One statement, not a percentage, and that is deliberate.
-
-    One extra statement at ten times the data is what an N+1 over one row looks
-    like, and a threshold generous enough to absorb it is a threshold that
-    misses the defect at small factors.
-    """
+    """One statement, not a percentage, and that is deliberate."""
     assert not Growth.CONSTANT.permits(point(1, 4), point(10, 5))
 
 
 def test_constant_refuses_a_count_that_fell() -> None:
-    """A count that goes *down* with the data is not constant either.
-
-    It is the signature of a per-process cache that the first run filled, which
-    is a real thing to be told about rather than a happy accident to absorb.
-    """
+    """A count that goes *down* with the data is not constant either."""
     assert not Growth.CONSTANT.permits(point(1, 5), point(10, 4))
 
 
@@ -43,12 +27,7 @@ def test_linear_permits_exactly_proportional_growth() -> None:
 
 
 def test_linear_permits_an_affine_count() -> None:
-    """``a + b*N``: a fixed preamble plus per-row work is the ordinary bulk shape.
-
-    Three statements at factor 1 and twenty-one at factor 10 is one listing
-    query plus one per author, which is what a real batched write looks like.
-    The rule has to accept it, or ``LINEAR`` describes nothing anybody writes.
-    """
+    """``a + b*N``: a fixed preamble plus per-row work is the ordinary bulk shape."""
     assert Growth.LINEAR.permits(point(1, 3), point(10, 21))
 
 
@@ -80,12 +59,7 @@ def test_the_constant_explanation_carries_both_counts() -> None:
 
 
 def test_the_linear_explanation_names_the_count_that_would_have_held() -> None:
-    """Naming a bound is actionable where "too many" is not.
-
-    The bound is the same floor division the rule permits, so the number printed
-    is the number the arithmetic used rather than a second calculation that
-    could disagree with it.
-    """
+    """Naming a bound is actionable where "too many" is not."""
     explained = Growth.LINEAR.explain(point(1, 5), point(10, 401))
 
     assert "that allows 50 at factor 10; 401 ran." in explained

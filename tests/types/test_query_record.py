@@ -1,5 +1,3 @@
-"""The record, and the one piece of judgement it makes: which frame is the call site."""
-
 from __future__ import annotations
 
 import contextlib
@@ -46,12 +44,7 @@ def test_the_call_site_is_the_innermost_frame_outside_django() -> None:
 
 
 def test_only_django_is_skipped() -> None:
-    """A framework, a factory or a service layer did emit the query.
-
-    Deciding that some third-party packages are more interesting than others is
-    the tuning this package exists without: skip the ORM, report whatever asked
-    it.
-    """
+    """A framework, a factory or a service layer did emit the query."""
     library = StackFrame(filename="/venv/rest_framework/generics.py", lineno=4, function="list")
     record = _record(
         StackFrame(filename="/app/views.py", lineno=112, function="render"),
@@ -62,11 +55,7 @@ def test_only_django_is_skipped() -> None:
 
 
 def test_a_stack_of_only_django_frames_has_no_call_site() -> None:
-    """``None`` rather than the innermost frame available.
-
-    "The query came from django/db/models/query.py" is true of every query and
-    tells a reader nothing, so it is not offered as an answer.
-    """
+    """``None`` rather than the innermost frame available."""
     assert _record(_django_frame("_fetch_all"), _django_frame("execute_sql")).call_site is None
 
 
@@ -96,13 +85,7 @@ def test_a_frame_prints_as_a_location() -> None:
 
 
 def test_a_record_names_the_readers_own_frame_the_way_a_finding_does() -> None:
-    """One walk, so a record and the finding holding it cannot disagree.
-
-    The asymmetry is the point of the test rather than the symmetry: the
-    innermost frame here is the standard library's, so ``call_site`` and
-    ``project_call_site`` give different answers and only one of them is a line
-    anybody edits.
-    """
+    """One walk, so a record and the finding holding it cannot disagree."""
     mine = StackFrame(
         filename=os.path.join(os.getcwd(), "shop", "views.py"), lineno=7, function="index"
     )
@@ -123,15 +106,7 @@ def test_a_record_with_no_frame_of_the_readers_reports_none() -> None:
 
 
 def test_the_readers_innermost_frame_wins_not_their_outermost() -> None:
-    """The direction of the walk, which no other test here can hold.
-
-    ``capture_stack`` keeps the innermost frames and orders them
-    **outermost-first**, so a walk from the wrong end is plausible in both
-    directions and produces plausible output either way: with one project frame
-    in the stack the two agree, and every test that has one passes under both.
-    This one has two at different depths, and only the inner one is the line
-    that ran the query.
-    """
+    """The direction of the walk, which no other test here can hold."""
     outer = StackFrame(
         filename=os.path.join(os.getcwd(), "shop", "views.py"), lineno=7, function="index"
     )

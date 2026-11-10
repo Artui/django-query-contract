@@ -1,13 +1,3 @@
-"""The attribution, and the four questions it answers about itself.
-
-Records are built by hand here rather than captured, for the reason
-``test_n_plus_one.py`` gives about its own subject: these are the properties of
-a value, and a real capture cannot be steered into every shape one can hold.
-``test_group_by_call_site.py`` does the opposite -- every capture there is real
--- so the grouping rule and the value it produces are each covered against
-something that can disagree with them.
-"""
-
 from __future__ import annotations
 
 from django_query_contract import Attribution, QueryRecord, StackFrame
@@ -39,13 +29,7 @@ def test_the_count_is_how_many_statements_the_line_emitted() -> None:
 
 
 def test_the_shapes_are_named_in_the_order_they_appeared() -> None:
-    """A line is allowed more than one shape, and that is the point.
-
-    A finding is one statement shape by definition. An attribution is one
-    *line*, and a line that evaluates a queryset carrying a related object
-    emits several. Deduplicated and ordered, so a report is stable rather than
-    however a set happened to iterate.
-    """
+    """A line is allowed more than one shape, and that is the point."""
     attribution = _attribution(
         _record(0, fingerprint="SELECT b"),
         _record(1, fingerprint="SELECT a"),
@@ -55,12 +39,7 @@ def test_the_shapes_are_named_in_the_order_they_appeared() -> None:
 
 
 def test_the_aliases_are_named_in_the_order_they_appeared() -> None:
-    """The group is keyed on the line and says nothing about the connection.
-
-    Same shape as a finding's ``aliases`` and for the same reason: one line
-    querying two databases is one line, so the span is reported rather than
-    encoded in the key.
-    """
+    """The group is keyed on the line and says nothing about the connection."""
     attribution = _attribution(
         _record(0, alias="other"),
         _record(1, alias="default"),
@@ -75,12 +54,7 @@ def test_the_first_index_is_where_the_line_started() -> None:
 
 
 def test_a_group_with_no_call_site_is_still_a_group() -> None:
-    """The one group that has no address, and it is a value like any other.
-
-    Records with no stack at all, and records whose kept frames were all
-    Django's own, land here. They are kept rather than dropped so that the
-    statements in a capture and the statements in its attribution add up.
-    """
+    """The one group that has no address, and it is a value like any other."""
     attribution = _attribution(_record(0, stack=()), _record(1, stack=()), call_site=None)
     assert attribution.call_site is None
     assert attribution.count == 2

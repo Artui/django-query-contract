@@ -1,5 +1,3 @@
-"""One point on a growth curve: a factor, a size, and everything the block ran."""
-
 from __future__ import annotations
 
 import pytest
@@ -32,12 +30,7 @@ def test_a_world_that_counted_nothing_leaves_the_size_unknown() -> None:
 
 
 def test_the_capture_is_whole_enough_to_diagnose_the_growth() -> None:
-    """The reason a point keeps the capture rather than only the number.
-
-    "One thousand statements at factor 10" says a count grew. The capture behind
-    it says which statement grew and from which line, through the same detector
-    every other face of this package reads.
-    """
+    """The reason a point keeps the capture rather than only the number."""
     for name in ("a", "b"):
         Book.objects.create(author=Author.objects.create(name=name), title="b")
 
@@ -53,13 +46,7 @@ def test_the_capture_is_whole_enough_to_diagnose_the_growth() -> None:
 
 
 def test_a_point_carries_the_ceiling_the_capture_measured() -> None:
-    """A growth run is the regime where Django's own query log stops counting.
-
-    A per-row statement over a thousand rows at a factor or two more is
-    thousands of statements in one block, which is exactly where
-    ``CaptureQueriesContext`` starts under-reporting. The point does not have to
-    do anything about that; it has to not lose it.
-    """
+    """A growth run is the regime where Django's own query log stops counting."""
     measured = GrowthPoint(factor=1, rows=None, capture=capture_of(2))
 
     assert measured.capture.ceilings != ()

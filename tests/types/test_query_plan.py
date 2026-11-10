@@ -1,5 +1,3 @@
-"""One statement's plan, or the stated reason there is not one."""
-
 from __future__ import annotations
 
 import pytest
@@ -26,12 +24,7 @@ def test_the_nodes_of_a_plan_are_its_whole_tree() -> None:
 
 
 def test_a_refusal_is_a_value_and_not_an_absence() -> None:
-    """ "Nobody asked" and "we declined" have to stay distinguishable.
-
-    A record whose ``plan`` is ``None`` was never asked; a record whose plan has
-    no root was asked and declined, and the sentence saying why is the difference
-    between a report that can explain itself and one that cannot.
-    """
+    """ "Nobody asked" and "we declined" have to stay distinguishable."""
     plan = QueryPlan.refused("executemany has no single plan.")
 
     assert plan.root is None
@@ -53,11 +46,7 @@ def test_the_worst_estimate_is_an_argmax_and_therefore_needs_no_threshold() -> N
 
 
 def test_the_worst_estimate_prefers_the_earlier_node_on_a_tie() -> None:
-    """Tree order, which is the order the plan was printed in.
-
-    Ties are the ordinary case -- a plan of one node, or a chain that all agreed
-    -- and any other tie-break would be a ranking this package has no basis for.
-    """
+    """Tree order, which is the order the plan was printed in."""
     plan = QueryPlan.from_explain(
         [
             {
