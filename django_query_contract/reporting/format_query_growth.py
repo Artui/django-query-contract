@@ -1,5 +1,3 @@
-"""Render a growth curve as the paragraph a reader needs under a failed claim."""
-
 from __future__ import annotations
 
 from django_query_contract.reporting.format_capture_report import format_capture_report
@@ -29,44 +27,7 @@ def format_query_growth(
     max_findings: int = 3,
     max_sql: int = 160,
 ) -> str:
-    """Describe ``measured`` as a curve, and say whether it kept ``growth``.
-
-    This is the message ``assert_query_growth`` fails with, written as a plain
-    function so the CI-report face can render a curve that nobody asserted on.
-    It renders a holding curve too, and deliberately: a growth measurement is
-    worth printing when it passes, and a formatter that only had words for
-    failure would leave the reporting face to invent its own.
-
-    **A growth failure has to name the counts at each factor**, or a reader
-    cannot tell a defect from noise -- "the count grew" is the same sentence for
-    a hundredfold N+1 and for one extra statement from a cache that filled on
-    the first run. So the curve is a table, and under it the rule that was
-    broken, stated in the numbers that broke it.
-
-    Under that is the capture from the higher of the two factors that failed,
-    rendered by ``format_capture_report`` -- the same report that appears under
-    a failing ``django_assert_num_queries``, which means the N+1 that explains
-    the growth is described exactly as it would be anywhere else in this
-    package, and the reader gets the call site rather than only the arithmetic.
-
-    **The claim is required and has no default**, which is worth saying because
-    the obvious reading of "render this measurement" is that a measurement is
-    enough. It is not: one curve reads as a pass against
-    :attr:`~django_query_contract.Growth.LINEAR` and a failure against
-    :attr:`~django_query_contract.Growth.CONSTANT`, and the headline sentence has
-    to say which. Defaulting to either would put a claim nobody made into a
-    report, which is the whole failure mode this package is about.
-
-    Args:
-        measured: The curve.
-        growth: The claim to judge it against. Positional, and required -- see
-            above.
-        max_findings: How many N+1 findings to list from the failing world.
-        max_sql: Where to cut a long statement.
-
-    Returns:
-        The report, without a trailing newline.
-    """
+    """Describe ``measured`` as a curve, and say whether it kept ``growth``."""
     violation = measured.first_violation(growth)
     if violation is None:
         lines = [f"The query count stayed inside {growth.value} across every scale factor."]
@@ -79,9 +40,6 @@ def format_query_growth(
         smaller, larger = violation
         lines.append("")
         lines.append(growth.explain(smaller, larger))
-        # Empty when the failing world ran no statements at all, which a
-        # constant claim reaches when the count went *down* to zero. A heading
-        # over nothing would read as a report that lost its body.
         report = format_capture_report(larger.capture, max_findings=max_findings, max_sql=max_sql)
         if report:
             lines.append("")
@@ -98,10 +56,6 @@ def _curve_lines(measured: QueryGrowth) -> list[str]:
     points = measured.points
     factor_width = max(len(str(point.factor)) for point in points)
     count_width = max(len(str(point.count)) for point in points)
-    # Zero when no world reported a size, which drops the column rather than
-    # printing one full of placeholders. A world is allowed not to count its
-    # rows -- see ``measure_query_growth`` -- and a table that spends a column
-    # saying so on every line is a table about the harness.
     rows_width = max(
         (len(str(point.rows)) for point in points if point.rows is not None), default=0
     )

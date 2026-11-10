@@ -1,24 +1,3 @@
-"""The pytest face of the capture: a diagnosis, and never an assertion.
-
-This module is the one place in the package that is not a single exported
-symbol, because pytest finds hooks by name in a module and there is nowhere else
-to put them. It stays thin for that reason: every hook here decides *when* to
-capture and *when* to speak, and hands the actual work to a module that can be
-tested without a test runner in the loop.
-
-The design decision it implements is that this package ships **no count
-assertion**. ``django_assert_num_queries`` is the assertion -- it is typed, it
-already handles ``connection=`` and ``using=`` and a custom failure note, and it
-yields the captured queries. Wrapping it in a fixture of our own would
-re-implement all of that to add a paragraph. So the seam is: their assertion,
-our diagnosis, joined by a report section rather than by a wrapper.
-
-The N+1 listing follows the same rule from the other side. It is opt-in, it
-prints after the run rather than during it, and it changes no outcome -- because
-an N+1 that fails a build is how a detector earns the reputation that gets it
-uninstalled, and four of them are dead on PyPI already.
-"""
-
 from __future__ import annotations
 
 import warnings
@@ -74,15 +53,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         type="bool",
         default=True,
     )
-    # A string rather than pytest's ``int`` type, which only exists from 8.4.
     parser.addini(
         "query_contract_stack_depth",
         "How many call-stack frames to keep per captured query.",
-        # Stringified from the one constant rather than written out again: an
-        # ini default that drifted from the capture's own would make the plugin
-        # quietly measure something different from a hand-written
-        # ``QueryCapture``, which is the class of divergence this package exists
-        # to complain about.
         default=str(DEFAULT_STACK_DEPTH),
     )
     group = parser.getgroup("django-query-contract")
@@ -92,10 +65,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Turn capture off for this run without editing the ini file.",
     )
-    # Opt-in, and it stays opt-in. An N+1 printed under every passing test is
-    # the crying wolf that killed four earlier detectors; a listing somebody
-    # asked for cannot cry anything. It also fails nothing -- the exit status is
-    # the same with the flag as without it.
     group.addoption(
         "--n-plus-one",
         action="store_true",
@@ -107,76 +76,22 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_setup(item: pytest.Item) -> Generator[None, Result[Any], None]:
-    """Start each test from an empty query log, so no test is charged another's.
-
-    **Django does this itself, and the gap is which tests it does it for.**
-    ``TransactionTestCase._pre_setup`` ends by clearing ``queries_log``, with the
-    comment that ``assertNumQueries`` stops working once the log overflows.
-    pytest-django runs ``_pre_setup`` -- but only for a test that asked for the
-    database, and only over the aliases that test declares. A test that runs a
-    statement without the ``db`` fixture, through a connection an earlier test or
-    a session-scoped fixture opened, inherits whatever was left in the log.
-
-    Verified rather than reasoned about, at a log shrunk to five entries: a test
-    that runs six statements leaves it full, and the next test that does not use
-    the ``db`` fixture starts with five in it. Its own single statement is then
-    invisible to a count taken from the log, and this package says so -- under
-    that test's name, about a full log that test did not fill. The warning is
-    true and it accuses the wrong file, which is the crying wolf that gets a
-    detector uninstalled.
-
-    So the log is emptied here, at the start of the setup phase, which is where
-    Django would have emptied it and is before any fixture of this test has run.
-    That last part is why it is here and not around the call phase: a fixture
-    holding a ``CaptureQueriesContext`` open across the test body took its
-    starting index before this point, and moving the reset later would leave that
-    index pointing past the end of the log. It also means a test whose own
-    fixtures fill the log still warns -- correctly, and naming the test whose
-    fixtures did it.
-
-    ``--no-query-contract`` turns this off with everything else, and there is no
-    separate switch: a knob for it would be a knob for whether this package tells
-    the truth about one test at a time.
-    """
+    """Start each test from an empty query log, so no test is charged another's."""
     if _enabled(item.config) and settings.configured:
         _reset_query_logs()
     yield
 
 
 def _reset_query_logs() -> None:
-    """Empty ``queries_log`` on every configured connection.
-
-    Every connection rather than the ones a test declares, for the same reason
-    :class:`~django_query_contract.QueryCapture` covers every alias by default:
-    the assertion this diagnoses takes a ``using=`` of its own, and a reset that
-    covered only ``default`` would leave the multi-database case with the leak
-    this hook exists to close.
-
-    Indexing ``connections`` builds the wrapper object without opening anything,
-    so this is safe under pytest-django's database blocker and on an alias whose
-    server does not exist.
-    """
+    """Empty ``queries_log`` on every configured connection."""
     for alias in connections:
         connections[alias].queries_log.clear()
 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item: pytest.Item) -> Generator[None, Result[Any], None]:
-    """Capture around the test body, and say so when the block outran the log.
-
-    Around the *call* phase only. The assertion this diagnoses is written inside
-    the test, and widening capture to setup would fold every fixture's queries
-    into the diagnosis of a block that did not run them.
-
-    The ceiling is reported as a warning rather than a report section because
-    the case that matters is a test that **passed**: past the ceiling
-    ``django_assert_max_num_queries`` can be handed a zero for a block that ran
-    five queries, and a section on a passing test is only printed when somebody
-    already suspected something.
-    """
+    """Capture around the test body, and say so when the block outran the log."""
     if not _enabled(item.config) or not settings.configured:
-        # Installed in a suite with no Django settings, or switched off. Both
-        # are ordinary, and neither is this plugin's business to complain about.
         yield
         return
 
@@ -185,11 +100,6 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, Result[Any], None]
     with capture:
         yield
     if item.config.getoption("--n-plus-one"):
-        # Gathered here rather than at the end of the run, because the capture
-        # is the thing that gets read and a finding is the small part of it
-        # worth keeping. ``setdefault`` runs even when this test found nothing,
-        # so the listing can distinguish "asked, and there were none" from
-        # "never asked" and say the first out loud.
         collected = item.config.stash.setdefault(_FINDINGS_KEY, {})
         findings = find_n_plus_one(capture)
         if findings:
@@ -210,31 +120,11 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, Result[Any], None]
 def pytest_runtest_makereport(
     item: pytest.Item, call: pytest.CallInfo[None]
 ) -> Generator[None, Result[Any], None]:
-    """Attach the diagnosis under a failed test.
-
-    ``_assert_num_queries`` builds its message inline and calls ``pytest.fail()``,
-    so there is no hook inside it to enrich. A report section reaches the same
-    place -- underneath the stock failure -- without owning the failure, which
-    means the user's assertion keeps working unchanged whether this package is
-    installed or not.
-    """
+    """Attach the diagnosis under a failed test."""
     outcome = yield
     report = outcome.get_result()
     if report.when != "call":
         return
-    # Taken out of the stash, not read from it. pytest holds every collected
-    # item in ``session.items`` until the run ends, so a capture left here is
-    # retained for the whole session -- every statement's SQL and up to
-    # ``stack_depth`` frames per statement, for every test that ran. Measured on
-    # a synthetic suite at twenty queries a test: about 50 KiB per test, so 64
-    # MiB across twelve hundred tests and growing linearly. This package asks to
-    # be left on session-wide, which it can only honestly do if it does not
-    # accumulate.
-    #
-    # Dropping it here rather than in teardown because this is the only reader:
-    # the report section below is the last thing that wants it, and the
-    # ``--n-plus-one`` listing already extracted its findings during the call
-    # phase, keeping the small part worth keeping.
     capture = item.stash.get(_CAPTURE_KEY, None)
     if capture is not None:
         del item.stash[_CAPTURE_KEY]
@@ -253,25 +143,10 @@ def pytest_runtest_makereport(
             report.sections.append((_PLAN_SECTION_NAME, planned))
 
 
-# ``Any`` rather than ``pytest.TerminalReporter``, which this package cannot
-# name: that alias reached pytest's public namespace well after the 8.0 floor
-# the plugin claims to work against, and the floor job proved the difference is
-# not theoretical. The hook needs three things from it -- ``config``,
-# ``write_sep`` and ``write_line`` -- all of which pytest 8.0 already had.
 def pytest_terminal_summary(terminalreporter: Any) -> None:
-    """Print the run's N+1 findings, when somebody asked for them.
-
-    Nothing here changes an outcome, and that is the design rather than a
-    limitation. This package ships no assertion: ``django_assert_num_queries``
-    is the assertion, and an N+1 that fails a build is how a detector earns the
-    reputation that gets it uninstalled. A finding is a diagnosis attached to a
-    failure somebody else's assertion produced, or -- here -- a list somebody
-    asked to see.
-    """
+    """Print the run's N+1 findings, when somebody asked for them."""
     collected = terminalreporter.config.stash.get(_FINDINGS_KEY, None)
     if collected is None:
-        # Not asked for, or capture never ran. Either way, say nothing at all
-        # rather than printing an empty section for every run of every suite.
         return
     terminalreporter.write_sep("=", _SECTION_NAME)
     terminalreporter.write_line(format_n_plus_one_summary(collected))

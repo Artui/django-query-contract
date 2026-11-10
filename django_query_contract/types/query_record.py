@@ -1,5 +1,3 @@
-"""One database execution, as this package remembers it."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,34 +12,7 @@ from django_query_contract.utils import (
 
 @dataclass(frozen=True, slots=True)
 class QueryRecord:
-    """A single statement, its fingerprint and the stack that emitted it.
-
-    This is the artifact the whole package is built around, and it is public and
-    documented from the first release on purpose: four separate faces read it --
-    the pytest plugin, a CI report, call-site attribution and a runtime budget
-    middleware -- and two of them are still unwritten. A record kept private
-    until they are would grow a private accessor per face instead of a shape.
-    Attribution is the evidence that the bet paid: it reads this record and
-    needed no field added to it.
-
-    The contract in ``0.x`` is additive: fields may be added, never removed and
-    never given a new meaning. It is frozen at ``1.0``.
-
-    Two things are deliberately absent.
-
-    **No parameters.** Retaining them would pin every bound value for the length
-    of a capture -- a ``bulk_create`` of ten thousand rows arrives here as one
-    execution and ten thousand values -- and the runtime middleware face would
-    then be holding customer data in memory to answer a question about query
-    counts. ``param_count`` is what the diagnosis actually needs ("the ``IN``
-    list had five hundred entries"), and the plan face runs ``EXPLAIN`` at
-    execution time, where the parameters are still in hand.
-
-    **No duration.** This package's argument is that a performance assertion
-    mentioning a number of milliseconds is a flaky test with extra steps, and a
-    field invites the assertion. Timing a query is a profiler's job;
-    ``django-silk`` does it well and is deliberately out of scope.
-    """
+    """A single statement, its fingerprint and the stack that emitted it."""
 
     index: int
     """Position within the capture, counting from zero. Names a query in a report."""
@@ -97,34 +68,10 @@ class QueryRecord:
 
     @property
     def call_site(self) -> StackFrame | None:
-        """The innermost frame outside Django: the line that asked for this query.
-
-        ``None`` when the stack holds no such frame -- an empty stack, or one
-        truncated before it reached the caller. That is reported rather than
-        approximated with the innermost frame available, because "the query came
-        from ``django/db/models/query.py``" is true of every query and tells a
-        reader nothing.
-
-        Django is the only package skipped. Anything else in the stack -- a REST
-        framework, a factory library, a service layer -- did emit the query, and
-        deciding that some libraries are more interesting than others is the
-        kind of tuning this package exists without.
-
-        An :class:`~django_query_contract.NPlusOne` names its call site the same
-        way, through the same helper, so a finding and the records inside it can
-        never disagree about where they came from.
-        """
+        """The innermost frame outside Django: the line that asked for this query."""
         return innermost_frame_outside_django(self.stack)
 
     @property
     def project_call_site(self) -> StackFrame | None:
-        """The innermost frame that is the reader's own: the line to go and edit.
-
-        The companion to :attr:`call_site`, and here for the reason that one
-        names the helper it shares: an :class:`~django_query_contract.NPlusOne`
-        answers this the same way through the same walk, so a finding and the
-        records inside it cannot disagree about which frame is the project's.
-
-        ``None`` when no frame in the window is the reader's.
-        """
+        """The innermost frame that is the reader's own: the line to go and edit."""
         return innermost_frame_in_project(self.stack)

@@ -1,5 +1,3 @@
-"""Turn captured plans into the paragraph a reader needs, and no verdict."""
-
 from __future__ import annotations
 
 from django_query_contract.analysis.find_plan_defects import find_plan_defects
@@ -22,38 +20,7 @@ def format_query_plans(
     max_relations: int = 5,
     max_sql: int = 160,
 ) -> str:
-    """Describe what the planner did, what it got wrong, and what was not asked.
-
-    Five blocks, and the order is the argument. The findings come first because
-    they are the only claims here that hold by construction. The estimate errors
-    come after them and are explicitly *not* claims: they are two numbers
-    PostgreSQL printed and the factor between them, ordered so the largest is
-    visible, with no rule anywhere deciding which of them is a defect. The
-    statements that carried no plan are counted last, so a reader can see that
-    the numbers above do not cover everything.
-
-    The relations block sits between them and the count of what carried no plan,
-    and it is a third register again: neither a claim nor a number to be read,
-    but the material an index decision is made of, with the decision itself
-    declined in the text. See
-    :class:`~django_query_contract.RelationAccess` for why it is declined.
-
-    The block about relations with no statistics comes before all of it, because
-    it can invalidate all of it: a plan over a table PostgreSQL has never
-    analyzed is a guess, and a reader who does not know that will act on it.
-
-    Args:
-        capture: A closed :class:`~django_query_contract.PlanCapture`.
-        max_findings: How many findings to list before summarising the rest.
-        max_estimates: How many statements to name in the estimate-error block.
-        max_relations: How many tables to describe before counting the rest.
-        max_sql: Where to cut a long statement. The record keeps the whole thing.
-
-    Returns:
-        The report, without a trailing newline. Empty when no statement carried a
-        plan -- which is every capture that is not a ``PlanCapture``, and a
-        ``PlanCapture`` around a block that ran nothing.
-    """
+    """Describe what the planner did, what it got wrong, and what was not asked."""
     planned = [(record, record.plan) for record in capture.records if record.plan is not None]
     if not planned:
         return ""
@@ -138,26 +105,10 @@ def _spill_detail(node: PlanNode) -> str:
 def _estimate_lines(
     explained: list[tuple[QueryRecord, QueryPlan]], *, max_estimates: int, max_sql: int
 ) -> list[str]:
-    """The planner's biggest misses, reported and left alone.
-
-    Deliberately not a finding and deliberately not sorted into one. Every
-    analyzed plan has a node the planner was most wrong about, and printing it is
-    a fact; deciding that being wrong by fifty times is a defect and by forty is
-    not would be the threshold this package refuses. The caveat is printed with
-    the block rather than left to the documentation, because the commonest large
-    ratio has no defect under it at all: a node under a ``LIMIT`` stops early by
-    design, so its actual is meant to fall short of its estimate.
-
-    A node that ran more than once gets a second caveat under it, for the same
-    reason and in the same place: both printed numbers are per loop, so on the
-    inner side of a join they describe one execution of several and the total is
-    the one a reader has in mind. See :func:`_per_loop`.
-    """
+    """The planner's biggest misses, reported and left alone."""
     scored: list[tuple[float, QueryRecord, PlanNode]] = []
     for record, plan in explained:
         worst = plan.worst_estimate
-        # ``None`` exactly when no node carried an actual row count, which is
-        # every plan taken without ANALYZE.
         if worst is None:
             continue
         error, node = worst
@@ -185,19 +136,7 @@ def _estimate_lines(
 
 
 def _per_loop(node: PlanNode) -> list[str]:
-    """Say that the two numbers above are shares, and what the whole was.
-
-    Silent for a node that ran once, which is every node of every plan taken
-    over a database too small to be scanned in parallel -- so this changes
-    nothing about the report a reader already knows and appears exactly where
-    the numbers above would otherwise quietly mean something else.
-
-    **The parallel line is a second sentence and not a longer first one**,
-    because it says something different in kind. The per-loop caveat is about
-    what the reader should multiply; the parallel one is about a number in this
-    block being wrong, which is the only such admission the report makes. See
-    :attr:`~django_query_contract.PlanNode.estimate_error`.
-    """
+    """Say that the two numbers above are shares, and what the whole was."""
     note = loops_note(node.loops, parallel_aware=node.parallel_aware)
     if note is None:
         return []
@@ -214,12 +153,7 @@ def _per_loop(node: PlanNode) -> list[str]:
 
 
 def _relation_lines(capture: PlanCapture, *, max_relations: int, max_sql: int) -> list[str]:
-    """The tables these plans touched, and what already indexes them.
-
-    Delegated whole rather than inlined, because a caller holding a capture may
-    want this paragraph on its own -- it is the one block here that is useful
-    when nothing failed.
-    """
+    """The tables these plans touched, and what already indexes them."""
     relations = format_relation_access(capture, max_relations=max_relations, max_sql=max_sql)
     if not relations:
         return []
@@ -227,12 +161,7 @@ def _relation_lines(capture: PlanCapture, *, max_relations: int, max_sql: int) -
 
 
 def _refusal_lines(refusals: list[str]) -> list[str]:
-    """Count what was not explained, by the reason it was not.
-
-    Counted rather than listed per statement: the reasons are a closed set of
-    two, and a reader needs to know how much of the block the blocks above do not
-    describe, not which line each skipped statement was on.
-    """
+    """Count what was not explained, by the reason it was not."""
     if not refusals:
         return []
     tallied: dict[str, int] = {}

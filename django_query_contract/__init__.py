@@ -1,5 +1,3 @@
-"""A query-capture engine for Django, and a pytest plugin over it."""
-
 from django_query_contract.analysis.assert_query_growth import assert_query_growth
 from django_query_contract.analysis.find_n_plus_one import find_n_plus_one
 from django_query_contract.analysis.find_plan_defects import find_plan_defects
