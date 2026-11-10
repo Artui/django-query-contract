@@ -1,5 +1,3 @@
-"""Two models with one edge: the smallest schema that can produce an N+1."""
-
 from __future__ import annotations
 
 from django.db import models
@@ -19,15 +17,7 @@ class Book(models.Model):
 
 
 class Customer(models.Model):
-    """The parent side of the shaped world the plan tests measure against.
-
-    Separate models from ``Author`` and ``Book`` on purpose. The plan tests build
-    a session-scoped world of a hundred thousand rows and commit it, so pointing
-    them at the models the N+1 tests use would leave those tests counting five
-    thousand authors where their own fixture made three. A shaped world and a
-    hand-built one compose by taking different models, never by taking turns
-    over one.
-    """
+    """The parent side of the shaped world the plan tests measure against."""
 
     name = models.CharField(max_length=100)
 
