@@ -1,5 +1,3 @@
-"""Print the evidence an index decision needs, and refuse to make the decision."""
-
 from __future__ import annotations
 
 from django_query_contract.analysis.group_by_relation import group_by_relation
@@ -28,26 +26,7 @@ def format_relation_access(
     max_relations: int = 5,
     max_sql: int = 160,
 ) -> str:
-    """Describe which tables these plans read, how, and what already indexes them.
-
-    The fourth reading of one capture, after the N+1 findings, the call sites and
-    the plans themselves. What it adds is the join between a plan and an address:
-    "``testapp_order`` was read end to end eleven times, filtering
-    ``((status)::text = %s::text)``, discarding 199,000 rows, from
-    ``views.py:112``" -- every clause of which is either PostgreSQL's own output
-    or this package's own call-site rule, and none of which is a recommendation.
-
-    Args:
-        capture: A closed :class:`~django_query_contract.PlanCapture`.
-        max_relations: How many tables to describe before counting the rest.
-        max_sql: Where to cut a long predicate or index definition. The records
-            keep the whole thing.
-
-    Returns:
-        The report, without a trailing newline. Empty when no statement in the
-        capture carried a plan that read a table -- which is every ordinary
-        :class:`~django_query_contract.QueryCapture`.
-    """
+    """Describe which tables these plans read, how, and what already indexes them."""
     accesses = group_by_relation(capture.records)
     if not accesses:
         return ""
@@ -79,19 +58,7 @@ def _relation(access: RelationAccess, capture: PlanCapture, *, max_sql: int) -> 
 
 
 def _discarded(access: RelationAccess) -> list[str]:
-    """The read that threw away most, named by an argmax and judged by nobody.
-
-    **Both numbers are the whole read**, not one loop of it, because a read
-    PostgreSQL split across three processes is still one read of this table and
-    it discarded everything the three of them discarded. The per-loop figures the
-    plan actually prints are named on the line below rather than dropped, so a
-    reader comparing this report against ``EXPLAIN`` output can see where the
-    total came from.
-
-    Nothing is printed when no read here filtered: PostgreSQL emits
-    ``Rows Removed by Filter`` only where it applied one, and a zero would be a
-    measurement it never made rather than a table nothing was discarded from.
-    """
+    """The read that threw away most, named by an argmax and judged by nobody."""
     worst = access.most_rows_discarded
     if worst is None:
         return []
@@ -104,13 +71,7 @@ def _discarded(access: RelationAccess) -> list[str]:
 
 
 def _arithmetic(node: PlanNode) -> list[str]:
-    """Show the multiplication when the total above was one, and nothing when it was not.
-
-    Silent for a node that ran once, which is every node of every plan over a
-    database small enough not to be scanned in parallel -- so the ordinary report
-    is unchanged and this line appears exactly where the old number would have
-    started meaning something different.
-    """
+    """Show the multiplication when the total above was one, and nothing when it was not."""
     note = loops_note(node.loops, parallel_aware=node.parallel_aware)
     if note is None:
         return []
@@ -119,18 +80,7 @@ def _arithmetic(node: PlanNode) -> list[str]:
 
 
 def _catalogue(access: RelationAccess, capture: PlanCapture, *, max_sql: int) -> list[str]:
-    """The indexes this table already has, in the statements PostgreSQL would write.
-
-    **The only ``CREATE INDEX`` statements this package prints, and they are the
-    ones that exist.** The milestone imagined emitting the ones that should; what
-    can be stated instead is what is already there, beside the filter above it,
-    so a reader can see for themselves which predicate nothing covers.
-
-    Nothing is printed when the catalogue said nothing about this relation --
-    a capture that never asked, or a table that was gone by the time it did. An
-    empty list would read as "this table has no indexes", which is a claim, and
-    a false one for any table with a primary key.
-    """
+    """The indexes this table already has, in the statements PostgreSQL would write."""
     definitions = capture.relation_indexes.get(access.relation, ())
     if not definitions:
         return []

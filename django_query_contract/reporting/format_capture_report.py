@@ -1,5 +1,3 @@
-"""Turn a capture into the paragraph a reader needs under a failed assertion."""
-
 from __future__ import annotations
 
 from django_query_contract.analysis.find_n_plus_one import find_n_plus_one
@@ -18,39 +16,7 @@ def format_capture_report(
     max_call_sites: int = 5,
     max_sql: int = 160,
 ) -> str:
-    """Describe what a capture saw, worst N+1 first.
-
-    This is the diagnosis half of the bargain with ``django_assert_num_queries``:
-    that fixture builds its message inline and calls ``pytest.fail()``, so there
-    is no hook inside it and no reason to want one. The user keeps writing the
-    assertion they already write, and a failure gains this underneath it.
-
-    It names an N+1 rather than merely reporting repetition, which is what it
-    did before the detector existed. The claim is safe to make because of how
-    the finding is defined -- more than one execution of one statement shape
-    from one call stack, with no threshold and no rule about lazy loads -- and
-    because nothing here fails a test on one. See
-    :class:`~django_query_contract.NPlusOne`.
-
-    A :class:`~django_query_contract.PlanCapture` gains a fourth block underneath
-    all of it, describing what the planner did with the statements it explained.
-    An ordinary capture has no plans and prints none, so one function still
-    answers "what did this block do" whichever capture a caller is holding.
-
-    Args:
-        capture: A closed capture.
-        max_findings: How many findings to list before summarising the rest.
-            Applied to N+1 findings and, separately, to plan findings.
-        max_call_sites: How many lines to name when attributing the statements
-            no finding accounted for.
-        max_sql: Where to cut a long statement. The record keeps the whole thing.
-
-    Returns:
-        The report, without a trailing newline. Empty when there is nothing to
-        say -- no statements and no ceiling crossed. There is deliberately no
-        early return for that case: an explicit guard here was provably dead,
-        because both halves below already produce nothing from nothing.
-    """
+    """Describe what a capture saw, worst N+1 first."""
     lines = _ceiling_lines(capture)
     if capture.records:
         if lines:
@@ -68,14 +34,7 @@ def format_capture_report(
 
 
 def _plan_lines(capture: QueryCapture, *, max_findings: int, max_sql: int) -> list[str]:
-    """What the planner did, when the caller asked for plans at all.
-
-    An ``isinstance`` rather than a field on every capture, because taking plans
-    is a different bargain and not a mode: it is PostgreSQL-only, it refuses
-    rather than degrades, and it runs each read statement twice. A flag on
-    ``QueryCapture`` would put all of that behind a keyword argument on the
-    ordinary path, where the plugin sets one up around every test in the suite.
-    """
+    """What the planner did, when the caller asked for plans at all."""
     if not isinstance(capture, PlanCapture):
         return []
     plans = format_query_plans(capture, max_findings=max_findings, max_sql=max_sql)
@@ -104,21 +63,7 @@ def _ceiling_lines(capture: QueryCapture) -> list[str]:
 def _finding_lines(
     capture: QueryCapture, *, max_findings: int, max_call_sites: int, max_sql: int
 ) -> list[str]:
-    """What ran, which of it was an N+1, where the rest came from, and what was left.
-
-    The counts add up to the number of statements captured, on purpose. A report
-    that lists the interesting queries and stays quiet about the rest invites the
-    reader to assume the rest were fine, and this package's whole argument is
-    against measurements that quietly stop describing everything.
-
-    Attributing the leftovers is what closes the other half of that. Before it,
-    a capture named a call site only where a finding rendered one, so the case
-    this section exists for -- a count assertion that failed with no N+1 in the
-    capture at all -- printed a number of unexplained statements and not one
-    line of code. The statements a finding already accounts for are left out
-    rather than attributed twice: the finding named their call site three lines
-    higher up.
-    """
+    """What ran, which of it was an N+1, where the rest came from, and what was left."""
     records = capture.records
     by_alias: dict[str, int] = {}
     for record in records:
@@ -127,14 +72,7 @@ def _finding_lines(
     lines = [f"{len(records)} statements captured: {counted}."]
 
     findings = find_n_plus_one(records)
-    # A record with no stack is not an absence of an N+1, it is an absence of
-    # the evidence, so it is counted separately from the queries that were
-    # looked at and found innocent.
     stackless = sum(1 for record in records if not record.stack)
-    # By index rather than by re-deriving the detector's key, so this asks only
-    # "which statements did the findings already speak for" and does not grow a
-    # second copy of what a finding *is*. An index is unique within a capture --
-    # it is the position the capture assigned -- and this takes a capture.
     accounted = {record.index for finding in findings for record in finding.records}
     others = [record for record in records if record.stack and record.index not in accounted]
 
@@ -146,8 +84,6 @@ def _finding_lines(
         if len(findings) > max_findings:
             lines.append(f"  and {len(findings) - max_findings} more findings.")
     elif others:
-        # Worth saying out loud under a failed count assertion: the extra
-        # queries are not a loop, so the fix is not a prefetch.
         lines.append("")
         lines.append("No N+1: no statement shape repeated from a single call path.")
 
