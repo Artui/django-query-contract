@@ -1,5 +1,3 @@
-"""Walk the live call stack into plain frame records."""
-
 from __future__ import annotations
 
 import inspect
@@ -24,57 +22,14 @@ _PACKAGE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + os
 
 
 def capture_stack(depth: int) -> tuple[tuple[StackFrame, ...], bool]:
-    """Return the innermost ``depth`` frames outside this package, and whether more existed.
-
-    Ordered outermost-first, the way a traceback reads. The *innermost* frames
-    are the ones kept when the stack is deeper than ``depth``, because those are
-    where the information is: between a cursor execution and the test function
-    sit twenty-odd Django frames, and the call site this package exists to name
-    is just outside them. Truncating from the other end would drop it.
-
-    The boolean is the second half of that bargain. A truncated stack can hide
-    the call site entirely, and this package's whole argument is that a
-    measurement which quietly stops being true is worse than one that refuses --
-    so truncation is reported rather than absorbed.
-
-    Returns:
-        The frames and a flag that is ``True`` when at least one more frame was
-        available beyond ``depth``.
-    """
+    """Return the innermost ``depth`` frames outside this package, and whether more existed."""
     frame = inspect.currentframe()
     if frame is None:
-        # Python implementations are not required to support frame
-        # introspection, and an interpreter that declines returns None here
-        # rather than raising. Every other face of this capture still works with
-        # an empty stack, so this degrades to "no call site" instead of failing
-        # a suite that was only asking for a query count.
         return (), False
 
     collected: list[StackFrame] = []
     truncated = False
     current = frame.f_back
-    # **Both frame references are dropped by hand, on every exit.** ``frame`` is
-    # this function's own frame held in its own locals: a reference cycle, the
-    # one the ``inspect`` documentation warns about. Reference counting cannot
-    # free a cycle, so the frame would outlive this call -- and a frame that
-    # outlives its return keeps its ``f_back`` link, which keeps the caller's
-    # frame, which keeps *its* caller's, so every frame between here and the
-    # test and every local in them would wait for the cyclic collector. That is
-    # exactly what ``StackFrame`` holds plain strings to avoid, and through this
-    # one variable the walk would have undone it. Nothing fails at once: a
-    # half-read server-side cursor in a caller is finalized whenever the
-    # collector next runs, which can be during a later test, closing a cursor
-    # that died with the earlier test's rollback and failing the later test's
-    # transaction. Installing the package would then change finalization timing
-    # across a suite that never asked it anything.
-    #
-    # ``frame`` is the load-bearing half, and
-    # ``test_a_capture_frees_its_callers_locals_without_the_cycle_collector``
-    # fails on both exits without it. ``current`` only ever points outward, so
-    # once the cycle is gone it dies with this frame at return and no test can
-    # tell it was deleted; it goes too so the rule reads "no frame reference
-    # outlives the walk" -- the ``break`` at the depth limit leaves it on a live
-    # frame -- rather than a rule about which reference happens to matter.
     try:
         while current is not None:
             code = current.f_code
