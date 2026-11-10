@@ -1,5 +1,3 @@
-"""The capture engine against a real connection."""
-
 from __future__ import annotations
 
 import contextlib
@@ -29,12 +27,7 @@ def authors() -> list[Author]:
 
 
 def test_a_loop_is_one_shape_from_one_place(authors: list[Author]) -> None:
-    """The defect this package exists to describe, and how it reads in the capture.
-
-    Three iterations, three statements, one fingerprint and one call site. That
-    pairing is what makes an N+1 identifiable by construction rather than by a
-    rule about lazy loads -- which is what the detectors that died were tuning.
-    """
+    """The defect this package exists to describe, and how it reads in the capture."""
     with QueryCapture(using="default") as capture:
         for author in Author.objects.all():
             list(author.books.all())
@@ -68,9 +61,6 @@ def test_a_record_carries_what_the_four_faces_need(authors: list[Author]) -> Non
     record = capture[0]
     assert record.index == 0
     assert record.alias == "default"
-    # Read off the connection the statement ran on rather than pinned to one
-    # backend: this suite's default connection is SQLite, and the PostgreSQL job
-    # runs the same assertion against a server.
     assert record.vendor == connections["default"].vendor
     assert record.many is False
     assert record.sql.startswith("SELECT")
@@ -78,9 +68,6 @@ def test_a_record_carries_what_the_four_faces_need(authors: list[Author]) -> Non
     assert record.stack
     assert record.call_site is not None
     # The capture machinery must not appear between the caller and the query.
-    # Called directly, ``capture_stack`` has no frames of its own to drop; only
-    # through the wrapper is there anything for the filter to do, so this is
-    # where its absence would show.
     assert not any(frame.filename.startswith(_PACKAGE_ROOT) for frame in record.stack)
 
 
@@ -97,12 +84,7 @@ def test_executemany_is_recorded_as_such() -> None:
 
 
 def test_unsized_parameters_do_not_break_capture() -> None:
-    """Django accepts an iterator of parameters; sizing it here would consume it.
-
-    The query itself is free to fail -- that is the backend's business -- but it
-    must still be recorded, because a statement that raised is a statement that
-    ran.
-    """
+    """Django accepts an iterator of parameters; sizing it here would consume it."""
     with (
         QueryCapture(using="default") as capture,
         connection.cursor() as cursor,
@@ -128,21 +110,9 @@ def test_a_failing_statement_is_still_recorded() -> None:
 
 
 def test_a_statement_that_bypasses_the_cursor_wrapper_is_not_captured() -> None:
-    """The boundary of the mechanism, pinned so it is read here and not discovered.
-
-    ``execute_wrapper`` wraps Django's cursor wrapper, which means it sees
-    ``execute`` and ``executemany`` and nothing else. A statement issued on the
-    raw driver connection is invisible, and so is anything using a driver API
-    that is not one of those two -- psycopg 3's ``cursor.copy()``, which is how
-    ``django-data-shape`` loads rows, was measured emitting no captured
-    statement at all.
-
-    Django's own ``queries_log`` has the same blind spot, so the two agree; the
-    point of the test is that the agreement is a fact rather than an assumption,
-    and that a package about honest counts states where its count stops.
-    """
+    """The boundary of the mechanism, pinned so it is read here and not discovered."""
     with connection.cursor():
-        pass  # Open the connection without counting the statement that does it.
+        pass
 
     with QueryCapture(using="default") as capture:
         connection.connection.execute("SELECT 1")
@@ -171,11 +141,7 @@ def test_using_selects_which_connections_to_watch(authors: list[Author]) -> None
 
 
 def test_every_configured_connection_is_watched_by_default(authors: list[Author]) -> None:
-    """The assertion this diagnoses takes a ``using=`` of its own.
-
-    A diagnosis covering only ``default`` would go quiet on exactly the
-    multi-database test that most needs it.
-    """
+    """The assertion this diagnoses takes a ``using=`` of its own."""
     with QueryCapture() as capture:
         list(Author.objects.all())
     assert {ceiling.alias for ceiling in capture.ceilings} == set(connections)
@@ -206,13 +172,7 @@ def test_the_capture_reads_like_a_sequence(authors: list[Author]) -> None:
 def test_capture_does_not_disturb_what_pytest_django_counts(
     authors: list[Author], django_assert_num_queries
 ) -> None:
-    """The composition claim, falsified in both nestings.
-
-    ``CaptureQueriesContext`` works by flipping ``force_debug_cursor`` and
-    reading ``queries_log``; a wrapper is a separate list on the connection.
-    They cannot see each other, and if this capture executed so much as one
-    statement of its own the counts below would move.
-    """
+    """The composition claim, falsified in both nestings."""
     with QueryCapture(using="default") as outside, django_assert_num_queries(2) as context:
         list(Author.objects.all())
         list(Book.objects.all())
@@ -229,12 +189,7 @@ def test_capture_does_not_disturb_what_pytest_django_counts(
 def test_from_capture_context_serves_a_caller_who_already_has_one(
     authors: list[Author], django_assert_num_queries
 ) -> None:
-    """The fixture yields a ``CaptureQueriesContext``; this reads one without a rewrite.
-
-    Honestly degraded, and the degradation is the argument for capturing
-    separately: there are no stacks to recover, and no ceiling, because a count
-    taken from a rotated deque cannot report what it dropped.
-    """
+    """The fixture yields a ``CaptureQueriesContext``; this reads one without a rewrite."""
     with django_assert_num_queries(1) as context:
         list(Author.objects.all())
 
@@ -251,13 +206,7 @@ def test_from_capture_context_serves_a_caller_who_already_has_one(
 
 
 def test_the_ceiling_is_real(clean_query_log) -> None:
-    """Reproduce the under-report against the installed Django, at the real limit.
-
-    This is the falsification the whole ceiling story rests on, and it is run
-    rather than argued: ``CaptureQueriesContext`` is asked for a count over a
-    block whose size is known, and the answer is compared with the number of
-    statements that actually executed.
-    """
+    """Reproduce the under-report against the installed Django, at the real limit."""
     limit = connection.queries_limit
 
     def run(count: int) -> None:
@@ -267,9 +216,6 @@ def test_the_ceiling_is_real(clean_query_log) -> None:
 
     def measure(pre_filled: int, inside: int) -> tuple[int, int, bool]:
         connection.queries_log.clear()
-        # force_debug_cursor is what makes the log grow at all, and it is what
-        # CaptureQueriesContext itself turns on. Pre-filling under it is how a
-        # suite arrives at a full log: an earlier assertion in the same test.
         connection.force_debug_cursor = True
         run(pre_filled)
         with QueryCapture(using="default") as capture, CaptureQueriesContext(connection) as context:
@@ -287,7 +233,6 @@ def test_the_ceiling_is_real(clean_query_log) -> None:
     reported, executed, exceeded = measure(limit - 10, 100)
     assert (reported, executed, exceeded) == (10, 100, True)
 
-    # The silent false pass: five statements, a reported count of zero.
     reported, executed, exceeded = measure(limit, 5)
     assert (reported, executed, exceeded) == (0, 5, True)
 
@@ -295,12 +240,7 @@ def test_the_ceiling_is_real(clean_query_log) -> None:
 def test_a_max_num_queries_assertion_passes_over_the_ceiling(
     clean_query_log, django_assert_max_num_queries
 ) -> None:
-    """Not a hypothetical: pytest-django's own assertion, green, over five real queries.
-
-    This is the reason the ceiling is reported rather than absorbed. The
-    assertion below is the one a reader would write to prove a block is cheap,
-    and here it proves nothing at all.
-    """
+    """Not a hypothetical: pytest-django's own assertion, green, over five real queries."""
     connection.force_debug_cursor = True
     with connection.cursor() as cursor:
         for _ in range(connection.queries_limit):
