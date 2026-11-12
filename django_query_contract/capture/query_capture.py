@@ -15,7 +15,27 @@ from django_query_contract.utils import DEFAULT_STACK_DEPTH
 
 
 class QueryCapture:
-    """Record every statement executed inside a block, on one or more connections."""
+    """Record every statement executed inside a block, on one or more connections.
+
+    Capture rides on ``connection.execute_wrapper()``, which is Django's
+    documented hook and is what makes this compose rather than compete.
+    ``django_assert_num_queries`` counts through ``CaptureQueriesContext``, which
+    works by flipping ``force_debug_cursor`` and reading ``queries_log``; a
+    wrapper is a separate list on the connection and touches neither. So this
+    nests inside or around that assertion without changing what it sees --
+    a fact about the two mechanisms rather than a hope about them.
+
+    It also counts every execution, where ``queries_log`` is a bounded deque.
+    See ``LogCeiling`` for what that costs the other path and how this reports it.
+
+    ```python
+    with QueryCapture() as capture:
+        list(Author.objects.all())
+
+    for fingerprint, records in capture.by_fingerprint().items():
+        print(len(records), fingerprint, records[0].call_site)
+    ```
+    """
 
     def __init__(
         self,
@@ -110,7 +130,12 @@ class QueryCapture:
         return tuple(ceiling for ceiling in self._ceilings if ceiling.exceeded)
 
     def by_fingerprint(self) -> dict[str, tuple[QueryRecord, ...]]:
-        """Group the records by fingerprint, in the order each was first seen."""
+        """Group the records by fingerprint, in the order each was first seen.
+
+        The grouping every face of this capture starts from. A group of more
+        than one is a repeated statement; whether it is an N+1 also depends on
+        the call stack, which the records carry.
+        """
         grouped: dict[str, list[QueryRecord]] = {}
         for record in self._records:
             grouped.setdefault(record.fingerprint, []).append(record)
@@ -127,7 +152,27 @@ class QueryCapture:
 
     @classmethod
     def from_capture_context(cls, context: Any) -> QueryCapture:
-        """Build a capture from a ``django.test.utils.CaptureQueriesContext``."""
+        """Build a capture from a ``django.test.utils.CaptureQueriesContext``.
+
+        This is the object ``django_assert_num_queries`` yields, so a caller
+        already holding one can be served without rewriting the test. What comes
+        back is honestly degraded, and the gaps are the argument for capturing
+        separately rather than a limitation to work around:
+
+        - **No call stacks.** That context records ``{"sql", "time"}`` per query
+          and nothing else, so there is no frame to recover. ``call_site`` is
+          ``None`` on every record.
+        - **No ceiling.** ``ceilings`` is empty, because a count taken from a
+          rotated deque cannot report how much it lost -- the dropped entries
+          are gone, and their number with them. This is the one thing that
+          cannot be reconstructed after the fact at any price.
+        - **No parameter counts**, and ``many`` is ``False`` throughout: the SQL
+          of an ``executemany`` arrives there already rewritten to
+          ``"N times: ..."``.
+
+        Args:
+            context: Anything with ``captured_queries`` and ``connection``.
+        """
         capture = cls()
         connection = context.connection
         capture._records = [

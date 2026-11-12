@@ -26,7 +26,26 @@ def format_relation_access(
     max_relations: int = 5,
     max_sql: int = 160,
 ) -> str:
-    """Describe which tables these plans read, how, and what already indexes them."""
+    """Describe which tables these plans read, how, and what already indexes them.
+
+    The fourth reading of one capture, after the N+1 findings, the call sites and
+    the plans themselves. What it adds is the join between a plan and an address:
+    "``testapp_order`` was read end to end eleven times, filtering
+    ``((status)::text = %s::text)``, discarding 199,000 rows, from
+    ``views.py:112``" -- every clause of which is either PostgreSQL's own output
+    or this package's own call-site rule, and none of which is a recommendation.
+
+    Args:
+        capture: A closed :class:`~django_query_contract.PlanCapture`.
+        max_relations: How many tables to describe before counting the rest.
+        max_sql: Where to cut a long predicate or index definition. The records
+            keep the whole thing.
+
+    Returns:
+        The report, without a trailing newline. Empty when no statement in the
+        capture carried a plan that read a table -- which is every ordinary
+        :class:`~django_query_contract.QueryCapture`.
+    """
     accesses = group_by_relation(capture.records)
     if not accesses:
         return ""

@@ -13,7 +13,49 @@ _Measured = list[tuple[QueryRecord, PlanNode]]
 
 
 def find_plan_defects(records: Iterable[QueryRecord]) -> tuple[PlanFinding, ...]:
-    """Name the defects the captured plans state, blindness first."""
+    """Name the defects the captured plans state, blindness first.
+
+    The whole of the reader, and it is short for the same reason
+    :func:`~django_query_contract.find_n_plus_one` is: both defects are
+    definitions rather than heuristics. One is a fact PostgreSQL printed; the
+    other is an equality and an inequality over a pair of measurements. See
+    :class:`~django_query_contract.PlanDefect` for why the other two candidates
+    -- a sequential scan over a row threshold and a nested loop with a large
+    inner -- are declined, and for why the estimate-versus-actual ratio is
+    reported on every node instead of being classified here.
+
+    **Only measured plans are considered.** Without ``ANALYZE`` a plan carries
+    the planner's expectations and nothing to check them against, so neither
+    defect is decidable from one. Those statements are skipped rather than
+    passed, and :func:`~django_query_contract.format_query_plans` says how many
+    were skipped rather than reporting a clean bill of health it did not earn.
+
+    Takes any iterable of records, so it reads a
+    :class:`~django_query_contract.PlanCapture` directly, a slice of one, or the
+    records of a single connection. A record with no plan -- every record from an
+    ordinary :class:`~django_query_contract.QueryCapture` -- contributes nothing,
+    so calling this on a capture that took no plans returns nothing rather than
+    raising.
+
+    ```python
+    from django_query_contract import PlanCapture, find_plan_defects
+
+    with PlanCapture() as capture:
+        render_author_list()
+
+    for finding in find_plan_defects(capture):
+        print(finding.defect, finding.count, finding.actual_rows)
+    ```
+
+    Args:
+        records: The executions to read.
+
+    Returns:
+        The findings, blindness first and then spills, each kind in capture
+        order. The order across the two kinds is presentation and not a ranking:
+        a spilled sort and a blind estimate have no common scale, and inventing
+        one to sort them by would be the first knob.
+    """
     measured = _measured(records)
     return (*_blind(measured), *_spills(measured))
 

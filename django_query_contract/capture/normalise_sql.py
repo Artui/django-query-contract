@@ -43,7 +43,31 @@ _PLACEHOLDER = "%s"
 
 @lru_cache(maxsize=2048)
 def normalise_sql(sql: str) -> str:
-    """Return the fingerprint of ``sql``: the part that repeats across executions."""
+    """Return the fingerprint of ``sql``: the part that repeats across executions.
+
+    Two executions with the same fingerprint ran the same statement with
+    different data. Paired with the call stack, that is the definition of an
+    N+1 -- which is why this is a small list of named, reversible-in-the-head
+    rules rather than a hash. Every one of them can be pointed at, argued with
+    and tested, and the record keeps the original SQL beside the fingerprint so
+    a report never has to be believed on the strength of the normaliser alone.
+
+    A real SQL parser was considered and does not fit, for three independent
+    reasons. The SQL that reaches ``execute_wrapper`` carries Django's ``%s``
+    placeholders -- the backend's own paramstyle is applied below the wrapper --
+    and ``%s`` is a syntax error to a PostgreSQL grammar, so a parser cannot
+    read the input at all without the parameters being substituted back in,
+    which is the opposite of what a fingerprint is for. It would also be
+    PostgreSQL-only in a package whose count and growth assertions are meant to
+    work on any backend. And it costs roughly fifteen times a regex pass, per
+    query, in a suite that may run hundreds of thousands.
+
+    Args:
+        sql: The statement as handed to ``cursor.execute``.
+
+    Returns:
+        The normalised statement, with whitespace collapsed.
+    """
     normalised = _STRING_LITERAL.sub(_PLACEHOLDER, sql)
     normalised = _SAVEPOINT.sub(r"\1<savepoint>", normalised)
     normalised = _NUMERIC_LITERAL.sub(_PLACEHOLDER, normalised)

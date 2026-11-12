@@ -12,7 +12,26 @@ _MAX_INDICES = 8
 
 
 def format_n_plus_one(finding: NPlusOne, *, max_sql: int = 160, label: str = "") -> str:
-    """Describe ``finding`` as an indented block, call site first."""
+    """Describe ``finding`` as an indented block, call site first.
+
+    Call site first because that is the whole point. "42 similar queries" with
+    no address is the output people turn off; the line that ran the loop is the
+    line somebody edits, so it goes above the SQL rather than under it.
+
+    Both reports in this package render a finding through here -- the section
+    under a failed query-count assertion and the end-of-run listing -- so the
+    two cannot drift into describing the same finding differently.
+
+    Args:
+        finding: The finding to describe.
+        max_sql: Where to cut a long statement. The records keep the whole thing.
+        label: Where the finding came from, when the caller is listing findings
+            from more than one block. Omitted entirely when empty, so the block
+            reads the same in a report that has only one.
+
+    Returns:
+        The block, indented, without a trailing newline.
+    """
     site = finding.call_site
     where = (
         relative_to_cwd(str(site))

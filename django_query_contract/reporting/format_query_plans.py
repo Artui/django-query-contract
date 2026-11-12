@@ -20,7 +20,38 @@ def format_query_plans(
     max_relations: int = 5,
     max_sql: int = 160,
 ) -> str:
-    """Describe what the planner did, what it got wrong, and what was not asked."""
+    """Describe what the planner did, what it got wrong, and what was not asked.
+
+    Five blocks, and the order is the argument. The findings come first because
+    they are the only claims here that hold by construction. The estimate errors
+    come after them and are explicitly *not* claims: they are two numbers
+    PostgreSQL printed and the factor between them, ordered so the largest is
+    visible, with no rule anywhere deciding which of them is a defect. The
+    statements that carried no plan are counted last, so a reader can see that
+    the numbers above do not cover everything.
+
+    The relations block sits between them and the count of what carried no plan,
+    and it is a third register again: neither a claim nor a number to be read,
+    but the material an index decision is made of, with the decision itself
+    declined in the text. See
+    :class:`~django_query_contract.RelationAccess` for why it is declined.
+
+    The block about relations with no statistics comes before all of it, because
+    it can invalidate all of it: a plan over a table PostgreSQL has never
+    analyzed is a guess, and a reader who does not know that will act on it.
+
+    Args:
+        capture: A closed :class:`~django_query_contract.PlanCapture`.
+        max_findings: How many findings to list before summarising the rest.
+        max_estimates: How many statements to name in the estimate-error block.
+        max_relations: How many tables to describe before counting the rest.
+        max_sql: Where to cut a long statement. The record keeps the whole thing.
+
+    Returns:
+        The report, without a trailing newline. Empty when no statement carried a
+        plan -- which is every capture that is not a ``PlanCapture``, and a
+        ``PlanCapture`` around a block that ran nothing.
+    """
     planned = [(record, record.plan) for record in capture.records if record.plan is not None]
     if not planned:
         return ""

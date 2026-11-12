@@ -6,7 +6,28 @@ from django_query_contract.types.growth_point import GrowthPoint
 
 
 class Growth(Enum):
-    """The claim a growth assertion makes: an upper bound on how a count may grow."""
+    """The claim a growth assertion makes: an upper bound on how a count may grow.
+
+    A growth assertion runs one block against worlds of several sizes and asks
+    whether the number of statements it emitted kept its shape. This names the
+    shape, and both members are **upper bounds**, which is the decision worth
+    stating: ``LINEAR`` is satisfied by a block that turns out to be constant,
+    because a count that grows less than allowed is never the defect. Only
+    growing *faster* than the claim is.
+
+    **Every rule here is exact integer arithmetic, and that is the whole design.**
+    The alternative -- fitting a curve to the counts and deciding whether the
+    slope is near enough to zero -- needs a tolerance, a goodness-of-fit floor
+    and a rule for what counts as linear, which is three knobs where this has
+    none. A growth assertion that is itself flaky is worse than no growth
+    assertion, because it gets deleted and takes the idea with it. See
+    ``measure_query_growth`` for the rest of that argument.
+
+    The rules are stated over a *pair* of measurements rather than over the whole
+    curve because both are transitive: equality is, and so is a non-increasing
+    ratio. Checking consecutive pairs therefore decides the whole curve, and the
+    pair that failed is the pair a failure message can point at.
+    """
 
     CONSTANT = "constant"
     """``O(1)``: the same statements whatever the data. The common case, and exact."""
@@ -28,13 +49,27 @@ class Growth(Enum):
         return "The query count grows faster than the data."
 
     def permits(self, smaller: GrowthPoint, larger: GrowthPoint) -> bool:
-        """Whether going from ``smaller`` to ``larger`` stayed inside this bound."""
+        """Whether going from ``smaller`` to ``larger`` stayed inside this bound.
+
+        Args:
+            smaller: The measurement at the lower factor.
+            larger: The measurement at the higher factor.
+
+        Returns:
+            ``True`` when the pair is within the bound.
+        """
         if self is Growth.CONSTANT:
             return larger.count == smaller.count
         return larger.count * smaller.factor <= smaller.count * larger.factor
 
     def explain(self, smaller: GrowthPoint, larger: GrowthPoint) -> str:
-        """State the rule this pair broke, in the numbers that broke it."""
+        """State the rule this pair broke, in the numbers that broke it.
+
+        Kept beside :meth:`permits` rather than in the formatter so the sentence
+        and the arithmetic cannot drift into describing different rules -- the
+        failure a reader would have no way to detect, because the only evidence
+        they have is the sentence.
+        """
         if self is Growth.CONSTANT:
             return (
                 "A constant count runs the same statements whatever the data, so every "
