@@ -381,6 +381,11 @@ is invisible, and so is a driver API that is neither -- psycopg 3's
 so the two agree, and there is a test that pins it rather than a note that
 assumes it.
 
+Capture wraps the test body and nothing else. A statement that a fixture runs
+before the test, or in its teardown, is not recorded, so it appears in neither
+the diagnosis nor the `--n-plus-one` listing. The same statement in the test
+body does appear.
+
 ## Turning it off
 
 ```ini

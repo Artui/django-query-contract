@@ -71,10 +71,10 @@ class QueryPlan:
         """How far out this plan's least accurate node was, and which node that is.
 
         An argmax rather than a cut-off, and that is deliberate: every measured
-        plan has exactly one node the planner was most wrong about, so naming it
-        introduces no number. Whether being wrong by that much matters is left to
-        the reader, for the reasons
-        :attr:`~django_query_contract.PlanNode.estimate_error` sets out.
+        plan has a node the planner was most wrong about, so naming it
+        introduces no number. On a tie it is the first of them in tree order.
+        Whether being wrong by that much matters is left to the reader, for the
+        reasons :attr:`~django_query_contract.PlanNode.estimate_error` sets out.
 
         The factor comes back beside the node rather than being read off it
         again, so a caller cannot end up holding a node it has to re-test for a
