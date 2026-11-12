@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - The API reference's docstrings are restored.
+- The README says the capture covers the test body only, not fixture setup or teardown; `QueryPlan.worst_estimate` documents its tie rule.
 
 ## [0.11.0] — 2026-10-07
 
