@@ -16,7 +16,39 @@ def format_capture_report(
     max_call_sites: int = 5,
     max_sql: int = 160,
 ) -> str:
-    """Describe what a capture saw, worst N+1 first."""
+    """Describe what a capture saw, worst N+1 first.
+
+    This is the diagnosis half of the bargain with ``django_assert_num_queries``:
+    that fixture builds its message inline and calls ``pytest.fail()``, so there
+    is no hook inside it and no reason to want one. The user keeps writing the
+    assertion they already write, and a failure gains this underneath it.
+
+    It names an N+1 rather than merely reporting repetition, which is what it
+    did before the detector existed. The claim is safe to make because of how
+    the finding is defined -- more than one execution of one statement shape
+    from one call stack, with no threshold and no rule about lazy loads -- and
+    because nothing here fails a test on one. See
+    :class:`~django_query_contract.NPlusOne`.
+
+    A :class:`~django_query_contract.PlanCapture` gains a fourth block underneath
+    all of it, describing what the planner did with the statements it explained.
+    An ordinary capture has no plans and prints none, so one function still
+    answers "what did this block do" whichever capture a caller is holding.
+
+    Args:
+        capture: A closed capture.
+        max_findings: How many findings to list before summarising the rest.
+            Applied to N+1 findings and, separately, to plan findings.
+        max_call_sites: How many lines to name when attributing the statements
+            no finding accounted for.
+        max_sql: Where to cut a long statement. The record keeps the whole thing.
+
+    Returns:
+        The report, without a trailing newline. Empty when there is nothing to
+        say -- no statements and no ceiling crossed. There is deliberately no
+        early return for that case: an explicit guard here was provably dead,
+        because both halves below already produce nothing from nothing.
+    """
     lines = _ceiling_lines(capture)
     if capture.records:
         if lines:

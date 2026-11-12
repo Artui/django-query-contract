@@ -75,7 +75,49 @@ _INDEXES = (
 
 
 class PlanCapture(QueryCapture):
-    """A :class:`~django_query_contract.QueryCapture` that also asks for the plan."""
+    """A :class:`~django_query_contract.QueryCapture` that also asks for the plan.
+
+    ```python
+    from django_query_contract import PlanCapture, format_query_plans
+
+    with PlanCapture() as capture:
+        render_author_list()
+
+    print(format_query_plans(capture))
+    ```
+
+    **The plan is taken at execution time, and it has to be.** This package
+    retains no parameters -- a ``bulk_create`` arrives as one execution and ten
+    thousand values, and holding them would mean keeping customer data in memory
+    to answer a question about query counts -- so a plan cannot be taken after
+    the fact from a record. The wrapper is the one moment the statement and its
+    bindings are both in hand, and that was written into
+    :class:`~django_query_contract.QueryRecord` from the first release, before
+    this class existed.
+
+    It is taken **before** the statement runs, for the same reason the record is
+    written before it runs: a statement that raises is still a statement that was
+    executed, and a plan dropped because the query failed would be missing from
+    exactly the diagnosis that needed it.
+
+    **``EXPLAIN`` goes out on the driver connection, under the Django cursor
+    rather than through it**, and that is what keeps composition intact. Django's
+    ``execute_wrapper`` and its ``queries_log`` both sit on the Python cursor, so
+    a plan taken through ``connection.cursor()`` would be captured by this very
+    wrapper -- endlessly -- and would also be counted by
+    ``django_assert_num_queries``, which counts through ``queries_log``. Measured
+    both ways against a real server: the raw cursor is seen by neither. The
+    package already documented that blind spot as a limitation of the capture;
+    here it is the mechanism.
+
+    **What it costs, measured.** Against PostgreSQL 16 on a shaped 400,000-row
+    world, a two-statement block took 8.9 ms on its own and 14.8 ms with plan
+    capture: about **1.7x**, which is what running each statement twice buys.
+    With ``analyze=False`` it was 9.1 ms, or 1.02x, because the server only plans.
+    ``ANALYZE`` is the default anyway, because a plan with no measurement in it
+    cannot produce a finding, and a plan capture that can produce no finding is
+    the vacuous pass this package exists to refuse.
+    """
 
     def __init__(
         self,
@@ -97,7 +139,17 @@ class PlanCapture(QueryCapture):
         return self._analyze
 
     def refusal(self) -> str | None:
-        """Why plans cannot be captured on these connections, or ``None``."""
+        """Why plans cannot be captured on these connections, or ``None``.
+
+        Reads ``vendor`` off each connection and decides from the string, without
+        opening anything. That is deliberate and it is what keeps this package's
+        coverage gate on the portable matrix: a degradation path reachable only
+        by running the suite on the backend it refuses is a path the gating job
+        cannot see.
+
+        Public because the two callers need the same sentence delivered two ways.
+        ``__enter__`` raises it, and the ``query_plans`` fixture skips with it.
+        """
         return _vendor_refusal((alias, connections[alias].vendor) for alias in self._aliases())
 
     def __enter__(self) -> PlanCapture:
@@ -119,12 +171,52 @@ class PlanCapture(QueryCapture):
 
     @property
     def unanalyzed_relations(self) -> tuple[str, ...]:
-        """The tables in these plans that PostgreSQL has never gathered statistics for."""
+        """The tables in these plans that PostgreSQL has never gathered statistics for.
+
+        **The other half of "never pass vacuously", and the half a vendor check
+        cannot reach.** Refusing SQLite covers the backend with no planner. This
+        covers the backend that has one and was given nothing to reason with:
+        rows loaded in a fixture and never analyzed leave the planner guessing
+        from a default selectivity, and the plan it prints is confident and
+        meaningless. Measured during this package's design: two million rows
+        never analyzed produced a bitmap heap scan estimated at 10,000 rows for
+        two predicates whose real answers were 30,298 and 1,959,743.
+
+        It says nothing about whether the tables are *big enough*, and cannot:
+        "ten rows is too few" is a number, and a number is the knob this package
+        refuses. What it can do is print the row count the planner is working
+        from beside the plan and let a reader judge.
+
+        Empty before the block has finished, and empty on any capture that took
+        no plans.
+        """
         return self._unanalyzed
 
     @property
     def relation_indexes(self) -> dict[str, tuple[str, ...]]:
-        """The indexes each relation in these plans already has, in PostgreSQL's own words."""
+        """The indexes each relation in these plans already has, in PostgreSQL's own words.
+
+        Keyed by relation name, holding the ``CREATE INDEX`` statements the
+        server would write to build them -- ``pg_get_indexdef``, unedited, so an
+        expression index, a partial index and a non-default operator class all
+        come out right without this package learning any of the three.
+
+        **The one place index advice touched something real, and it is the half
+        that is a fact.** The milestone this was written for wanted to emit the
+        ``CREATE INDEX`` statements a capture implies; that turned out to need a
+        threshold and a SQL parser, and was declined -- see
+        :class:`~django_query_contract.RelationAccess`. What survives is
+        printing the statements that already exist beside the filters that were
+        applied, so a reader can see which predicate nothing covers and decide
+        for themselves.
+
+        A relation is absent rather than empty when the catalogue said nothing
+        about it, because an empty tuple would claim a table has no indexes and
+        that is false for anything with a primary key.
+
+        Empty before the block has finished, and empty on any capture that took
+        no plans.
+        """
         return dict(self._indexes)
 
     def _plan_for(self, connection: Any, sql: str, params: Any, many: bool) -> QueryPlan:

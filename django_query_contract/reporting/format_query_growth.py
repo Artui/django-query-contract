@@ -27,7 +27,44 @@ def format_query_growth(
     max_findings: int = 3,
     max_sql: int = 160,
 ) -> str:
-    """Describe ``measured`` as a curve, and say whether it kept ``growth``."""
+    """Describe ``measured`` as a curve, and say whether it kept ``growth``.
+
+    This is the message ``assert_query_growth`` fails with, written as a plain
+    function so the CI-report face can render a curve that nobody asserted on.
+    It renders a holding curve too, and deliberately: a growth measurement is
+    worth printing when it passes, and a formatter that only had words for
+    failure would leave the reporting face to invent its own.
+
+    **A growth failure has to name the counts at each factor**, or a reader
+    cannot tell a defect from noise -- "the count grew" is the same sentence for
+    a hundredfold N+1 and for one extra statement from a cache that filled on
+    the first run. So the curve is a table, and under it the rule that was
+    broken, stated in the numbers that broke it.
+
+    Under that is the capture from the higher of the two factors that failed,
+    rendered by ``format_capture_report`` -- the same report that appears under
+    a failing ``django_assert_num_queries``, which means the N+1 that explains
+    the growth is described exactly as it would be anywhere else in this
+    package, and the reader gets the call site rather than only the arithmetic.
+
+    **The claim is required and has no default**, which is worth saying because
+    the obvious reading of "render this measurement" is that a measurement is
+    enough. It is not: one curve reads as a pass against
+    :attr:`~django_query_contract.Growth.LINEAR` and a failure against
+    :attr:`~django_query_contract.Growth.CONSTANT`, and the headline sentence has
+    to say which. Defaulting to either would put a claim nobody made into a
+    report, which is the whole failure mode this package is about.
+
+    Args:
+        measured: The curve.
+        growth: The claim to judge it against. Positional, and required -- see
+            above.
+        max_findings: How many N+1 findings to list from the failing world.
+        max_sql: Where to cut a long statement.
+
+    Returns:
+        The report, without a trailing newline.
+    """
     violation = measured.first_violation(growth)
     if violation is None:
         lines = [f"The query count stayed inside {growth.value} across every scale factor."]

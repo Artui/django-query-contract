@@ -5,7 +5,18 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class StackFrame:
-    """Where a query came from, at one level of the call stack."""
+    """Where a query came from, at one level of the call stack.
+
+    Deliberately three plain strings and an integer rather than a reference to a
+    live frame object: a captured stack outlives the call it describes, and
+    holding frames would keep every local variable of every ORM call alive for
+    the length of a test. It would also make the record unpickleable, which the
+    CI-report face needs it not to be.
+
+    The source line is not read either. ``traceback.extract_stack`` opens and
+    caches the file for every frame it formats, and this runs once per query in
+    a suite that may execute hundreds of thousands of them.
+    """
 
     filename: str
     lineno: int

@@ -22,7 +22,23 @@ _PACKAGE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + os
 
 
 def capture_stack(depth: int) -> tuple[tuple[StackFrame, ...], bool]:
-    """Return the innermost ``depth`` frames outside this package, and whether more existed."""
+    """Return the innermost ``depth`` frames outside this package, and whether more existed.
+
+    Ordered outermost-first, the way a traceback reads. The *innermost* frames
+    are the ones kept when the stack is deeper than ``depth``, because those are
+    where the information is: between a cursor execution and the test function
+    sit twenty-odd Django frames, and the call site this package exists to name
+    is just outside them. Truncating from the other end would drop it.
+
+    The boolean is the second half of that bargain. A truncated stack can hide
+    the call site entirely, and this package's whole argument is that a
+    measurement which quietly stops being true is worse than one that refuses --
+    so truncation is reported rather than absorbed.
+
+    Returns:
+        The frames and a flag that is ``True`` when at least one more frame was
+        available beyond ``depth``.
+    """
     frame = inspect.currentframe()
     if frame is None:
         return (), False

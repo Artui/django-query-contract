@@ -22,7 +22,27 @@ def format_attributions(
     max_sites: int = 5,
     max_sql: int = 160,
 ) -> str:
-    """Describe ``attributions`` as indented blocks, busiest line first."""
+    """Describe ``attributions`` as indented blocks, busiest line first.
+
+    A block and no heading, the way :func:`format_n_plus_one` renders a finding,
+    because the caller is what knows why it is printing these: the section under
+    a failed query-count assertion introduces them as the statements no call
+    path repeated, and a report face would introduce them as something else
+    again. A heading here would be printed under the caller's own.
+
+    Args:
+        attributions: The groups to describe, already ordered -- ``max_sites``
+            keeps the front of the sequence, so an unordered one is truncated
+            arbitrarily. :func:`~django_query_contract.group_by_call_site`
+            returns them busiest first.
+        max_sites: How many lines to name before summarising the rest.
+        max_sql: Where to cut a long statement. The records keep the whole thing.
+
+    Returns:
+        The blocks, indented, without a trailing newline. Empty for an empty
+        sequence, so a caller can print a heading only when there is something
+        under it.
+    """
     lines = [_block(attribution, max_sql=max_sql) for attribution in attributions[:max_sites]]
     if len(attributions) > max_sites:
         lines.append(f"  and {len(attributions) - max_sites} more call site(s).")

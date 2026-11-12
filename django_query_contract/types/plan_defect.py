@@ -4,7 +4,33 @@ from enum import Enum
 
 
 class PlanDefect(Enum):
-    """What a plan finding accuses, and there are only two because only two qualify."""
+    """What a plan finding accuses, and there are only two because only two qualify.
+
+    **A finding here holds by construction, exactly as an N+1 does.** The plan
+    that produced this package listed four candidates: sequential scans over a
+    row threshold, nested loops with a large inner, sorts spilling to disk, and
+    planner estimates off by orders of magnitude from actual. Two of them are
+    numbers wearing a description -- *how many* rows makes a sequential scan
+    wrong, *how* large an inner is large -- and a number is a knob. The four dead
+    N+1 detectors on PyPI are what a package of knobs looks like a few years
+    later, so both are declined here rather than shipped with a default nobody
+    would agree with.
+
+    The two that survived did so for different reasons, and the difference is
+    worth keeping in view:
+
+    - a spill is a fact **PostgreSQL asserts**, using a threshold of its own
+      (``work_mem``) that belongs to the database rather than to this package;
+    - blindness is a fact about **a pair of measurements**, decided by equality
+      and inequality, with no magnitude anywhere in it.
+
+    The estimate-versus-actual ratio itself is not here, and its absence is the
+    design rather than an omission. It is on every node as
+    :attr:`~django_query_contract.PlanNode.estimate_error`, ordered by the
+    report and read by a person: "the planner expected 20 and 20,323 arrived" is
+    a fact, while "more than fifty times out is a defect" is a policy about
+    size. This package reports the first and refuses to write the second.
+    """
 
     PLANNER_BLIND = "planner blind"
     """One statement shape, one estimate, and more than one truth.
